@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:drift/drift.dart';
 import 'package:vhs_mobile_user/data/dao/service_dao.dart';
 import 'package:vhs_mobile_user/data/database/service_database.dart';
+import 'package:vhs_mobile_user/data/models/service/service_detail.dart';
 import 'package:vhs_mobile_user/data/models/service/service_model.dart';
 import 'package:vhs_mobile_user/data/services/service_api.dart';
 
@@ -33,6 +34,16 @@ class ServiceRepository {
     await _dao.clearAll();
     await _dao.insertAll(list.map(_toCompanion).toList());
     return list;
+  }
+
+  /// Lấy chi tiết dịch vụ
+  Future<ServiceDetail> getDetail(String id) {
+    return _api.getServiceDetail(id);
+  }
+
+  /// Lấy các tùy chọn dịch vụ
+  Future<List<ServiceOption>> getOptions(String id) {
+    return _api.getServiceOptions(id);
   }
 
   Future<List<ServiceModel>> search(String keyword) async {

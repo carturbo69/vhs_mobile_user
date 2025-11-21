@@ -4,7 +4,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
-import 'package:vhs_mobile_user/ui/service/service_list_viewmodel.dart';
+import 'package:go_router/go_router.dart';
+import 'package:vhs_mobile_user/routing/routes.dart';
+import 'package:vhs_mobile_user/ui/service_list/service_list_viewmodel.dart';
 
 import 'service_card.dart';
 
@@ -69,7 +71,9 @@ class _ServiceListScreenState extends ConsumerState<ServiceListScreen> {
                               icon: const Icon(Icons.clear),
                               onPressed: () {
                                 _searchController.clear();
-                                ref.read(serviceListProvider.notifier).search('');
+                                ref
+                                    .read(serviceListProvider.notifier)
+                                    .search('');
                                 setState(() {});
                               },
                             )
@@ -92,12 +96,20 @@ class _ServiceListScreenState extends ConsumerState<ServiceListScreen> {
                     setState(() {
                       _selectedCategory = val == 'all' ? null : val;
                     });
-                    ref.read(serviceListProvider.notifier).filterByCategory(_selectedCategory);
+                    ref
+                        .read(serviceListProvider.notifier)
+                        .filterByCategory(_selectedCategory);
                   },
                   itemBuilder: (ctx) => <PopupMenuEntry<String>>[
                     const PopupMenuItem(value: 'all', child: Text('Tất cả')),
-                    const PopupMenuItem(value: 'cat1', child: Text('Category 1')),
-                    const PopupMenuItem(value: 'cat2', child: Text('Category 2')),
+                    const PopupMenuItem(
+                      value: 'cat1',
+                      child: Text('Category 1'),
+                    ),
+                    const PopupMenuItem(
+                      value: 'cat2',
+                      child: Text('Category 2'),
+                    ),
                     // TODO: replace static categories with dynamic categories from repo/DB
                   ],
                 ),
@@ -107,15 +119,22 @@ class _ServiceListScreenState extends ConsumerState<ServiceListScreen> {
                   icon: Icon(
                     _sortAsc == null
                         ? Icons.sort
-                        : (_sortAsc! ? Icons.arrow_upward : Icons.arrow_downward),
+                        : (_sortAsc!
+                              ? Icons.arrow_upward
+                              : Icons.arrow_downward),
                   ),
                   onPressed: () {
                     setState(() {
-                      if (_sortAsc == null) _sortAsc = true;
-                      else if (_sortAsc == true) _sortAsc = false;
-                      else _sortAsc = null;
+                      if (_sortAsc == null)
+                        _sortAsc = true;
+                      else if (_sortAsc == true)
+                        _sortAsc = false;
+                      else
+                        _sortAsc = null;
                     });
-                    ref.read(serviceListProvider.notifier).sortByPrice(_sortAsc);
+                    ref
+                        .read(serviceListProvider.notifier)
+                        .sortByPrice(_sortAsc);
                   },
                 ),
               ],
@@ -146,10 +165,9 @@ class _ServiceListScreenState extends ConsumerState<ServiceListScreen> {
                   final s = services[idx];
                   return ServiceCard(
                     service: s,
-                    onTap: () {
-                      // navigation example: use GoRouter or Navigator
-                      // context.push('/service/${s.serviceId}');
-                    },
+                    // Navigate to detail page
+                    onTap: () =>
+                        context.push(Routes.detailServicePath(s.serviceId)),
                   );
                 },
               ),
