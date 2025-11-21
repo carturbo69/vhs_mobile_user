@@ -2,6 +2,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:vhs_mobile_user/core/provider/provider.dart';
+import 'package:vhs_mobile_user/data/models/service/service_detail.dart';
 
 final serviceApiProvider = Provider<ServiceApi>((ref) {
   final dio = ref.watch(dioProvider);
@@ -26,6 +27,27 @@ class ServiceApi {
       }
     } else {
       throw Exception('Http ${resp.statusCode}: ${resp.statusMessage}');
+    }
+  }
+   Future<ServiceDetail> getServiceDetail(String id) async {
+    try {
+      final response = await _dio.get('/api/Services/$id');
+
+      return ServiceDetail.fromJson(response.data);
+    } on DioException catch (e) {
+      throw Exception(e.response?.data ?? e.message);
+    }
+  }
+
+  Future<List<ServiceOption>> getServiceOptions(String id) async {
+    try {
+      final response = await _dio.get('/api/Services/$id/options-cart');
+
+      return (response.data as List)
+          .map((x) => ServiceOption.fromJson(x))
+          .toList();
+    } on DioException catch (e) {
+      throw Exception(e.response?.data ?? e.message);
     }
   }
 
