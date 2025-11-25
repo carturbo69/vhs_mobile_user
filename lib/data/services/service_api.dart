@@ -3,6 +3,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:vhs_mobile_user/core/provider/provider.dart';
 import 'package:vhs_mobile_user/data/models/service/service_detail.dart';
+import 'package:vhs_mobile_user/data/models/service/service_model.dart';
 
 final serviceApiProvider = Provider<ServiceApi>((ref) {
   final dio = ref.watch(dioProvider);
@@ -14,42 +15,20 @@ class ServiceApi {
   ServiceApi(this._dio);
 
   /// Fetch raw list from backend
-  Future<List<Map<String, dynamic>>> fetchHomeServicesRaw() async {
-    final resp = await _dio.get('/Services/services-homepage');
-    // assume backend returns JSON array
+  Future<List<ServiceModel>> fetchHomePageServices() async {
+    final resp = await _dio.get('/api/Services/services-homepage');
     if (resp.statusCode == 200) {
-      final data = resp.data;
-      if (data is List) {
-        // ensure each item is Map<String,dynamic>
-        return data.map((e) => Map<String, dynamic>.from(e as Map)).toList();
-      } else {
-        throw Exception('Unexpected payload: ${data.runtimeType}');
-      }
-    } else {
-      throw Exception('Http ${resp.statusCode}: ${resp.statusMessage}');
-    }
-  }
-   Future<ServiceDetail> getServiceDetail(String id) async {
-    try {
-      final response = await _dio.get('/api/Services/$id');
-
-      return ServiceDetail.fromJson(response.data);
-    } on DioException catch (e) {
-      throw Exception(e.response?.data ?? e.message);
-    }
-  }
-
-  Future<List<ServiceOption>> getServiceOptions(String id) async {
-    try {
-      final response = await _dio.get('/api/Services/$id/options-cart');
-
-      return (response.data as List)
-          .map((x) => ServiceOption.fromJson(x))
+      final data = resp.data as List<dynamic>;
+      return data
+          .map((e) => ServiceModel.fromJson(e as Map<String, dynamic>))
           .toList();
-    } on DioException catch (e) {
-      throw Exception(e.response?.data ?? e.message);
+    } else {
+      throw Exception('Failed to load services: ${resp.statusCode}');
     }
   }
 
-  /// You can add other endpoints (create/update/delete) here...
+  Future<ServiceDetail> getDetail(String id) async {
+    final resp = await _dio.get('/api/Services/$id');
+    return ServiceDetail.fromJson(resp.data);
+  }
 }

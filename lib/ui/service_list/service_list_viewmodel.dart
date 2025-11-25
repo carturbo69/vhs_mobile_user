@@ -3,129 +3,143 @@ import 'package:vhs_mobile_user/data/models/service/service_model.dart';
 import 'package:vhs_mobile_user/data/repositories/service_repository.dart';
 
 final serviceListProvider =
-    AsyncNotifierProvider<ServiceListNotifier, List<ServiceModel>>(
-  ServiceListNotifier.new,
-);
+    AsyncNotifierProvider<ServiceListNotifier, ServiceListState>(() {
+      return ServiceListNotifier();
+    });
+// service_list_viewmodel.dart
 
-class ServiceListNotifier extends AsyncNotifier<List<ServiceModel>> {
-  late final ServiceRepository _repo;
+class ServiceListState {
+  final List<ServiceModel> items; // original cached / fetched
+  final List<ServiceModel> filtered; // after search/filter
+  final String? query;
+  final Map<String, dynamic>?
+  filters; // e.g. {'categoryId': '...', 'minPrice': 10, 'maxPrice': 100}
+  final bool loadingMore;
 
-  // Pagination config
-  static const int _pageSize = 20;
-  int _currentOffset = 0;
-  bool _isLoadingMore = false;
-  bool _hasMore = true;
+  ServiceListState({
+    required this.items,
+    required this.filtered,
+    this.query,
+    this.filters,
+    this.loadingMore = false,
+  });
 
-  // Filters/search/sort
-  String? _query;
-  String? _categoryId;
-  bool? _sortAsc;
+  ServiceListState copyWith({
+    List<ServiceModel>? items,
+    List<ServiceModel>? filtered,
+    String? query,
+    Map<String, dynamic>? filters,
+    bool? loadingMore,
+  }) {
+    return ServiceListState(
+      items: items ?? this.items,
+      filtered: filtered ?? this.filtered,
+      query: query ?? this.query,
+      filters: filters ?? this.filters,
+      loadingMore: loadingMore ?? this.loadingMore,
+    );
+  }
+
+  factory ServiceListState.initial() =>
+      ServiceListState(items: [], filtered: []);
+}
+
+class ServiceListNotifier extends AsyncNotifier<ServiceListState> {
+  late  ServiceRepository _repo;
 
   @override
-  Future<List<ServiceModel>> build() async {
+  Future<ServiceListState> build() async {
+    // provider will set repo before use OR use ref.read
     _repo = ref.read(serviceRepositoryProvider);
-    return await _loadPage(reset: true);
+    // initial load from cache
+    final cached = await _repo.getCachedServices();
+    // attempt to refresh network in background? we'll refresh here synchronously
+    try {
+      final fresh = await _repo.fetchAndCacheServices();
+      return ServiceListState(items: fresh, filtered: fresh);
+    } catch (_) {
+      // fallback to cache
+      return ServiceListState(items: cached, filtered: cached);
+    }
   }
 
-  /// Refresh toàn bộ danh sách (force fetch nếu cần)
   Future<void> refresh() async {
-    await _loadPage(reset: true, forceRefresh: true);
-  }
-
-  /// Lazy load (load trang tiếp theo)
-  Future<void> loadMore() async {
-    if (_isLoadingMore || !_hasMore) return;
-    _isLoadingMore = true;
-
+    state = const AsyncValue.loading();
     try {
-      final more = await _repo.getPage(
-        limit: _pageSize,
-        offset: _currentOffset,
-        keyword: _query,
-        categoryId: _categoryId,
-        sortAsc: _sortAsc,
-      );
-
-      if (more.isEmpty) {
-        _hasMore = false;
-      } else {
-        final current = state.maybeMap(
-          data: (data) => data.value,
-          orElse: () => [],
-        );
-        _currentOffset += more.length;
-        state = AsyncData([...current, ...more]);
-      }
-    } finally {
-      _isLoadingMore = false;
-    }
-  }
-
-  /// Search (theo keyword)
-  Future<void> search(String keyword) async {
-    _query = keyword.trim().isEmpty ? null : keyword.trim();
-    await _loadPage(reset: true);
-  }
-
-  /// Filter theo categoryId
-  Future<void> filterByCategory(String? categoryId) async {
-    _categoryId = (categoryId == null || categoryId.isEmpty) ? null : categoryId;
-    await _loadPage(reset: true);
-  }
-
-  /// Sort theo giá (asc/desc)
-  Future<void> sortByPrice(bool? sortAsc) async {
-    _sortAsc = sortAsc;
-    await _loadPage(reset: true);
-  }
-
-  /// Xóa toàn bộ filter/search/sort
-  Future<void> clearFilters() async {
-    _query = null;
-    _categoryId = null;
-    _sortAsc = null;
-    await _loadPage(reset: true);
-  }
-
-  /// Load trang đầu tiên hoặc refresh
-  Future<List<ServiceModel>> _loadPage({
-    bool reset = false,
-    bool forceRefresh = false,
-  }) async {
-    if (reset) {
-      _currentOffset = 0;
-      _hasMore = true;
-      state = const AsyncLoading();
-    }
-
-    try {
-      final page = await _repo.getPage(
-        limit: _pageSize,
-        offset: _currentOffset,
-        keyword: _query,
-        categoryId: _categoryId,
-        sortAsc: _sortAsc,
-      );
-
-      if (reset) {
-        _currentOffset = page.length;
-        _hasMore = page.length == _pageSize;
-        state = AsyncData(page);
-      }
-
-      return page;
+      final fresh = await _repo.fetchAndCacheServices();
+      state = AsyncValue.data(ServiceListState(items: fresh, filtered: fresh));
     } catch (e, st) {
-      state = AsyncError(e, st);
-      rethrow;
+      final cached = await _repo.getCachedServices();
+      state = AsyncValue.error(e, st);
+      // also set data from cache so UI can still show items
+      // you may choose to return cached separately
+      state = AsyncValue.data(
+        ServiceListState(items: cached, filtered: cached),
+      );
     }
   }
 
-  /// Invalidate cache (xóa DB) và load lại
-  Future<void> invalidateAndReload() async {
-    _repo.invalidateCache();
-    await _loadPage(reset: true, forceRefresh: true);
+  void search(String q) {
+    final cur = state.value ?? ServiceListState.initial();
+    final qLower = q.trim().toLowerCase();
+    final filtered = cur.items.where((s) {
+      final title = s.title.toLowerCase();
+      final cat = s.categoryName.toLowerCase();
+      return title.contains(qLower) || cat.contains(qLower);
+    }).toList();
+    state = AsyncValue.data(cur.copyWith(query: q, filtered: filtered));
   }
 
-  bool get hasMore => _hasMore;
-  bool get isLoadingMore => _isLoadingMore;
+  void applyFilter({
+    String? categoryId,
+    double? minPrice,
+    double? maxPrice,
+    bool onlyActive = true,
+  }) {
+    final cur = state.value ?? ServiceListState.initial();
+    var list = cur.items;
+    if (categoryId != null) {
+      list = list.where((s) => s.categoryId == categoryId).toList();
+    }
+    if (minPrice != null) {
+      list = list.where((s) => s.price >= minPrice).toList();
+    }
+    if (maxPrice != null) {
+      list = list.where((s) => s.price <= maxPrice).toList();
+    }
+    if (onlyActive) {
+      list = list.where((s) => s.status?.toLowerCase() == 'active').toList();
+    }
+
+    // also apply text query if exists
+    final q = cur.query;
+    if (q != null && q.trim().isNotEmpty) {
+      final ql = q.toLowerCase();
+      list = list
+          .where(
+            (s) =>
+                s.title.toLowerCase().contains(ql) ||
+                s.categoryName.toLowerCase().contains(ql),
+          )
+          .toList();
+    }
+
+    final newFilters = {
+      if (categoryId != null) 'categoryId': categoryId,
+      if (minPrice != null) 'minPrice': minPrice,
+      if (maxPrice != null) 'maxPrice': maxPrice,
+      'onlyActive': onlyActive,
+    };
+
+    state = AsyncValue.data(cur.copyWith(filters: newFilters, filtered: list));
+  }
+
+  void clearFiltersAndSearch() {
+    final cur = state.value ?? ServiceListState.initial();
+    state = AsyncValue.data(
+      cur.copyWith(query: null, filters: {}, filtered: cur.items),
+    );
+  }
+
+  // optional: load next page from cache or api if you support paging.
 }

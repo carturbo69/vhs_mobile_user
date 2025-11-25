@@ -3,6 +3,6 @@
 part of 'service_dao.dart';
 
 // ignore_for_file: type=lint
-mixin _$ServiceDaoMixin on DatabaseAccessor<ServiceDatabase> {
-  $ServicesTable get services => attachedDatabase.services;
+mixin _$ServicesDaoMixin on DatabaseAccessor<AppDatabase> {
+  $ServicesTableTable get servicesTable => attachedDatabase.servicesTable;
 }

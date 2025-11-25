@@ -1,8 +1,15 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+
     <application
         android:label="vhs_mobile_user"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
+
+        <meta-data
+        android:name="com.google.android.gms.client_id"
+        android:value="1011562344003-3he6c2c1l47o9i55m68b4ltah3skbpmr.apps.googleusercontent.com"/>
+
         <activity
             android:name=".MainActivity"
             android:exported="true"

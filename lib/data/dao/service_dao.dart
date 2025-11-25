@@ -1,106 +1,98 @@
+import 'dart:convert';
 import 'package:drift/drift.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:vhs_mobile_user/data/database/service_database.dart';
 import 'package:vhs_mobile_user/data/database/service_table.dart';
+import 'package:vhs_mobile_user/data/models/service/service_model.dart';
 part 'service_dao.g.dart';
 
-@DriftAccessor(tables: [Services])
-class ServiceDao extends DatabaseAccessor<ServiceDatabase>
-    with _$ServiceDaoMixin {
-  ServiceDao(ServiceDatabase db) : super(db);
+// part of your generated drift database file / dao file
+@DriftAccessor(tables: [ServicesTable])
+class ServicesDao extends DatabaseAccessor<AppDatabase> with _$ServicesDaoMixin {
+  ServicesDao(AppDatabase db) : super(db);
 
-  Future<void> insertAll(List<ServicesCompanion> entries) async {
-    await batch((b) => b.insertAllOnConflictUpdate(services, entries));
+  Future<void> upsertServices(List<ServiceModel> services) async {
+    return transaction(() async {
+      for (final s in services) {
+        final companion = ServicesTableCompanion(
+          serviceId: Value(s.serviceId),
+          providerId: Value(s.providerId),
+          categoryId: Value(s.categoryId),
+          title: Value(s.title),
+          description: Value(s.description),
+          price: Value(s.price),
+          unitType: Value(s.unitType),
+          baseUnit: Value(s.baseUnit),
+          images: Value(s.images),
+          createdAt: Value(s.createdAt),
+          status: Value(s.status),
+          deleted: Value(s.deleted),
+          averageRating: Value(s.averageRating),
+          totalReviews: Value(s.totalReviews),
+          categoryName: Value(s.categoryName),
+          providerName: Value(s.providerName),
+          jsonOptions: Value(jsonEncode(s.serviceOptions.map((o) => o.toJson()).toList())),
+        );
+
+        await into(servicesTable).insertOnConflictUpdate(companion);
+      }
+    });
   }
 
-  Future<void> clearAll() => delete(services).go();
-
-  Future<List<ServiceEntity>> getAll() => select(services).get();
-
-  /// Search theo tiêu đề hoặc mô tả
-  Future<List<ServiceEntity>> search(String keyword) async {
-    if (keyword.trim().isEmpty) return getAll();
-    return (select(services)..where(
-          (tbl) =>
-              tbl.title.like('%$keyword%') | tbl.description.like('%$keyword%'),
-        ))
-        .get();
-  }
-
-  /// Filter theo category
-  Future<List<ServiceEntity>> filterByCategory(String categoryId) {
-    return (select(
-      services,
-    )..where((tbl) => tbl.categoryId.equals(categoryId))).get();
-  }
-
-  /// Sort theo giá
-  Future<List<ServiceEntity>> sortByPrice({bool ascending = true}) {
-    return (select(services)..orderBy([
-          (tbl) => ascending
-              ? OrderingTerm.asc(tbl.price)
-              : OrderingTerm.desc(tbl.price),
-        ]))
-        .get();
-  }
-
-  /// Query kết hợp tất cả điều kiện (tối ưu)
-  Future<List<ServiceEntity>> queryFiltered({
-    String? keyword,
-    String? categoryId,
-    bool? sortAsc,
-  }) async {
-    final query = select(services);
-
-    if (keyword != null && keyword.isNotEmpty) {
-      query.where(
-        (tbl) =>
-            tbl.title.like('%$keyword%') | tbl.description.like('%$keyword%'),
+  Future<List<ServiceModel>> getAllServices() async {
+    final rows = await select(servicesTable).get();
+    return rows.map((r) {
+      final options = r.jsonOptions == null ? [] :
+        (jsonDecode(r.jsonOptions!) as List<dynamic>).map((e) => ServiceOption.fromJson(e as Map<String, dynamic>)).toList();
+      return ServiceModel(
+        serviceId: r.serviceId,
+        providerId: r.providerId ?? '',
+        categoryId: r.categoryId ?? '',
+        title: r.title,
+        description: r.description,
+        price: r.price,
+        unitType: r.unitType ?? '',
+        baseUnit: r.baseUnit,
+        images: r.images,
+        createdAt: r.createdAt,
+        status: r.status,
+        deleted: r.deleted,
+        averageRating: r.averageRating,
+        totalReviews: r.totalReviews,
+        categoryName: r.categoryName ?? '',
+        providerName: r.providerName,
+        serviceOptions: options.cast<ServiceOption>(),
       );
-    }
-
-    if (categoryId != null && categoryId.isNotEmpty) {
-      query.where((tbl) => tbl.categoryId.equals(categoryId));
-    }
-
-    if (sortAsc != null) {
-      query.orderBy([
-        (tbl) => sortAsc
-            ? OrderingTerm.asc(tbl.price)
-            : OrderingTerm.desc(tbl.price),
-      ]);
-    }
-
-    return query.get();
+    }).toList();
   }
 
-  Future<List<ServiceEntity>> getPage({
-    required int limit,
-    required int offset,
-    String? keyword,
-    String? categoryId,
-    bool? sortAsc,
-  }) async {
-    final query = select(services);
-
-    if (keyword != null && keyword.isNotEmpty) {
-      query.where(
-        (tbl) =>
-            tbl.title.like('%$keyword%') | tbl.description.like('%$keyword%'),
-      );
-    }
-    if (categoryId != null && categoryId.isNotEmpty) {
-      query.where((tbl) => tbl.categoryId.equals(categoryId));
-    }
-
-    if (sortAsc != null) {
-      query.orderBy([
-        (tbl) => sortAsc
-            ? OrderingTerm.asc(tbl.price)
-            : OrderingTerm.desc(tbl.price),
-      ]);
-    }
-
-    query.limit(limit, offset: offset);
-    return query.get();
+  Future<ServiceModel?> getById(String id) async {
+    final row = await (select(servicesTable)..where((t) => t.serviceId.equals(id))).getSingleOrNull();
+    if (row == null) return null;
+    final options = row.jsonOptions == null ? [] :
+      (jsonDecode(row.jsonOptions!) as List<dynamic>).map((e) => ServiceOption.fromJson(e as Map<String, dynamic>)).toList();
+    return ServiceModel(
+      serviceId: row.serviceId,
+      providerId: row.providerId ?? '',
+      categoryId: row.categoryId ?? '',
+      title: row.title,
+      description: row.description,
+      price: row.price,
+      unitType: row.unitType ?? '',
+      baseUnit: row.baseUnit,
+      images: row.images,
+      createdAt: row.createdAt,
+      status: row.status,
+      deleted: row.deleted,
+      averageRating: row.averageRating,
+      totalReviews: row.totalReviews,
+      categoryName: row.categoryName ?? '',
+      providerName: row.providerName,
+      serviceOptions: options.cast<ServiceOption>(),
+    );
   }
 }
+final servicesDaoProvider = Provider<ServicesDao>((ref) {
+  final db = ref.read(appDatabaseProvider);
+  return ServicesDao(db);
+});
