@@ -11,6 +11,7 @@ import 'package:vhs_mobile_user/ui/auth/verify_otp_screen.dart';
 import 'package:vhs_mobile_user/ui/core/bottom_navbar_widget.dart';
 import 'package:vhs_mobile_user/ui/history/history_screen.dart';
 import 'package:vhs_mobile_user/ui/profile/profile_screen.dart';
+import 'package:vhs_mobile_user/ui/profile/profile_viewmodel.dart';
 import 'package:vhs_mobile_user/ui/service_detail/service_detail_page.dart';
 import 'package:vhs_mobile_user/ui/service_list/service_list_screen.dart';
 
