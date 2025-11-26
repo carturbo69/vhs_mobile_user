@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:vhs_mobile_user/core/network/dio_client.dart';
+import 'package:vhs_mobile_user/data/models/booking/booking_history_item.dart';
 import 'package:vhs_mobile_user/data/models/booking/booking_result_model.dart';
 
 final bookingApiProvider = Provider<BookingApi>((ref) {

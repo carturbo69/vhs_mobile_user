@@ -36,14 +36,14 @@ class _AddAddressPageState extends ConsumerState<AddAddressPage> {
           _field("Đường/Số nhà", _street),
           _field("Tên người nhận", _recipientName),
           _field("SĐT người nhận", _recipientPhone),
-          const SizedBox(height: 8),
+          const SizedBox(height: 8), 
 
           // Pick location
           ElevatedButton.icon(
             icon: const Icon(Icons.map),
             label: const Text("Chọn vị trí trên bản đồ"),
             onPressed: () async {
-              final result = await context.push(Routes.mapPicker);
+              final result = await context.push(Routes.locationPicker);
 
               if (result != null) {
                 final data = result as Map<String, dynamic>;

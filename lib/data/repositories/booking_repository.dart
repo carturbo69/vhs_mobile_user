@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:vhs_mobile_user/data/dao/auth_dao.dart';
+import 'package:vhs_mobile_user/data/models/booking/booking_history_item.dart';
 import 'package:vhs_mobile_user/data/models/booking/booking_result_model.dart';
 import 'package:vhs_mobile_user/data/models/cart/cart_item_model.dart';
 import 'package:vhs_mobile_user/data/models/user/user_address_model.dart';
@@ -60,12 +61,11 @@ class BookingRepository {
     };
 
     final res = await api.createMany(payload);
-    return res;
-
-      /// Lấy danh sách lịch sử đơn hàng
-  Future<List<BookingHistoryItem>> getHistoryByAccount(String accountId) async {
-    final response = await _api.getHistoryByAccount(accountId);
-    return response.items;
+    return res;  
   }
+     /// Lấy danh sách lịch sử đơn hàng
+  Future<List<BookingHistoryItem>> getHistoryByAccount(String accountId) async {
+    final response = await api.getHistoryByAccount(accountId);
+    return response.items;
   }
 }

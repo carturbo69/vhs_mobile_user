@@ -25,13 +25,13 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(openConnection());
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
     onUpgrade: (m, from, to) async {
-      if (from == 3) {
-        await m.createTable(userAddressTable);
+      if (from == 4) {
+        await m.createTable(cartTable);
       }
     },
   );

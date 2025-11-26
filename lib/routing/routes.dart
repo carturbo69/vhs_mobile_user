@@ -17,6 +17,12 @@ abstract final class Routes {
   static const cart = '/cart';
   static const checkout = '/checkout';
   static const bookingResult = '/booking-result';
+
+   static const addressList = '/address';
+  static const addAddress = '/address/add';
+  static const editAddress = '/address/edit';
+  static const locationPicker = '/address/location-picker';
+
 }
   // Add other routes here
 

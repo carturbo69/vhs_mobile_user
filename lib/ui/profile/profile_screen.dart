@@ -255,7 +255,7 @@ class _ProfileView extends ConsumerWidget {
   Widget _buildEditButton(BuildContext context) {
     return ElevatedButton.icon(
       icon: const Icon(Icons.edit),
-      label: const Text("Chỉnh sửa địa chỉ"),
+      label: const Text("Chỉnh sửa hồ sơ"),
       onPressed: () {
         context.push(Routes.editProfile, extra: profile);
       },

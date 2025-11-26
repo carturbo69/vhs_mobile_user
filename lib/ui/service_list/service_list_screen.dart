@@ -115,7 +115,7 @@ class _ServiceListScreenState extends ConsumerState<ServiceListScreen> {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text("Lỗi: $e")),
         data: (state) {
-          final list = state.filtered; 
+          final list = state.filtered;
 
           if (list.isEmpty) {
             return const Center(child: Text("Không có kết quả"));
@@ -135,7 +135,7 @@ class _ServiceListScreenState extends ConsumerState<ServiceListScreen> {
                   return ServiceCard(
                     service: item,
                     onTap: () =>
-                        context.push('${Routes.serviceDetail}/${item.serviceId}'),
+                        context.push(Routes.detailServicePath(item.serviceId)),
                   );
                 },
               ),
