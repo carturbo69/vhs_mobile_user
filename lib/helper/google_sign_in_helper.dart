@@ -35,6 +35,15 @@ class GoogleSignInHelperV7 {
     }
 
     try {
+      // Thử sign out trước để đảm bảo không có session cũ gây conflict
+      try {
+        await _google.disconnect();
+        print("Disconnected from previous Google session");
+      } catch (e) {
+        // Ignore errors when disconnecting (might not be signed in)
+        print("No previous session to disconnect: $e");
+      }
+
       print("Attempting lightweight authentication...");
       GoogleSignInAccount? account = await _google
           .attemptLightweightAuthentication();
@@ -51,6 +60,19 @@ class GoogleSignInHelperV7 {
           if (e.code == GoogleSignInExceptionCode.canceled) {
             print("User canceled Google Sign-In dialog");
             return null;
+          }
+          // Xử lý lỗi unknownError - thường xảy ra trên emulator
+          if (e.code == GoogleSignInExceptionCode.unknownError) {
+            final errorMessage = e.toString().toLowerCase();
+            if (errorMessage.contains('no credential') || 
+                errorMessage.contains('no credentials available')) {
+              throw Exception(
+                "Không thể đăng nhập Google. Vui lòng:\n"
+                "1. Đảm bảo emulator có Google Play Services\n"
+                "2. Đăng nhập Google account trên emulator\n"
+                "3. Hoặc thử trên thiết bị thật"
+              );
+            }
           }
           // Log other error codes for debugging
           print("Google Sign-In error code: ${e.code}");
@@ -83,6 +105,19 @@ class GoogleSignInHelperV7 {
         // User dismissed the Google Sign-In dialog
         print("User canceled Google Sign-In dialog");
         return null;
+      }
+      // Xử lý lỗi unknownError
+      if (e.code == GoogleSignInExceptionCode.unknownError) {
+        final errorMessage = e.toString().toLowerCase();
+        if (errorMessage.contains('no credential') || 
+            errorMessage.contains('no credentials available')) {
+          throw Exception(
+            "Không thể đăng nhập Google. Vui lòng:\n"
+            "1. Đảm bảo emulator có Google Play Services\n"
+            "2. Đăng nhập Google account trên emulator\n"
+            "3. Hoặc thử trên thiết bị thật"
+          );
+        }
       }
       // Re-throw other GoogleSignInExceptions
       rethrow;

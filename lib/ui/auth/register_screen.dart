@@ -1,6 +1,9 @@
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:vhs_mobile_user/helper/google_sign_in_helper.dart';
 import 'package:vhs_mobile_user/routing/routes.dart';
 import 'package:vhs_mobile_user/ui/auth/auth_viewmodel.dart';
 
@@ -70,13 +73,137 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                           );
                         }
                       } catch (e) {
-                        ScaffoldMessenger.of(
-                          context,
-                        ).showSnackBar(SnackBar(content: Text(e.toString())));
+                        if (!mounted) return;
+                        
+                        String errorMessage = "Đăng ký thất bại";
+                        
+                        if (e is DioException) {
+                          if (e.response != null) {
+                            final statusCode = e.response?.statusCode;
+                            final data = e.response?.data;
+                            
+                            if (data is Map && data['message'] != null) {
+                              errorMessage = data['message'].toString();
+                            } else if (data is Map && data['Message'] != null) {
+                              errorMessage = data['Message'].toString();
+                            } else {
+                              errorMessage = "Lỗi từ server: $statusCode";
+                            }
+                          } else if (e.type == DioExceptionType.connectionTimeout ||
+                                     e.type == DioExceptionType.receiveTimeout) {
+                            errorMessage = "Kết nối timeout. Vui lòng thử lại.";
+                          } else if (e.type == DioExceptionType.connectionError) {
+                            errorMessage = "Không thể kết nối đến server. Vui lòng kiểm tra kết nối mạng.";
+                          } else {
+                            errorMessage = "Lỗi kết nối: ${e.message ?? e.toString()}";
+                          }
+                        } else {
+                          errorMessage = e.toString();
+                        }
+                        
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(errorMessage),
+                            duration: const Duration(seconds: 3),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
                       }
                     },
                     child: const Text("Đăng ký"),
                   ),
+
+            const SizedBox(height: 20),
+
+            // ================= GOOGLE REGISTRATION ===============
+            OutlinedButton.icon(
+              icon: CachedNetworkImage(
+                imageUrl:
+                    "https://developers.google.com/identity/images/g-logo.png",
+                width: 24,
+                height: 24,
+                placeholder: (_, __) => const SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+                errorWidget: (_, __, ___) => const Icon(Icons.g_mobiledata),
+              ),
+              label: const Text("Đăng ký bằng Google"),
+              onPressed: () async {
+                try {
+                  final helper = GoogleSignInHelperV7();
+                  final idToken = await helper.signInAndGetIdToken();
+                  
+                  if (idToken == null) {
+                    if (!mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text("Đăng ký Google đã bị hủy hoặc thất bại"),
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
+                    return;
+                  }
+
+                  await ref
+                      .read(authStateProvider.notifier)
+                      .registerWithGoogle(idToken);
+
+                  if (!mounted) return;
+
+                  // Google registration tự động kích hoạt tài khoản, không cần OTP
+                  context.go(Routes.listService);
+                } catch (e) {
+                  if (!mounted) return;
+                  
+                  String errorMessage = "Lỗi đăng ký Google";
+                  
+                  if (e is DioException) {
+                    if (e.response != null) {
+                      final data = e.response?.data;
+                      if (data is Map && data['message'] != null) {
+                        errorMessage = data['message'].toString();
+                      } else if (data is Map && data['Message'] != null) {
+                        errorMessage = data['Message'].toString();
+                      } else {
+                        errorMessage = "Lỗi từ server: ${e.response?.statusCode}";
+                      }
+                    } else if (e.type == DioExceptionType.connectionTimeout ||
+                               e.type == DioExceptionType.receiveTimeout) {
+                      errorMessage = "Kết nối timeout. Vui lòng thử lại.";
+                    } else if (e.type == DioExceptionType.connectionError) {
+                      errorMessage = "Không thể kết nối đến server. Vui lòng kiểm tra kết nối mạng.";
+                    } else {
+                      errorMessage = "Lỗi kết nối: ${e.message ?? e.toString()}";
+                    }
+                  } else {
+                    // Xử lý lỗi từ Google Sign-In
+                    final errorStr = e.toString();
+                    if (errorStr.contains('no credential') || 
+                        errorStr.contains('no credentials available') ||
+                        errorStr.contains('Google Play Services')) {
+                      errorMessage = errorStr;
+                    } else {
+                      errorMessage = errorStr;
+                    }
+                  }
+                  
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(errorMessage),
+                      duration: const Duration(seconds: 5),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              },
+            ),
+
+            TextButton(
+              onPressed: () => context.push(Routes.login),
+              child: const Text("Đã có tài khoản? Đăng nhập"),
+            ),
           ],
         ),
       ),

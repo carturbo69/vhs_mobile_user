@@ -24,13 +24,33 @@ class ServiceRepository {
   /// Fetch from network and cache into drift. Return the fresh list.
   Future<List<ServiceModel>> fetchAndCacheServices() async {
     final list = await _api.fetchHomePageServices();
-    await _dao.upsertServices(list);
+    try {
+      await _dao.upsertServices(list);
+    } catch (e) {
+      // Nếu database connection đã đóng, bỏ qua việc cache nhưng vẫn trả về data từ API
+      if (e.toString().contains('connection was closed') || 
+          e.toString().contains('Bad state')) {
+        print("⚠️ Database connection closed, skipping cache but returning API data");
+      } else {
+        rethrow;
+      }
+    }
     return list;
   }
 
   /// Load from local cache
-  Future<List<ServiceModel>> getCachedServices() {
-    return _dao.getAllServices();
+  Future<List<ServiceModel>> getCachedServices() async {
+    try {
+      return await _dao.getAllServices();
+    } catch (e) {
+      // Nếu database connection đã đóng hoặc chưa được tạo, trả về empty list
+      if (e.toString().contains('connection was closed') || 
+          e.toString().contains('Bad state')) {
+        print("⚠️ Database connection closed, returning empty cache");
+        return [];
+      }
+      rethrow;
+    }
   }
   Future<ServiceDetail> getServiceDetail(String id) async {
   return _api.getDetail(id);
