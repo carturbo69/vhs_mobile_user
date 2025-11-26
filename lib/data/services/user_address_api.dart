@@ -7,11 +7,20 @@ class UserAddressApi {
 
   UserAddressApi(this._client);
 
-  Future<List<UserAddressModel>> getAll() async {
-    final res = await _client.instance.get("/api/UserAddress");
-    final data = res.data["Data"] as List;
-    return data.map((e) => UserAddressModel.fromJson(e)).toList();
+ Future<List<UserAddressModel>> getAll() async {
+  final res = await _client.instance.get("/api/UserAddress");
+
+  final data = res.data["data"]; // backend dùng "data"
+
+  if (data == null) {
+    return []; // ⭐ return empty list nếu không có address
   }
+
+  return (data as List)
+      .map((e) => UserAddressModel.fromJson(e))
+      .toList();
+}
+
 
   Future<UserAddressModel> getById(String id) async {
     final res = await _client.instance.get("/api/UserAddress/$id");

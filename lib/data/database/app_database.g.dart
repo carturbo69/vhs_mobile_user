@@ -2614,6 +2614,593 @@ class UserAddressTableCompanion extends UpdateCompanion<UserAddressTableData> {
   }
 }
 
+class $CartTableTable extends CartTable
+    with TableInfo<$CartTableTable, CartTableData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $CartTableTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _cartItemIdMeta = const VerificationMeta(
+    'cartItemId',
+  );
+  @override
+  late final GeneratedColumn<String> cartItemId = GeneratedColumn<String>(
+    'cart_item_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _serviceIdMeta = const VerificationMeta(
+    'serviceId',
+  );
+  @override
+  late final GeneratedColumn<String> serviceId = GeneratedColumn<String>(
+    'service_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _serviceNameMeta = const VerificationMeta(
+    'serviceName',
+  );
+  @override
+  late final GeneratedColumn<String> serviceName = GeneratedColumn<String>(
+    'service_name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _providerIdMeta = const VerificationMeta(
+    'providerId',
+  );
+  @override
+  late final GeneratedColumn<String> providerId = GeneratedColumn<String>(
+    'provider_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _providerNameMeta = const VerificationMeta(
+    'providerName',
+  );
+  @override
+  late final GeneratedColumn<String> providerName = GeneratedColumn<String>(
+    'provider_name',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _priceMeta = const VerificationMeta('price');
+  @override
+  late final GeneratedColumn<double> price = GeneratedColumn<double>(
+    'price',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _quantityMeta = const VerificationMeta(
+    'quantity',
+  );
+  @override
+  late final GeneratedColumn<int> quantity = GeneratedColumn<int>(
+    'quantity',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(1),
+  );
+  static const VerificationMeta _imageUrlMeta = const VerificationMeta(
+    'imageUrl',
+  );
+  @override
+  late final GeneratedColumn<String> imageUrl = GeneratedColumn<String>(
+    'image_url',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _optionsJsonMeta = const VerificationMeta(
+    'optionsJson',
+  );
+  @override
+  late final GeneratedColumn<String> optionsJson = GeneratedColumn<String>(
+    'options_json',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    cartItemId,
+    serviceId,
+    serviceName,
+    providerId,
+    providerName,
+    price,
+    quantity,
+    imageUrl,
+    optionsJson,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'cart_table';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<CartTableData> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('cart_item_id')) {
+      context.handle(
+        _cartItemIdMeta,
+        cartItemId.isAcceptableOrUnknown(
+          data['cart_item_id']!,
+          _cartItemIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_cartItemIdMeta);
+    }
+    if (data.containsKey('service_id')) {
+      context.handle(
+        _serviceIdMeta,
+        serviceId.isAcceptableOrUnknown(data['service_id']!, _serviceIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_serviceIdMeta);
+    }
+    if (data.containsKey('service_name')) {
+      context.handle(
+        _serviceNameMeta,
+        serviceName.isAcceptableOrUnknown(
+          data['service_name']!,
+          _serviceNameMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_serviceNameMeta);
+    }
+    if (data.containsKey('provider_id')) {
+      context.handle(
+        _providerIdMeta,
+        providerId.isAcceptableOrUnknown(data['provider_id']!, _providerIdMeta),
+      );
+    }
+    if (data.containsKey('provider_name')) {
+      context.handle(
+        _providerNameMeta,
+        providerName.isAcceptableOrUnknown(
+          data['provider_name']!,
+          _providerNameMeta,
+        ),
+      );
+    }
+    if (data.containsKey('price')) {
+      context.handle(
+        _priceMeta,
+        price.isAcceptableOrUnknown(data['price']!, _priceMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_priceMeta);
+    }
+    if (data.containsKey('quantity')) {
+      context.handle(
+        _quantityMeta,
+        quantity.isAcceptableOrUnknown(data['quantity']!, _quantityMeta),
+      );
+    }
+    if (data.containsKey('image_url')) {
+      context.handle(
+        _imageUrlMeta,
+        imageUrl.isAcceptableOrUnknown(data['image_url']!, _imageUrlMeta),
+      );
+    }
+    if (data.containsKey('options_json')) {
+      context.handle(
+        _optionsJsonMeta,
+        optionsJson.isAcceptableOrUnknown(
+          data['options_json']!,
+          _optionsJsonMeta,
+        ),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {cartItemId};
+  @override
+  CartTableData map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return CartTableData(
+      cartItemId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}cart_item_id'],
+      )!,
+      serviceId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}service_id'],
+      )!,
+      serviceName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}service_name'],
+      )!,
+      providerId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}provider_id'],
+      ),
+      providerName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}provider_name'],
+      ),
+      price: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}price'],
+      )!,
+      quantity: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}quantity'],
+      )!,
+      imageUrl: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}image_url'],
+      ),
+      optionsJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}options_json'],
+      ),
+    );
+  }
+
+  @override
+  $CartTableTable createAlias(String alias) {
+    return $CartTableTable(attachedDatabase, alias);
+  }
+}
+
+class CartTableData extends DataClass implements Insertable<CartTableData> {
+  final String cartItemId;
+  final String serviceId;
+  final String serviceName;
+  final String? providerId;
+  final String? providerName;
+  final double price;
+  final int quantity;
+  final String? imageUrl;
+  final String? optionsJson;
+  const CartTableData({
+    required this.cartItemId,
+    required this.serviceId,
+    required this.serviceName,
+    this.providerId,
+    this.providerName,
+    required this.price,
+    required this.quantity,
+    this.imageUrl,
+    this.optionsJson,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['cart_item_id'] = Variable<String>(cartItemId);
+    map['service_id'] = Variable<String>(serviceId);
+    map['service_name'] = Variable<String>(serviceName);
+    if (!nullToAbsent || providerId != null) {
+      map['provider_id'] = Variable<String>(providerId);
+    }
+    if (!nullToAbsent || providerName != null) {
+      map['provider_name'] = Variable<String>(providerName);
+    }
+    map['price'] = Variable<double>(price);
+    map['quantity'] = Variable<int>(quantity);
+    if (!nullToAbsent || imageUrl != null) {
+      map['image_url'] = Variable<String>(imageUrl);
+    }
+    if (!nullToAbsent || optionsJson != null) {
+      map['options_json'] = Variable<String>(optionsJson);
+    }
+    return map;
+  }
+
+  CartTableCompanion toCompanion(bool nullToAbsent) {
+    return CartTableCompanion(
+      cartItemId: Value(cartItemId),
+      serviceId: Value(serviceId),
+      serviceName: Value(serviceName),
+      providerId: providerId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(providerId),
+      providerName: providerName == null && nullToAbsent
+          ? const Value.absent()
+          : Value(providerName),
+      price: Value(price),
+      quantity: Value(quantity),
+      imageUrl: imageUrl == null && nullToAbsent
+          ? const Value.absent()
+          : Value(imageUrl),
+      optionsJson: optionsJson == null && nullToAbsent
+          ? const Value.absent()
+          : Value(optionsJson),
+    );
+  }
+
+  factory CartTableData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return CartTableData(
+      cartItemId: serializer.fromJson<String>(json['cartItemId']),
+      serviceId: serializer.fromJson<String>(json['serviceId']),
+      serviceName: serializer.fromJson<String>(json['serviceName']),
+      providerId: serializer.fromJson<String?>(json['providerId']),
+      providerName: serializer.fromJson<String?>(json['providerName']),
+      price: serializer.fromJson<double>(json['price']),
+      quantity: serializer.fromJson<int>(json['quantity']),
+      imageUrl: serializer.fromJson<String?>(json['imageUrl']),
+      optionsJson: serializer.fromJson<String?>(json['optionsJson']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'cartItemId': serializer.toJson<String>(cartItemId),
+      'serviceId': serializer.toJson<String>(serviceId),
+      'serviceName': serializer.toJson<String>(serviceName),
+      'providerId': serializer.toJson<String?>(providerId),
+      'providerName': serializer.toJson<String?>(providerName),
+      'price': serializer.toJson<double>(price),
+      'quantity': serializer.toJson<int>(quantity),
+      'imageUrl': serializer.toJson<String?>(imageUrl),
+      'optionsJson': serializer.toJson<String?>(optionsJson),
+    };
+  }
+
+  CartTableData copyWith({
+    String? cartItemId,
+    String? serviceId,
+    String? serviceName,
+    Value<String?> providerId = const Value.absent(),
+    Value<String?> providerName = const Value.absent(),
+    double? price,
+    int? quantity,
+    Value<String?> imageUrl = const Value.absent(),
+    Value<String?> optionsJson = const Value.absent(),
+  }) => CartTableData(
+    cartItemId: cartItemId ?? this.cartItemId,
+    serviceId: serviceId ?? this.serviceId,
+    serviceName: serviceName ?? this.serviceName,
+    providerId: providerId.present ? providerId.value : this.providerId,
+    providerName: providerName.present ? providerName.value : this.providerName,
+    price: price ?? this.price,
+    quantity: quantity ?? this.quantity,
+    imageUrl: imageUrl.present ? imageUrl.value : this.imageUrl,
+    optionsJson: optionsJson.present ? optionsJson.value : this.optionsJson,
+  );
+  CartTableData copyWithCompanion(CartTableCompanion data) {
+    return CartTableData(
+      cartItemId: data.cartItemId.present
+          ? data.cartItemId.value
+          : this.cartItemId,
+      serviceId: data.serviceId.present ? data.serviceId.value : this.serviceId,
+      serviceName: data.serviceName.present
+          ? data.serviceName.value
+          : this.serviceName,
+      providerId: data.providerId.present
+          ? data.providerId.value
+          : this.providerId,
+      providerName: data.providerName.present
+          ? data.providerName.value
+          : this.providerName,
+      price: data.price.present ? data.price.value : this.price,
+      quantity: data.quantity.present ? data.quantity.value : this.quantity,
+      imageUrl: data.imageUrl.present ? data.imageUrl.value : this.imageUrl,
+      optionsJson: data.optionsJson.present
+          ? data.optionsJson.value
+          : this.optionsJson,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CartTableData(')
+          ..write('cartItemId: $cartItemId, ')
+          ..write('serviceId: $serviceId, ')
+          ..write('serviceName: $serviceName, ')
+          ..write('providerId: $providerId, ')
+          ..write('providerName: $providerName, ')
+          ..write('price: $price, ')
+          ..write('quantity: $quantity, ')
+          ..write('imageUrl: $imageUrl, ')
+          ..write('optionsJson: $optionsJson')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    cartItemId,
+    serviceId,
+    serviceName,
+    providerId,
+    providerName,
+    price,
+    quantity,
+    imageUrl,
+    optionsJson,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is CartTableData &&
+          other.cartItemId == this.cartItemId &&
+          other.serviceId == this.serviceId &&
+          other.serviceName == this.serviceName &&
+          other.providerId == this.providerId &&
+          other.providerName == this.providerName &&
+          other.price == this.price &&
+          other.quantity == this.quantity &&
+          other.imageUrl == this.imageUrl &&
+          other.optionsJson == this.optionsJson);
+}
+
+class CartTableCompanion extends UpdateCompanion<CartTableData> {
+  final Value<String> cartItemId;
+  final Value<String> serviceId;
+  final Value<String> serviceName;
+  final Value<String?> providerId;
+  final Value<String?> providerName;
+  final Value<double> price;
+  final Value<int> quantity;
+  final Value<String?> imageUrl;
+  final Value<String?> optionsJson;
+  final Value<int> rowid;
+  const CartTableCompanion({
+    this.cartItemId = const Value.absent(),
+    this.serviceId = const Value.absent(),
+    this.serviceName = const Value.absent(),
+    this.providerId = const Value.absent(),
+    this.providerName = const Value.absent(),
+    this.price = const Value.absent(),
+    this.quantity = const Value.absent(),
+    this.imageUrl = const Value.absent(),
+    this.optionsJson = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  CartTableCompanion.insert({
+    required String cartItemId,
+    required String serviceId,
+    required String serviceName,
+    this.providerId = const Value.absent(),
+    this.providerName = const Value.absent(),
+    required double price,
+    this.quantity = const Value.absent(),
+    this.imageUrl = const Value.absent(),
+    this.optionsJson = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : cartItemId = Value(cartItemId),
+       serviceId = Value(serviceId),
+       serviceName = Value(serviceName),
+       price = Value(price);
+  static Insertable<CartTableData> custom({
+    Expression<String>? cartItemId,
+    Expression<String>? serviceId,
+    Expression<String>? serviceName,
+    Expression<String>? providerId,
+    Expression<String>? providerName,
+    Expression<double>? price,
+    Expression<int>? quantity,
+    Expression<String>? imageUrl,
+    Expression<String>? optionsJson,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (cartItemId != null) 'cart_item_id': cartItemId,
+      if (serviceId != null) 'service_id': serviceId,
+      if (serviceName != null) 'service_name': serviceName,
+      if (providerId != null) 'provider_id': providerId,
+      if (providerName != null) 'provider_name': providerName,
+      if (price != null) 'price': price,
+      if (quantity != null) 'quantity': quantity,
+      if (imageUrl != null) 'image_url': imageUrl,
+      if (optionsJson != null) 'options_json': optionsJson,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  CartTableCompanion copyWith({
+    Value<String>? cartItemId,
+    Value<String>? serviceId,
+    Value<String>? serviceName,
+    Value<String?>? providerId,
+    Value<String?>? providerName,
+    Value<double>? price,
+    Value<int>? quantity,
+    Value<String?>? imageUrl,
+    Value<String?>? optionsJson,
+    Value<int>? rowid,
+  }) {
+    return CartTableCompanion(
+      cartItemId: cartItemId ?? this.cartItemId,
+      serviceId: serviceId ?? this.serviceId,
+      serviceName: serviceName ?? this.serviceName,
+      providerId: providerId ?? this.providerId,
+      providerName: providerName ?? this.providerName,
+      price: price ?? this.price,
+      quantity: quantity ?? this.quantity,
+      imageUrl: imageUrl ?? this.imageUrl,
+      optionsJson: optionsJson ?? this.optionsJson,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (cartItemId.present) {
+      map['cart_item_id'] = Variable<String>(cartItemId.value);
+    }
+    if (serviceId.present) {
+      map['service_id'] = Variable<String>(serviceId.value);
+    }
+    if (serviceName.present) {
+      map['service_name'] = Variable<String>(serviceName.value);
+    }
+    if (providerId.present) {
+      map['provider_id'] = Variable<String>(providerId.value);
+    }
+    if (providerName.present) {
+      map['provider_name'] = Variable<String>(providerName.value);
+    }
+    if (price.present) {
+      map['price'] = Variable<double>(price.value);
+    }
+    if (quantity.present) {
+      map['quantity'] = Variable<int>(quantity.value);
+    }
+    if (imageUrl.present) {
+      map['image_url'] = Variable<String>(imageUrl.value);
+    }
+    if (optionsJson.present) {
+      map['options_json'] = Variable<String>(optionsJson.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CartTableCompanion(')
+          ..write('cartItemId: $cartItemId, ')
+          ..write('serviceId: $serviceId, ')
+          ..write('serviceName: $serviceName, ')
+          ..write('providerId: $providerId, ')
+          ..write('providerName: $providerName, ')
+          ..write('price: $price, ')
+          ..write('quantity: $quantity, ')
+          ..write('imageUrl: $imageUrl, ')
+          ..write('optionsJson: $optionsJson, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -2623,12 +3210,14 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $UserAddressTableTable userAddressTable = $UserAddressTableTable(
     this,
   );
+  late final $CartTableTable cartTable = $CartTableTable(this);
   late final ServicesDao servicesDao = ServicesDao(this as AppDatabase);
   late final AuthDao authDao = AuthDao(this as AppDatabase);
   late final ProfileDao profileDao = ProfileDao(this as AppDatabase);
   late final UserAddressDao userAddressDao = UserAddressDao(
     this as AppDatabase,
   );
+  late final CartDao cartDao = CartDao(this as AppDatabase);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -2638,6 +3227,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     authsTable,
     profileTable,
     userAddressTable,
+    cartTable,
   ];
 }
 
@@ -3905,6 +4495,292 @@ typedef $$UserAddressTableTableProcessedTableManager =
       UserAddressTableData,
       PrefetchHooks Function()
     >;
+typedef $$CartTableTableCreateCompanionBuilder =
+    CartTableCompanion Function({
+      required String cartItemId,
+      required String serviceId,
+      required String serviceName,
+      Value<String?> providerId,
+      Value<String?> providerName,
+      required double price,
+      Value<int> quantity,
+      Value<String?> imageUrl,
+      Value<String?> optionsJson,
+      Value<int> rowid,
+    });
+typedef $$CartTableTableUpdateCompanionBuilder =
+    CartTableCompanion Function({
+      Value<String> cartItemId,
+      Value<String> serviceId,
+      Value<String> serviceName,
+      Value<String?> providerId,
+      Value<String?> providerName,
+      Value<double> price,
+      Value<int> quantity,
+      Value<String?> imageUrl,
+      Value<String?> optionsJson,
+      Value<int> rowid,
+    });
+
+class $$CartTableTableFilterComposer
+    extends Composer<_$AppDatabase, $CartTableTable> {
+  $$CartTableTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get cartItemId => $composableBuilder(
+    column: $table.cartItemId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get serviceId => $composableBuilder(
+    column: $table.serviceId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get serviceName => $composableBuilder(
+    column: $table.serviceName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get providerId => $composableBuilder(
+    column: $table.providerId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get providerName => $composableBuilder(
+    column: $table.providerName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get price => $composableBuilder(
+    column: $table.price,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get quantity => $composableBuilder(
+    column: $table.quantity,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get imageUrl => $composableBuilder(
+    column: $table.imageUrl,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get optionsJson => $composableBuilder(
+    column: $table.optionsJson,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$CartTableTableOrderingComposer
+    extends Composer<_$AppDatabase, $CartTableTable> {
+  $$CartTableTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get cartItemId => $composableBuilder(
+    column: $table.cartItemId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get serviceId => $composableBuilder(
+    column: $table.serviceId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get serviceName => $composableBuilder(
+    column: $table.serviceName,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get providerId => $composableBuilder(
+    column: $table.providerId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get providerName => $composableBuilder(
+    column: $table.providerName,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get price => $composableBuilder(
+    column: $table.price,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get quantity => $composableBuilder(
+    column: $table.quantity,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get imageUrl => $composableBuilder(
+    column: $table.imageUrl,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get optionsJson => $composableBuilder(
+    column: $table.optionsJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$CartTableTableAnnotationComposer
+    extends Composer<_$AppDatabase, $CartTableTable> {
+  $$CartTableTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get cartItemId => $composableBuilder(
+    column: $table.cartItemId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get serviceId =>
+      $composableBuilder(column: $table.serviceId, builder: (column) => column);
+
+  GeneratedColumn<String> get serviceName => $composableBuilder(
+    column: $table.serviceName,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get providerId => $composableBuilder(
+    column: $table.providerId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get providerName => $composableBuilder(
+    column: $table.providerName,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get price =>
+      $composableBuilder(column: $table.price, builder: (column) => column);
+
+  GeneratedColumn<int> get quantity =>
+      $composableBuilder(column: $table.quantity, builder: (column) => column);
+
+  GeneratedColumn<String> get imageUrl =>
+      $composableBuilder(column: $table.imageUrl, builder: (column) => column);
+
+  GeneratedColumn<String> get optionsJson => $composableBuilder(
+    column: $table.optionsJson,
+    builder: (column) => column,
+  );
+}
+
+class $$CartTableTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $CartTableTable,
+          CartTableData,
+          $$CartTableTableFilterComposer,
+          $$CartTableTableOrderingComposer,
+          $$CartTableTableAnnotationComposer,
+          $$CartTableTableCreateCompanionBuilder,
+          $$CartTableTableUpdateCompanionBuilder,
+          (
+            CartTableData,
+            BaseReferences<_$AppDatabase, $CartTableTable, CartTableData>,
+          ),
+          CartTableData,
+          PrefetchHooks Function()
+        > {
+  $$CartTableTableTableManager(_$AppDatabase db, $CartTableTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$CartTableTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$CartTableTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$CartTableTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> cartItemId = const Value.absent(),
+                Value<String> serviceId = const Value.absent(),
+                Value<String> serviceName = const Value.absent(),
+                Value<String?> providerId = const Value.absent(),
+                Value<String?> providerName = const Value.absent(),
+                Value<double> price = const Value.absent(),
+                Value<int> quantity = const Value.absent(),
+                Value<String?> imageUrl = const Value.absent(),
+                Value<String?> optionsJson = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CartTableCompanion(
+                cartItemId: cartItemId,
+                serviceId: serviceId,
+                serviceName: serviceName,
+                providerId: providerId,
+                providerName: providerName,
+                price: price,
+                quantity: quantity,
+                imageUrl: imageUrl,
+                optionsJson: optionsJson,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String cartItemId,
+                required String serviceId,
+                required String serviceName,
+                Value<String?> providerId = const Value.absent(),
+                Value<String?> providerName = const Value.absent(),
+                required double price,
+                Value<int> quantity = const Value.absent(),
+                Value<String?> imageUrl = const Value.absent(),
+                Value<String?> optionsJson = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CartTableCompanion.insert(
+                cartItemId: cartItemId,
+                serviceId: serviceId,
+                serviceName: serviceName,
+                providerId: providerId,
+                providerName: providerName,
+                price: price,
+                quantity: quantity,
+                imageUrl: imageUrl,
+                optionsJson: optionsJson,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$CartTableTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $CartTableTable,
+      CartTableData,
+      $$CartTableTableFilterComposer,
+      $$CartTableTableOrderingComposer,
+      $$CartTableTableAnnotationComposer,
+      $$CartTableTableCreateCompanionBuilder,
+      $$CartTableTableUpdateCompanionBuilder,
+      (
+        CartTableData,
+        BaseReferences<_$AppDatabase, $CartTableTable, CartTableData>,
+      ),
+      CartTableData,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -3917,4 +4793,6 @@ class $AppDatabaseManager {
       $$ProfileTableTableTableManager(_db, _db.profileTable);
   $$UserAddressTableTableTableManager get userAddressTable =>
       $$UserAddressTableTableTableManager(_db, _db.userAddressTable);
+  $$CartTableTableTableManager get cartTable =>
+      $$CartTableTableTableManager(_db, _db.cartTable);
 }
