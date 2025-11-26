@@ -12,6 +12,9 @@ abstract final class Routes {
   static const editProfile = "/profile/edit";
   static const changePassword = "/profile/change-password";
   static const changeEmail = "/profile/change-email";
+  static const chatList = "/chat";
+  static const chatDetail = "/chat/:conversationId";
+  static String chatDetailPath(String conversationId) => '/chat/$conversationId';
 }
   // Add other routes here
 

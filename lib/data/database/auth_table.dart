@@ -1,5 +1,4 @@
 // lib/data/local/auth_table.dart
-import 'dart:convert';
 import 'package:drift/drift.dart';
 
 class AuthsTable extends Table {

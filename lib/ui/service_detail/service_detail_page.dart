@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:vhs_mobile_user/data/models/service/service_detail.dart';
 import 'package:vhs_mobile_user/ui/service_detail/service_detail_viewmodel.dart';
+import 'package:vhs_mobile_user/ui/chat/chat_list_viewmodel.dart';
+import 'package:vhs_mobile_user/routing/routes.dart';
 
 class ServiceDetailPage extends ConsumerWidget {
   final String serviceId;
@@ -27,18 +30,19 @@ class ServiceDetailPage extends ConsumerWidget {
       body: asyncDetail.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text("Lỗi: $e")),
-        data: (detail) => _DetailContent(detail: detail),
+        data: (detail) => _DetailContent(detail: detail, serviceId: serviceId),
       ),
     );
   }
 }
 
-class _DetailContent extends StatelessWidget {
+class _DetailContent extends ConsumerWidget {
   final ServiceDetail detail;
-  const _DetailContent({required this.detail});
+  final String serviceId;
+  const _DetailContent({required this.detail, required this.serviceId});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final imageList = detail.imageList;
 
     return SingleChildScrollView(
@@ -49,7 +53,7 @@ class _DetailContent extends StatelessWidget {
           _buildPriceSection(),
           _buildTitleSection(),
           _buildRatingSection(),
-          _buildProviderSection(),
+          _buildProviderSection(context, ref),
           _buildOptionsSection(),
           _buildDescriptionSection(),
           _buildTagsSection(),
@@ -144,7 +148,7 @@ class _DetailContent extends StatelessWidget {
   }
 
   // ================= PROVIDER (SHOP) SECTION ====================
-  Widget _buildProviderSection() {
+  Widget _buildProviderSection(BuildContext context, WidgetRef ref) {
     final p = detail.provider;
     return Container(
       width: double.infinity,
@@ -178,15 +182,68 @@ class _DetailContent extends StatelessWidget {
               ],
             ),
           ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-            decoration: BoxDecoration(
-              color: Colors.red.shade50,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: const Text(
-              "Xem shop",
-              style: TextStyle(color: Colors.red),
+          const SizedBox(width: 8),
+          ElevatedButton.icon(
+            onPressed: () async {
+              // Kiểm tra nếu đang trong quá trình navigate thì không làm gì
+              if (!context.mounted) return;
+              
+              // Hiển thị loading
+              showDialog(
+                context: context,
+                barrierDismissible: false,
+                builder: (dialogContext) => const Center(
+                  child: CircularProgressIndicator(),
+                ),
+              );
+              
+              try {
+                // Bắt đầu chat với provider
+                final conversationId = await ref
+                    .read(chatListProvider.notifier)
+                    .startConversationWithProvider(detail.providerId);
+                
+                // Đóng loading dialog
+                if (context.mounted && Navigator.of(context).canPop()) {
+                  Navigator.of(context).pop();
+                }
+                
+                if (conversationId != null && context.mounted) {
+                  // Đợi một chút để đảm bảo dialog đã đóng hoàn toàn
+                  await Future.delayed(const Duration(milliseconds: 200));
+                  if (context.mounted) {
+                    // Dùng go thay vì push để tránh duplicate navigation
+                    context.go(Routes.chatDetailPath(conversationId));
+                  }
+                } else if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Không thể bắt đầu chat'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              } catch (e) {
+                // Đóng loading dialog nếu có lỗi
+                if (context.mounted && Navigator.of(context).canPop()) {
+                  Navigator.of(context).pop();
+                }
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Lỗi: $e'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              }
+            },
+            icon: const Icon(Icons.chat, size: 18),
+            label: const Text('Chat'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.blue,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             ),
           ),
         ],

@@ -8,6 +8,8 @@ import 'package:vhs_mobile_user/ui/auth/register_screen.dart';
 import 'package:vhs_mobile_user/ui/auth/reset_password_screen.dart';
 import 'package:vhs_mobile_user/ui/auth/verify_otp_screen.dart';
 import 'package:vhs_mobile_user/ui/core/bottom_navbar_widget.dart';
+import 'package:vhs_mobile_user/ui/chat/chat_detail_screen.dart';
+import 'package:vhs_mobile_user/ui/chat/chat_list_screen.dart';
 import 'package:vhs_mobile_user/ui/profile/change_email_screen.dart';
 import 'package:vhs_mobile_user/ui/profile/change_password_screen.dart';
 import 'package:vhs_mobile_user/ui/profile/edit_profile_screen.dart';
@@ -88,7 +90,24 @@ final GoRouter router = GoRouter(
           ],
         ),
 
-        // ---------- TAB 2: PROFILE ----------
+        // ---------- TAB 2: CHAT ----------
+        StatefulShellBranch(
+          routes: [
+            GoRoute(
+              path: Routes.chatList,
+              builder: (_, __) => const ChatListScreen(),
+            ),
+            GoRoute(
+              path: Routes.chatDetail,
+              builder: (context, state) {
+                final conversationId = state.pathParameters['conversationId']!;
+                return ChatDetailScreen(conversationId: conversationId);
+              },
+            ),
+          ],
+        ),
+
+        // ---------- TAB 3: PROFILE ----------
         StatefulShellBranch(
           routes: [
             GoRoute(
