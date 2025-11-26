@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:go_router/go_router.dart';
 import 'package:vhs_mobile_user/data/models/user/profile_model.dart';
 import 'package:vhs_mobile_user/ui/profile/profile_viewmodel.dart';
+import 'package:vhs_mobile_user/ui/auth/auth_viewmodel.dart';
+import 'package:vhs_mobile_user/routing/routes.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -32,13 +35,13 @@ class ProfileScreen extends ConsumerWidget {
   }
 }
 
-class _ProfileView extends StatelessWidget {
+class _ProfileView extends ConsumerWidget {
   final ProfileModel profile;
 
   const _ProfileView({required this.profile});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
@@ -52,6 +55,8 @@ class _ProfileView extends StatelessWidget {
         _buildInfoCard("Ngày tạo", profile.createdAt?.toLocal().toString() ?? "Không rõ"),
         const SizedBox(height: 30),
         _buildEditButton(context),
+        const SizedBox(height: 16),
+        _buildLogoutButton(context, ref),
       ],
     );
   }
@@ -111,6 +116,48 @@ class _ProfileView extends StatelessWidget {
       onPressed: () {
         // TODO: chuyển sang trang Edit Profile
         // context.push(Routes.editProfile);
+      },
+    );
+  }
+
+  Widget _buildLogoutButton(BuildContext context, WidgetRef ref) {
+    return OutlinedButton.icon(
+      icon: const Icon(Icons.logout_rounded),
+      label: const Text("Đăng xuất"),
+      style: OutlinedButton.styleFrom(
+        foregroundColor: Colors.red,
+        side: const BorderSide(color: Colors.red),
+      ),
+      onPressed: () async {
+        // Hiển thị dialog xác nhận
+        final confirm = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text("Xác nhận đăng xuất"),
+            content: const Text("Bạn có chắc chắn muốn đăng xuất không?"),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text("Hủy"),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                style: TextButton.styleFrom(foregroundColor: Colors.red),
+                child: const Text("Đăng xuất"),
+              ),
+            ],
+          ),
+        );
+
+        if (confirm == true && context.mounted) {
+          // Gọi logout
+          await ref.read(authStateProvider.notifier).logout();
+          
+          // Navigate về login screen
+          if (context.mounted) {
+            context.go(Routes.login);
+          }
+        }
       },
     );
   }

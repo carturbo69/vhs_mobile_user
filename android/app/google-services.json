@@ -1,32 +1,13 @@
 {
   "project_info": {
-    "project_number": "340596822592",
-    "project_id": "viethomeservice-849b7",
-    "storage_bucket": "viethomeservice-849b7.firebasestorage.app"
+    "project_number": "821141237976",
+    "project_id": "viethomeservice-849b7-61b7b",
+    "storage_bucket": "viethomeservice-849b7-61b7b.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:340596822592:android:e9cc44907a693174aa05a5",
-        "android_client_info": {
-          "package_name": "com.example.vhs_mobile_staff"
-        }
-      },
-      "oauth_client": [],
-      "api_key": [
-        {
-          "current_key": "AIzaSyCQBLrEBvGxE8Hyq9Eq3X1LRpv6r8rF7-4"
-        }
-      ],
-      "services": {
-        "appinvite_service": {
-          "other_platform_oauth_client": []
-        }
-      }
-    },
-    {
-      "client_info": {
-        "mobilesdk_app_id": "1:340596822592:android:e4ab7e89cc48da81aa05a5",
+        "mobilesdk_app_id": "1:821141237976:android:ec988f5d00ce7cc555a7ad",
         "android_client_info": {
           "package_name": "com.example.vhs_mobile_user"
         }
@@ -34,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyCQBLrEBvGxE8Hyq9Eq3X1LRpv6r8rF7-4"
+          "current_key": "AIzaSyDCEOdoMJIS3BTPki1EnLKf4vGkzqEAR14"
         }
       ],
       "services": {

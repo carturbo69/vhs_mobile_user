@@ -33,6 +33,16 @@ class AppDatabase extends _$AppDatabase {
       }
     },
   );
+
+  /// Xóa database file
+  static Future<void> deleteDatabase() async {
+    final dir = await getApplicationDocumentsDirectory();
+    final file = File(p.join(dir.path, 'VHSuserDatabase.sqlite'));
+
+    if (await file.exists()) {
+      await file.delete();
+    }
+  }
 }
 
 LazyDatabase _openConnection() {

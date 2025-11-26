@@ -30,6 +30,11 @@ class BottomNavbarWidget extends StatelessWidget {
             label: "Trang chủ",
           ),
           NavigationDestination(
+            icon: Icon(Icons.history_outlined),
+            selectedIcon: Icon(Icons.history),
+            label: "Lịch sử",
+          ),
+          NavigationDestination(
             icon: Icon(Icons.person_outline),
             selectedIcon: Icon(Icons.person),
             label: "Hồ sơ",
