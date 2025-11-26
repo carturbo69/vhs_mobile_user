@@ -17,6 +17,8 @@ import 'package:vhs_mobile_user/ui/profile/profile_screen.dart';
 import 'package:vhs_mobile_user/data/models/user/profile_model.dart';
 import 'package:vhs_mobile_user/ui/service_detail/service_detail_page.dart';
 import 'package:vhs_mobile_user/ui/service_list/service_list_screen.dart';
+import 'package:vhs_mobile_user/ui/chat/chat_list_screen.dart';
+import 'package:vhs_mobile_user/ui/chat/chat_detail_screen.dart';
 
 /// Helper class để refresh router khi auth state thay đổi
 class AuthStateNotifier extends ChangeNotifier {
@@ -25,11 +27,13 @@ class AuthStateNotifier extends ChangeNotifier {
 
   AuthStateNotifier(this.ref) {
     // Listen auth state changes
+    _subscription = ref.listen(authStateProvider, (previous, next) {
       notifyListeners();
     });
   }
 
   @override
+  void dispose() {
     _subscription?.close();
     super.dispose();
   }
@@ -113,6 +117,14 @@ final routerProvider = Provider<GoRouter>((ref) {
         },
       ),
 
+      GoRoute(
+        path: Routes.chatDetail,
+        builder: (context, state) {
+          final conversationId = state.pathParameters['conversationId']!;
+          return ChatDetailScreen(conversationId: conversationId);
+        },
+      ),
+
       // -------------------------
       // PROFILE ROUTES (ngoài shell)
       // -------------------------
@@ -156,7 +168,17 @@ final routerProvider = Provider<GoRouter>((ref) {
             ],
           ),
 
-          // ---------- TAB 2: HISTORY ----------
+          // ---------- TAB 2: CHAT LIST ----------
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: Routes.chatList,
+                builder: (_, __) => const ChatListScreen(),
+              ),
+            ],
+          ),
+
+          // ---------- TAB 3: HISTORY ----------
           StatefulShellBranch(
             routes: [
               GoRoute(
@@ -166,7 +188,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             ],
           ),
 
-          // ---------- TAB 3: PROFILE ----------
+          // ---------- TAB 4: PROFILE ----------
           StatefulShellBranch(
             routes: [
               GoRoute(
