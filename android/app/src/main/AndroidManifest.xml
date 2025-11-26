@@ -1,5 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+<uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
 
     <application
         android:label="vhs_mobile_user"
@@ -9,6 +10,12 @@
         <meta-data
         android:name="com.google.android.gms.client_id"
         android:value="1011562344003-3he6c2c1l47o9i55m68b4ltah3skbpmr.apps.googleusercontent.com"/>
+        <meta-data
+            android:name="com.google.android.geo.API_KEY"
+            android:value="AIzaSyAqRP0mC3frHNpYB7sToB9FZjlk8n6dgao" />
+        <meta-data
+            android:name="firebase_analytics_collection_enabled"
+            android:value="false" />
 
         <activity
             android:name=".MainActivity"

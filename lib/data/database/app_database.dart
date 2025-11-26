@@ -3,30 +3,33 @@ import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:vhs_mobile_user/data/dao/auth_dao.dart';
+import 'package:vhs_mobile_user/data/dao/profile_dao.dart';
 import 'package:vhs_mobile_user/data/dao/service_dao.dart';
+import 'package:vhs_mobile_user/data/dao/user_address_dao.dart';
 import 'package:vhs_mobile_user/data/database/auth_table.dart';
-import 'package:vhs_mobile_user/data/models/service/service_model.dart';
+import 'package:vhs_mobile_user/data/database/profile_table.dart';
+import 'package:vhs_mobile_user/data/database/user_address_table.dart';
 import 'service_table.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
-part 'service_database.g.dart';
+part 'app_database.g.dart';
 
 @DriftDatabase(
-  tables: [ServicesTable, AuthsTable],
-  daos: [ServicesDao, AuthDao],
+  tables: [ServicesTable, AuthsTable, ProfileTable, UserAddressTable],
+  daos: [ServicesDao, AuthDao, ProfileDao, UserAddressDao],
 )
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
     onUpgrade: (m, from, to) async {
-      if (from == 1) {
-        await m.createTable(authsTable);
+      if (from == 3) {
+        await m.createTable(userAddressTable);
       }
     },
   );
@@ -35,7 +38,7 @@ class AppDatabase extends _$AppDatabase {
 LazyDatabase _openConnection() {
   return LazyDatabase(() async {
     final dir = await getApplicationDocumentsDirectory();
-    final file = File(p.join(dir.path, 'VHSUserDatabase.sqlite'));
+    final file = File(p.join(dir.path, 'VHSuserDatabase.sqlite'));
     return NativeDatabase.createInBackground(file);
   });
 }

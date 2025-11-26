@@ -1,12 +1,12 @@
 // lib/data/service_api.dart
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:vhs_mobile_user/core/provider/provider.dart';
+import 'package:vhs_mobile_user/core/network/dio_client.dart';
 import 'package:vhs_mobile_user/data/models/service/service_detail.dart';
 import 'package:vhs_mobile_user/data/models/service/service_model.dart';
 
 final serviceApiProvider = Provider<ServiceApi>((ref) {
-  final dio = ref.watch(dioProvider);
+  final dio = ref.watch(dioClientProvider).instance;
   return ServiceApi(dio);
 });
 

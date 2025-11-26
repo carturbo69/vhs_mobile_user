@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:drift/drift.dart';
 import 'package:vhs_mobile_user/data/dao/service_dao.dart';
-import 'package:vhs_mobile_user/data/database/service_database.dart';
+import 'package:vhs_mobile_user/data/database/app_database.dart';
 import 'package:vhs_mobile_user/data/models/service/service_detail.dart';
 import 'package:vhs_mobile_user/data/models/service/service_model.dart';
 import 'package:vhs_mobile_user/data/services/service_api.dart';

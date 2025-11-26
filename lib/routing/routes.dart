@@ -8,6 +8,7 @@ abstract final class Routes {
   static const forgotPassword = "/forgot";
   static const verifyOtp = "/verify-otp";
   static const resetPassword = "/reset-password";
+  static const profile = "/profile";
 }
   // Add other routes here
 

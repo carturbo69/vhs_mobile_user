@@ -1,7 +1,7 @@
 // lib/data/services/auth_api.dart
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:vhs_mobile_user/core/provider/provider.dart';
+import 'package:vhs_mobile_user/core/network/dio_client.dart';
 import 'package:vhs_mobile_user/data/models/auth/auth_model.dart';
 
 class AuthApi {
@@ -58,6 +58,6 @@ class AuthApi {
 
 }
 final authApiProvider = Provider<AuthApi>((ref) {
-  final dio = ref.watch(dioProvider);
+  final dio = ref.watch(dioClientProvider).instance;
   return AuthApi(dio);
 });
