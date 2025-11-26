@@ -12,6 +12,7 @@ class ProfileModel {
   final String? images; // CSV or single URL returned by backend
   final String? address;
   final DateTime? createdAt;
+  final DateTime? updatedAt;
 
   ProfileModel({
     required this.userId,
@@ -24,6 +25,7 @@ class ProfileModel {
     this.images,
     this.address,
     this.createdAt,
+    this.updatedAt,
   });
 
   /// Helper: trả về list ảnh (nếu backend trả CSV)
@@ -61,6 +63,7 @@ class ProfileModel {
     String? images,
     String? address,
     DateTime? createdAt,
+    DateTime? updatedAt,
   }) {
     return ProfileModel(
       userId: userId ?? this.userId,
@@ -73,6 +76,7 @@ class ProfileModel {
       images: images ?? this.images,
       address: address ?? this.address,
       createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
     );
   }
 
@@ -89,7 +93,10 @@ class ProfileModel {
       images: json['images'] != null ? json['images'].toString() : null,
       address: json['address'] ?? json['location'] ?? null,
       createdAt: json['createdAt'] != null
-          ? DateTime.tryParse(json['createdAt'])
+          ? DateTime.tryParse(json['createdAt'].toString())
+          : null,
+      updatedAt: json['updatedAt'] != null
+          ? DateTime.tryParse(json['updatedAt'].toString())
           : null,
     );
   }
@@ -106,6 +113,7 @@ class ProfileModel {
       'images': images,
       'address': address,
       'createdAt': createdAt?.toIso8601String(),
+      'updatedAt': updatedAt?.toIso8601String(),
     };
   }
 
@@ -120,7 +128,8 @@ class ProfileModel {
       phoneNumber: row.phoneNumber,
       images: row.images,
       address: row.address,
-      createdAt: row.createdAt,
+      createdAt: null, // Local cache doesn't store createdAt
+      updatedAt: null, // Local cache doesn't store updatedAt
     );
   }
 }

@@ -51,15 +51,24 @@ class ServiceListNotifier extends AsyncNotifier<ServiceListState> {
   Future<ServiceListState> build() async {
     // provider will set repo before use OR use ref.read
     _repo = ref.read(serviceRepositoryProvider);
-    // initial load from cache
-    final cached = await _repo.getCachedServices();
-    // attempt to refresh network in background? we'll refresh here synchronously
+    
+    // Attempt to fetch from network first
     try {
       final fresh = await _repo.fetchAndCacheServices();
       return ServiceListState(items: fresh, filtered: fresh);
-    } catch (_) {
-      // fallback to cache
-      return ServiceListState(items: cached, filtered: cached);
+    } catch (e) {
+      print("⚠️ Error fetching services from API: $e");
+      // Fallback to cache if available
+      try {
+        final cached = await _repo.getCachedServices();
+        if (cached.isNotEmpty) {
+          return ServiceListState(items: cached, filtered: cached);
+        }
+      } catch (cacheError) {
+        print("⚠️ Error loading from cache: $cacheError");
+      }
+      // Return empty list if both fail
+      return ServiceListState.initial();
     }
   }
 

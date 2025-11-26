@@ -18,10 +18,15 @@ class DioClient {
       InterceptorsWrapper(
         onRequest: (options, handler) async {
           // Get token from Drift
-          final token = await _ref.read(authDaoProvider).getToken();
-
-          if (token != null) {
-            options.headers["Authorization"] = "Bearer $token";
+          try {
+            final token = await _ref.read(authDaoProvider).getToken();
+            if (token != null && token.isNotEmpty) {
+              options.headers["Authorization"] = "Bearer $token";
+            }
+          } catch (e) {
+            // Nếu database đã bị xóa hoặc connection đã đóng, bỏ qua việc thêm token
+            // Request vẫn tiếp tục mà không có Authorization header
+            print("⚠️ Cannot get auth token: $e");
           }
 
           return handler.next(options);

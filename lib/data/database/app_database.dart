@@ -1,7 +1,8 @@
 import 'dart:io';
 import 'package:drift/drift.dart';
-import 'package:drift/native.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
 import 'package:vhs_mobile_user/data/dao/auth_dao.dart';
 import 'package:vhs_mobile_user/data/dao/cart_dao.dart';
 import 'package:vhs_mobile_user/data/dao/profile_dao.dart';
@@ -12,8 +13,7 @@ import 'package:vhs_mobile_user/data/database/cart_table.dart';
 import 'package:vhs_mobile_user/data/database/profile_table.dart';
 import 'package:vhs_mobile_user/data/database/user_address_table.dart';
 import 'service_table.dart';
-import 'package:path/path.dart' as p;
-import 'package:path_provider/path_provider.dart';
+import 'database_connection.dart';
 
 part 'app_database.g.dart';
 
@@ -22,7 +22,7 @@ part 'app_database.g.dart';
   daos: [ServicesDao, AuthDao, ProfileDao, UserAddressDao, CartDao],
 )
 class AppDatabase extends _$AppDatabase {
-  AppDatabase() : super(_openConnection());
+  AppDatabase() : super(openConnection());
 
   @override
   int get schemaVersion => 4;
@@ -35,18 +35,21 @@ class AppDatabase extends _$AppDatabase {
       }
     },
   );
-}
 
-LazyDatabase _openConnection() {
-  return LazyDatabase(() async {
+  /// Xóa database file
+  static Future<void> deleteDatabase() async {
     final dir = await getApplicationDocumentsDirectory();
     final file = File(p.join(dir.path, 'VHSuserDatabase.sqlite'));
-    return NativeDatabase.createInBackground(file);
-  });
+
+    if (await file.exists()) {
+      await file.delete();
+    }
+  }
 }
 
 // AppDatabase provider (drift) - you must have it in your app
 final appDatabaseProvider = Provider<AppDatabase>((ref) {
   final db = AppDatabase();
+  ref.onDispose(() => db.close());
   return db;
 });
