@@ -1,14 +1,21 @@
 import 'package:go_router/go_router.dart';
+import 'package:vhs_mobile_user/data/models/booking/booking_result_model.dart';
 import 'package:vhs_mobile_user/routing/routes.dart';
 import 'package:vhs_mobile_user/ui/auth/forgot_password_screen.dart';
 import 'package:vhs_mobile_user/ui/auth/login_screen.dart';
 import 'package:vhs_mobile_user/ui/auth/register_screen.dart';
 import 'package:vhs_mobile_user/ui/auth/reset_password_screen.dart';
 import 'package:vhs_mobile_user/ui/auth/verify_otp_screen.dart';
+import 'package:vhs_mobile_user/ui/booking/booking_result_screen.dart';
+import 'package:vhs_mobile_user/ui/cart/cart_screen.dart';
+import 'package:vhs_mobile_user/ui/checkout/checkout_screen.dart';
 import 'package:vhs_mobile_user/ui/core/bottom_navbar_widget.dart';
 import 'package:vhs_mobile_user/ui/profile/profile_screen.dart';
 import 'package:vhs_mobile_user/ui/service_detail/service_detail_page.dart';
 import 'package:vhs_mobile_user/ui/service_list/service_list_screen.dart';
+import 'package:vhs_mobile_user/ui/user_address/address_add_screen.dart';
+import 'package:vhs_mobile_user/ui/user_address/address_list_screen.dart';
+import 'package:vhs_mobile_user/ui/user_address/location_picker_screen.dart';
 
 final GoRouter router = GoRouter(
   initialLocation: Routes.login,
@@ -42,10 +49,28 @@ final GoRouter router = GoRouter(
     ),
 
     GoRoute(
-      path: Routes.detailService,
+      path: Routes.serviceDetail,
       builder: (context, state) {
         final id = state.pathParameters['id']!;
         return ServiceDetailPage(serviceId: id);
+      },
+    ),
+
+    GoRoute(path: Routes.addressList, builder: (_, __) => const AddressListPage()),
+    GoRoute(path: Routes.addAddress, builder: (_, __) => const AddAddressPage()),
+    
+    GoRoute(
+      path: Routes.mapPicker,
+      builder: (_, __) => const LocationPickerScreen(),
+    ),
+
+     GoRoute(path: Routes.cart, builder: (_, __) => const CartScreen()),
+    GoRoute(path: Routes.checkout, builder: (_, __) => const CheckoutScreen()),
+    GoRoute(
+      path: Routes.bookingResult,
+      builder: (context, state) {
+        final res = state.extra as BookingResultModel;
+        return BookingResultScreen(result: res);
       },
     ),
 

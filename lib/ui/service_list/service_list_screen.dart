@@ -135,7 +135,7 @@ class _ServiceListScreenState extends ConsumerState<ServiceListScreen> {
                   return ServiceCard(
                     service: item,
                     onTap: () =>
-                        context.push(Routes.detailServicePath(item.serviceId)),
+                        context.push('${Routes.serviceDetail}/${item.serviceId}'),
                   );
                 },
               ),

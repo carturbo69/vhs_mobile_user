@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:go_router/go_router.dart';
 import 'package:vhs_mobile_user/data/models/user/profile_model.dart';
+import 'package:vhs_mobile_user/routing/routes.dart';
 import 'package:vhs_mobile_user/ui/profile/profile_viewmodel.dart';
 
 class ProfileScreen extends ConsumerWidget {
@@ -107,9 +109,9 @@ class _ProfileView extends StatelessWidget {
   Widget _buildEditButton(BuildContext context) {
     return ElevatedButton.icon(
       icon: const Icon(Icons.edit),
-      label: const Text("Chỉnh sửa hồ sơ"),
+      label: const Text("Chỉnh sửa địa chỉ"),
       onPressed: () {
-        // TODO: chuyển sang trang Edit Profile
+        context.push(Routes.addressList);
         // context.push(Routes.editProfile);
       },
     );

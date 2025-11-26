@@ -42,7 +42,7 @@ dependencies:
   freezed: ^3.2.3
   freezed_annotation: ^3.1.0
   dio: ^5.9.0
-  google_maps_flutter: ^2.13.1
+  google_maps_flutter: ^2.14.0
   image_picker: ^1.2.0
   flutter_secure_storage: ^9.2.4
   drift: ^2.29.0
@@ -52,6 +52,8 @@ dependencies:
   google_sign_in: ^7.2.0
   google_sign_in_android: ^7.2.6
   cached_network_image: ^3.4.1
+  geolocator: ^14.0.2
+  geocoding: ^4.0.0
   
 
 dev_dependencies:
