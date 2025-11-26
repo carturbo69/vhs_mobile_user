@@ -15,12 +15,32 @@ class ProfileRepository {
 
   Future<ProfileModel> getProfile() async {
     final profile = await api.getProfile();
-    await dao.cacheProfile(profile); // CACHE TO DRIFT
+    try {
+      await dao.cacheProfile(profile); // CACHE TO DRIFT
+    } catch (e) {
+      // Nếu database connection đã đóng, bỏ qua việc cache nhưng vẫn trả về profile từ API
+      if (e.toString().contains('connection was closed') || 
+          e.toString().contains('Bad state')) {
+        print("⚠️ Database connection closed, skipping cache but returning API profile");
+      } else {
+        rethrow;
+      }
+    }
     return profile;
   }
 
-  Future<ProfileModel?> getCachedProfile() {
-    return dao.getCachedProfile();
+  Future<ProfileModel?> getCachedProfile() async {
+    try {
+      return await dao.getCachedProfile();
+    } catch (e) {
+      // Nếu database connection đã đóng hoặc chưa được tạo, trả về null
+      if (e.toString().contains('connection was closed') || 
+          e.toString().contains('Bad state')) {
+        print("⚠️ Database connection closed, returning null cache");
+        return null;
+      }
+      rethrow;
+    }
   }
 
   Future<ProfileModel> updateProfile({
@@ -37,7 +57,16 @@ class ProfileRepository {
       phoneNumber: phoneNumber,
       address: address,
     );
-    await dao.cacheProfile(updatedProfile);
+    try {
+      await dao.cacheProfile(updatedProfile);
+    } catch (e) {
+      if (e.toString().contains('connection was closed') || 
+          e.toString().contains('Bad state')) {
+        print("⚠️ Database connection closed, skipping cache");
+      } else {
+        rethrow;
+      }
+    }
     return updatedProfile;
   }
 

@@ -4,6 +4,7 @@ import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:vhs_mobile_user/data/database/auth_table.dart';
 import 'package:vhs_mobile_user/data/database/app_database.dart';
+import 'package:vhs_mobile_user/data/models/auth/auth_model.dart';
 
 part 'auth_dao.g.dart';
 
@@ -37,6 +38,17 @@ class AuthDao extends DatabaseAccessor<AppDatabase> with _$AuthDaoMixin {
       'accountId': row.accountId,
       'savedAt': row.savedAt,
     };
+  }
+
+  /// Lấy auth từ database và trả về LoginRespond
+  Future<LoginRespond?> getAuth() async {
+    final saved = await getSavedAuth();
+    if (saved == null) return null;
+    final token = saved['token'] as String?;
+    final role = saved['role'] as String?;
+    final accountId = saved['accountId'] as String?;
+    if (token == null) return null;
+    return LoginRespond(token: token, role: role ?? '', accountId: accountId ?? '');
   }
 
   Future<void> clearAuth() async {
