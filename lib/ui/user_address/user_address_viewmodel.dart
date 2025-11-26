@@ -6,17 +6,17 @@ import 'package:vhs_mobile_user/data/repositories/user_address_repository.dart';
 
 final userAddressProvider =
     AsyncNotifierProvider<UserAddressNotifier, List<UserAddressModel>>(
-  UserAddressNotifier.new,
-);
+      UserAddressNotifier.new,
+    );
 
-class UserAddressNotifier
-    extends AsyncNotifier<List<UserAddressModel>> {
+class UserAddressNotifier extends AsyncNotifier<List<UserAddressModel>> {
   late final UserAddressRepository _repo;
 
   @override
   Future<List<UserAddressModel>> build() async {
     _repo = ref.read(userAddressRepositoryProvider);
-    return _repo.fetch();
+    final list = await _repo.fetch();
+    return list;
   }
 
   Future<void> refresh() async {

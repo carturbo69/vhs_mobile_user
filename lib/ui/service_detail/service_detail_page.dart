@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:carousel_slider/carousel_slider.dart';
+import 'package:go_router/go_router.dart';
 import 'package:vhs_mobile_user/data/models/service/service_detail.dart';
+import 'package:vhs_mobile_user/ui/cart/cart_list_viewmodel.dart';
 import 'package:vhs_mobile_user/ui/service_detail/service_detail_viewmodel.dart';
 import 'package:vhs_mobile_user/ui/chat/chat_list_viewmodel.dart';
 import 'package:vhs_mobile_user/routing/routes.dart';
@@ -30,7 +32,17 @@ class ServiceDetailPage extends ConsumerWidget {
       body: asyncDetail.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text("Lỗi: $e")),
-        data: (detail) => _DetailContent(detail: detail, serviceId: serviceId),
+        data: (detail) => Stack(
+          children: [
+            _DetailContent(detail: detail, serviceId: '',),
+            Positioned(
+              bottom: 0,
+              left: 0,
+              right: 0,
+              child: _BottomActionBar(detail: detail),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -159,9 +171,7 @@ class _DetailContent extends ConsumerWidget {
         children: [
           CircleAvatar(
             radius: 24,
-            backgroundImage: p.images != null
-                ? NetworkImage(p.images!)
-                : null,
+            backgroundImage: p.images != null ? NetworkImage(p.images!) : null,
             child: p.images == null ? const Icon(Icons.store) : null,
           ),
           const SizedBox(width: 12),
@@ -172,7 +182,9 @@ class _DetailContent extends ConsumerWidget {
                 Text(
                   p.providerName,
                   style: const TextStyle(
-                      fontWeight: FontWeight.bold, fontSize: 16),
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Text(
@@ -182,69 +194,13 @@ class _DetailContent extends ConsumerWidget {
               ],
             ),
           ),
-          const SizedBox(width: 8),
-          ElevatedButton.icon(
-            onPressed: () async {
-              // Kiểm tra nếu đang trong quá trình navigate thì không làm gì
-              if (!context.mounted) return;
-              
-              // Hiển thị loading
-              showDialog(
-                context: context,
-                barrierDismissible: false,
-                builder: (dialogContext) => const Center(
-                  child: CircularProgressIndicator(),
-                ),
-              );
-              
-              try {
-                // Bắt đầu chat với provider
-                final conversationId = await ref
-                    .read(chatListProvider.notifier)
-                    .startConversationWithProvider(detail.providerId);
-                
-                // Đóng loading dialog
-                if (context.mounted && Navigator.of(context).canPop()) {
-                  Navigator.of(context).pop();
-                }
-                
-                if (conversationId != null && context.mounted) {
-                  // Đợi một chút để đảm bảo dialog đã đóng hoàn toàn
-                  await Future.delayed(const Duration(milliseconds: 200));
-                  if (context.mounted) {
-                    // Dùng go thay vì push để tránh duplicate navigation
-                    context.go(Routes.chatDetailPath(conversationId));
-                  }
-                } else if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Không thể bắt đầu chat'),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
-                }
-              } catch (e) {
-                // Đóng loading dialog nếu có lỗi
-                if (context.mounted && Navigator.of(context).canPop()) {
-                  Navigator.of(context).pop();
-                }
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Lỗi: $e'),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
-                }
-              }
-            },
-            icon: const Icon(Icons.chat, size: 18),
-            label: const Text('Chat'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.blue,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.red.shade50,
+              borderRadius: BorderRadius.circular(8),
             ),
+            child: const Text("Xem shop", style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -276,7 +232,9 @@ class _DetailContent extends ConsumerWidget {
                 .map(
                   (o) => Container(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 6),
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(10),
                       border: Border.all(color: Colors.grey.shade300),
@@ -313,7 +271,7 @@ class _DetailContent extends ConsumerWidget {
           Text(
             detail.description ?? "Không có mô tả",
             style: const TextStyle(fontSize: 14),
-          )
+          ),
         ],
       ),
     );
@@ -331,10 +289,12 @@ class _DetailContent extends ConsumerWidget {
       child: Wrap(
         spacing: 8,
         children: detail.tags
-            .map((t) => Chip(
-                  label: Text(t.name),
-                  backgroundColor: Colors.orange.shade50,
-                ))
+            .map(
+              (t) => Chip(
+                label: Text(t.name),
+                backgroundColor: Colors.orange.shade50,
+              ),
+            )
             .toList(),
       ),
     );
@@ -379,8 +339,9 @@ class _DetailContent extends ConsumerWidget {
             children: [
               CircleAvatar(
                 radius: 18,
-                backgroundImage:
-                    r.avatar != null ? NetworkImage(r.avatar!) : null,
+                backgroundImage: r.avatar != null
+                    ? NetworkImage(r.avatar!)
+                    : null,
               ),
               const SizedBox(width: 8),
               Text(r.fullName ?? "Người dùng ẩn"),
@@ -395,10 +356,7 @@ class _DetailContent extends ConsumerWidget {
           ),
           const SizedBox(height: 8),
           if (r.comment != null)
-            Text(
-              r.comment!,
-              style: const TextStyle(fontSize: 14),
-            ),
+            Text(r.comment!, style: const TextStyle(fontSize: 14)),
           if (r.images.isNotEmpty)
             Padding(
               padding: const EdgeInsets.only(top: 8),
@@ -406,18 +364,90 @@ class _DetailContent extends ConsumerWidget {
                 spacing: 8,
                 runSpacing: 8,
                 children: r.images
-                    .map((img) => ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: CachedNetworkImage(
-                            imageUrl: img,
-                            width: 80,
-                            height: 80,
-                            fit: BoxFit.cover,
-                          ),
-                        ))
+                    .map(
+                      (img) => ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: CachedNetworkImage(
+                          imageUrl: img,
+                          width: 80,
+                          height: 80,
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                    )
                     .toList(),
               ),
-            )
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BottomActionBar extends ConsumerWidget {
+  final ServiceDetail detail;
+  const _BottomActionBar({required this.detail});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.06),
+            blurRadius: 6,
+            offset: const Offset(0, -2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          // ----------- Nút thêm vào giỏ ----------
+          Expanded(
+            child: OutlinedButton(
+              onPressed: () async {
+                try {
+                  await ref
+                      .read(cartProvider.notifier)
+                      .addToCartFromDetail(serviceId: detail.serviceId);
+                  context.push("/checkout");
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("Đã thêm vào giỏ")),
+                  );
+                } catch (e) {
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(SnackBar(content: Text("Lỗi: $e")));
+                }
+              },
+              child: const Text("Thêm vào giỏ"),
+            ),
+          ),
+
+          const SizedBox(width: 12),
+
+          // ----------- Nút Đặt ngay (đi đến checkout) ----------
+          Expanded(
+            child: ElevatedButton(
+              onPressed: () async {
+                try {
+                  await ref
+                      .read(cartProvider.notifier)
+                      .addToCartFromDetail(serviceId: detail.serviceId);
+
+                  // Sau khi add → đi đến Checkout
+                  context.push("/checkout");
+                } catch (e) {
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(SnackBar(content: Text("Lỗi: $e")));
+                }
+              },
+              child: const Text("Đặt ngay"),
+            ),
+          ),
         ],
       ),
     );

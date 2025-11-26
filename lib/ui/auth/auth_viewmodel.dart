@@ -1,4 +1,3 @@
-// lib/viewmodels/auth_viewmodel.dart
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:vhs_mobile_user/data/repositories/auth_repository.dart';
 import 'package:vhs_mobile_user/data/models/auth/auth_model.dart';
