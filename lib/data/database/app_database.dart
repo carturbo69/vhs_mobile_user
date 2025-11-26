@@ -1,5 +1,8 @@
+import 'dart:io';
 import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
 import 'package:vhs_mobile_user/data/dao/auth_dao.dart';
 import 'package:vhs_mobile_user/data/dao/profile_dao.dart';
 import 'package:vhs_mobile_user/data/dao/service_dao.dart';
@@ -45,5 +48,6 @@ class AppDatabase extends _$AppDatabase {
 // AppDatabase provider (drift) - you must have it in your app
 final appDatabaseProvider = Provider<AppDatabase>((ref) {
   final db = AppDatabase();
+  ref.onDispose(() => db.close());
   return db;
 });

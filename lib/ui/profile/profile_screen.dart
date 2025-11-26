@@ -64,6 +64,8 @@ class _ProfileView extends ConsumerWidget {
         _buildChangePasswordButton(context),
         const SizedBox(height: 12),
         _buildChangeEmailButton(context),
+        const SizedBox(height: 12),
+        _buildLogoutButton(context, ref),
       ],
     );
   }
@@ -255,7 +257,7 @@ class _ProfileView extends ConsumerWidget {
       icon: const Icon(Icons.edit),
       label: const Text("Chỉnh sửa hồ sơ"),
       onPressed: () {
-        context.push(Routes.editProfile);
+        context.push(Routes.editProfile, extra: profile);
       },
     );
   }
@@ -275,7 +277,7 @@ class _ProfileView extends ConsumerWidget {
       icon: const Icon(Icons.email),
       label: const Text("Đổi email"),
       onPressed: () {
-        context.push(Routes.changeEmail);
+        context.push(Routes.changeEmail, extra: profile);
       },
     );
   }

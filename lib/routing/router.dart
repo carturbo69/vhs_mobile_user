@@ -12,6 +12,10 @@ import 'package:vhs_mobile_user/ui/core/bottom_navbar_widget.dart';
 import 'package:vhs_mobile_user/ui/history/history_screen.dart';
 import 'package:vhs_mobile_user/ui/profile/profile_screen.dart';
 import 'package:vhs_mobile_user/ui/profile/profile_viewmodel.dart';
+import 'package:vhs_mobile_user/ui/profile/edit_profile_screen.dart';
+import 'package:vhs_mobile_user/ui/profile/change_password_screen.dart';
+import 'package:vhs_mobile_user/ui/profile/change_email_screen.dart';
+import 'package:vhs_mobile_user/data/models/user/profile_model.dart';
 import 'package:vhs_mobile_user/ui/service_detail/service_detail_page.dart';
 import 'package:vhs_mobile_user/ui/service_list/service_list_screen.dart';
 
@@ -109,6 +113,30 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) {
           final id = state.pathParameters['id']!;
           return ServiceDetailPage(serviceId: id);
+        },
+      ),
+
+      // -------------------------
+      // PROFILE ROUTES (ngoài shell)
+      // -------------------------
+      GoRoute(
+        path: Routes.editProfile,
+        builder: (context, state) {
+          // Lấy profile từ extra (được truyền từ profile screen)
+          final profile = state.extra as ProfileModel;
+          return EditProfileScreen(profile: profile);
+        },
+      ),
+      GoRoute(
+        path: Routes.changePassword,
+        builder: (_, __) => const ChangePasswordScreen(),
+      ),
+      GoRoute(
+        path: Routes.changeEmail,
+        builder: (context, state) {
+          // Lấy profile từ extra (được truyền từ profile screen)
+          final profile = state.extra as ProfileModel;
+          return ChangeEmailScreen(profile: profile);
         },
       ),
 

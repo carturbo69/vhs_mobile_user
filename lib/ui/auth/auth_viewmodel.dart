@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:vhs_mobile_user/data/repositories/auth_repository.dart';
 import 'package:vhs_mobile_user/data/models/auth/auth_model.dart';
 import 'package:vhs_mobile_user/data/database/app_database.dart';
+import 'package:vhs_mobile_user/data/dao/auth_dao.dart';
 
 
 final authStateProvider = AsyncNotifierProvider<AuthNotifier, LoginRespond?>(() {
@@ -111,14 +112,36 @@ class AuthNotifier extends AsyncNotifier<LoginRespond?> {
 
 
   Future<void> logout() async {
+    print("🚪 Bắt đầu logout...");
+    
+    // Đóng database connection trước khi xóa
+    try {
+      final db = ref.read(appDatabaseProvider);
+      await db.close();
+      print("✅ Đã đóng database connection");
+    } catch (e) {
+      print("⚠️ Error closing database: $e");
+    }
+    
     // Xóa toàn bộ database (auth, profile, services, etc.)
     await _repo.logout();
+    print("✅ Đã xóa database file");
     
-    // Invalidate các provider để clear cache và tạo database mới
+    // Invalidate tất cả các provider phụ thuộc trước
+    // Invalidate authDaoProvider trước để nó không giữ reference đến database cũ
+    ref.invalidate(authDaoProvider);
+    print("✅ Đã invalidate authDaoProvider");
+    
+    // Invalidate appDatabaseProvider để tạo database mới
     ref.invalidate(appDatabaseProvider);
+    print("✅ Đã invalidate appDatabaseProvider");
+    
+    // Đợi một chút để database được đóng hoàn toàn và provider được dispose
+    await Future.delayed(const Duration(milliseconds: 500));
     
     // Reset state về null
     state = const AsyncData(null);
+    print("✅ Logout hoàn tất");
   }
 
   // OTP / Forgot password flows

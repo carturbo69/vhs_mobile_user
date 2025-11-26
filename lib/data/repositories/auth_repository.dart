@@ -19,8 +19,16 @@ class AuthRepository {
     try {
       old = await dao.getAuth();
     } catch (e) {
-      // Database có thể đã bị xóa, bỏ qua
-      print("⚠️ Cannot get old auth: $e");
+      // Database có thể đã bị xóa hoặc connection đã đóng, bỏ qua
+      print("⚠️ Cannot get old auth (database may be closed or deleted): $e");
+      // Nếu database connection đã đóng, invalidate để tạo lại
+      if (e.toString().contains('connection was closed')) {
+        print("🔄 Database connection was closed, invalidating...");
+        // Invalidate authDaoProvider trước để nó không giữ reference đến database cũ
+        ref.invalidate(authDaoProvider);
+        ref.invalidate(appDatabaseProvider);
+        await Future.delayed(const Duration(milliseconds: 300));
+      }
     }
 
     // Gọi API login
@@ -31,17 +39,24 @@ class AuthRepository {
       print("🔴 Login user changed → nuking DB...");
       await _clearAllData();
       // Invalidate để tạo database mới
+      ref.invalidate(authDaoProvider);
       ref.invalidate(appDatabaseProvider);
       // Đợi một chút để database được tạo lại
-      await Future.delayed(const Duration(milliseconds: 100));
+      await Future.delayed(const Duration(milliseconds: 300));
     }
 
     // Lưu user mới
+    // Đợi một chút để đảm bảo database được tạo lại hoàn toàn
+    await Future.delayed(const Duration(milliseconds: 300));
+    
+    // Luôn sử dụng freshDao sau khi invalidate để đảm bảo database mới
     try {
+      // Đảm bảo database được tạo bằng cách đọc appDatabaseProvider trước
+      final db = ref.read(appDatabaseProvider);
+      // Đợi một chút để database được khởi tạo hoàn toàn
+      await Future.delayed(const Duration(milliseconds: 100));
+      
       final freshDao = ref.read(authDaoProvider);
-      // Đảm bảo database được khởi tạo bằng cách thực hiện một query đơn giản
-      await freshDao.getAuth();
-      // Sau đó mới save
       print("💾 Đang lưu auth vào database...");
       await freshDao.upsertLogin(
         token: newUser.token,
@@ -58,14 +73,26 @@ class AuthRepository {
         print("⚠️ Warning: Không thể verify auth sau khi lưu");
       }
     } catch (e) {
-      // Nếu vẫn lỗi, thử lại với dao hiện tại
-      print("⚠️ Error saving with fresh dao, retrying: $e");
-      await dao.upsertLogin(
-        token: newUser.token,
-        role: newUser.role,
-        accountId: newUser.accountId,
-      );
-      print("✅ Đã lưu auth với dao hiện tại");
+      // Nếu vẫn lỗi, thử lại sau khi đợi thêm và invalidate lại
+      print("⚠️ Error saving with fresh dao, retrying after delay and re-invalidate: $e");
+      ref.invalidate(authDaoProvider);
+      ref.invalidate(appDatabaseProvider);
+      await Future.delayed(const Duration(milliseconds: 500));
+      try {
+        // Đảm bảo database được tạo
+        final db = ref.read(appDatabaseProvider);
+        await Future.delayed(const Duration(milliseconds: 100));
+        final retryDao = ref.read(authDaoProvider);
+        await retryDao.upsertLogin(
+          token: newUser.token,
+          role: newUser.role,
+          accountId: newUser.accountId,
+        );
+        print("✅ Đã lưu auth sau khi retry");
+      } catch (e2) {
+        print("❌ Error saving after retry: $e2");
+        rethrow;
+      }
     }
 
     return newUser;
@@ -77,8 +104,16 @@ class AuthRepository {
     try {
       old = await dao.getAuth();
     } catch (e) {
-      // Database có thể đã bị xóa, bỏ qua
-      print("⚠️ Cannot get old auth: $e");
+      // Database có thể đã bị xóa hoặc connection đã đóng, bỏ qua
+      print("⚠️ Cannot get old auth (database may be closed or deleted): $e");
+      // Nếu database connection đã đóng, invalidate để tạo lại
+      if (e.toString().contains('connection was closed')) {
+        print("🔄 Database connection was closed, invalidating...");
+        // Invalidate authDaoProvider trước để nó không giữ reference đến database cũ
+        ref.invalidate(authDaoProvider);
+        ref.invalidate(appDatabaseProvider);
+        await Future.delayed(const Duration(milliseconds: 300));
+      }
     }
 
     // Gọi API login
@@ -89,17 +124,24 @@ class AuthRepository {
       print("🔴 Login user changed → nuking DB...");
       await _clearAllData();
       // Invalidate để tạo database mới
+      ref.invalidate(authDaoProvider);
       ref.invalidate(appDatabaseProvider);
       // Đợi một chút để database được tạo lại
-      await Future.delayed(const Duration(milliseconds: 100));
+      await Future.delayed(const Duration(milliseconds: 300));
     }
 
     // Lưu user mới
+    // Đợi một chút để đảm bảo database được tạo lại hoàn toàn
+    await Future.delayed(const Duration(milliseconds: 300));
+    
+    // Luôn sử dụng freshDao sau khi invalidate để đảm bảo database mới
     try {
+      // Đảm bảo database được tạo bằng cách đọc appDatabaseProvider trước
+      final db = ref.read(appDatabaseProvider);
+      // Đợi một chút để database được khởi tạo hoàn toàn
+      await Future.delayed(const Duration(milliseconds: 100));
+      
       final freshDao = ref.read(authDaoProvider);
-      // Đảm bảo database được khởi tạo bằng cách thực hiện một query đơn giản
-      await freshDao.getAuth();
-      // Sau đó mới save
       print("💾 Đang lưu auth vào database...");
       await freshDao.upsertLogin(
         token: newUser.token,
@@ -116,14 +158,26 @@ class AuthRepository {
         print("⚠️ Warning: Không thể verify auth sau khi lưu");
       }
     } catch (e) {
-      // Nếu vẫn lỗi, thử lại với dao hiện tại
-      print("⚠️ Error saving with fresh dao, retrying: $e");
-      await dao.upsertLogin(
-        token: newUser.token,
-        role: newUser.role,
-        accountId: newUser.accountId,
-      );
-      print("✅ Đã lưu auth với dao hiện tại");
+      // Nếu vẫn lỗi, thử lại sau khi đợi thêm và invalidate lại
+      print("⚠️ Error saving with fresh dao, retrying after delay and re-invalidate: $e");
+      ref.invalidate(authDaoProvider);
+      ref.invalidate(appDatabaseProvider);
+      await Future.delayed(const Duration(milliseconds: 500));
+      try {
+        // Đảm bảo database được tạo
+        final db = ref.read(appDatabaseProvider);
+        await Future.delayed(const Duration(milliseconds: 100));
+        final retryDao = ref.read(authDaoProvider);
+        await retryDao.upsertLogin(
+          token: newUser.token,
+          role: newUser.role,
+          accountId: newUser.accountId,
+        );
+        print("✅ Đã lưu auth sau khi retry");
+      } catch (e2) {
+        print("❌ Error saving after retry: $e2");
+        rethrow;
+      }
     }
 
     return newUser;
