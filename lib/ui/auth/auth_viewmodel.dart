@@ -2,6 +2,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:vhs_mobile_user/data/repositories/auth_repository.dart';
 import 'package:vhs_mobile_user/data/models/auth/auth_model.dart';
+import 'package:vhs_mobile_user/data/database/app_database.dart';
+import 'package:vhs_mobile_user/data/dao/auth_dao.dart';
 
 
 final authStateProvider = AsyncNotifierProvider<AuthNotifier, LoginRespond?>(() {
@@ -14,14 +16,47 @@ class AuthNotifier extends AsyncNotifier<LoginRespond?> {
   @override
   Future<LoginRespond?> build() async {
     _repo = ref.read(authRepositoryProvider);
-    // load saved auth from DB if exists (fast startup)
-    final saved = await _repo.getSavedAuth();
-    if (saved == null) return null;
-    final token = saved['token'] as String?;
-    final role = saved['role'] as String?;
-    final accountId = saved['accountId'] as String?;
-    if (token == null) return null;
-    return LoginRespond(token: token, role: role ?? '', accountId: accountId ?? '');
+    
+    print("🔄 Đang load auth từ database...");
+    
+    // Load auth từ database
+    final auth = await _repo.getLoggedIn();
+    
+    if (auth == null) {
+      print("ℹ️ Không có auth trong database");
+      return null;
+    }
+    
+    print("✅ Đã load auth từ database: ${auth.accountId}");
+    
+    // Validate token trong background, không block build
+    // Trả về auth ngay để app có thể vào home
+    // Nếu token không hợp lệ, sẽ xóa auth sau
+    _validateTokenInBackground(auth);
+    
+    return auth;
+  }
+  
+  /// Validate token trong background
+  /// Nếu token không hợp lệ, sẽ tự động xóa auth
+  Future<void> _validateTokenInBackground(LoginRespond auth) async {
+    try {
+      print("🔄 Đang validate token với server...");
+      final isValid = await _repo.validateToken(auth);
+      
+      if (!isValid) {
+        print("🔴 Token không hợp lệ, tự động xóa auth...");
+        // Xóa auth và update state
+        await _repo.logout();
+        ref.invalidate(appDatabaseProvider);
+        state = const AsyncData(null);
+      } else {
+        print("✅ Token hợp lệ");
+      }
+    } catch (e) {
+      // Nếu có lỗi khi validate (network, etc.), vẫn giữ auth
+      print("⚠️ Lỗi khi validate token: $e, giữ nguyên auth");
+    }
   }
 
   Future<void> register(String username, String password, String email) async {
@@ -38,25 +73,37 @@ class AuthNotifier extends AsyncNotifier<LoginRespond?> {
   }
 
   Future<void> login(String username, String password) async {
+    print("🔐 Bắt đầu login...");
     state = const AsyncLoading();
-    try {
-      final resp = await _repo.login(LoginRequest(username: username, password: password));
-      state = AsyncData(resp);
-    } catch (e, st) {
-      state = AsyncError(e, st);
-      rethrow;
+
+    final result = await AsyncValue.guard(
+      () => _repo.login(LoginRequest(username: username, password: password)),
+    );
+
+    if (result.hasValue && result.value != null) {
+      print("✅ Login thành công, auth đã được lưu");
+    } else {
+      print("❌ Login thất bại");
     }
+
+    state = result;
   }
 
   Future<void> loginWithGoogle(String idToken) async {
+    print("🔐 Bắt đầu Google login...");
     state = const AsyncLoading();
-    try {
-      final resp = await _repo.loginWithGoogle(idToken);
-      state = AsyncData(resp);
-    } catch (e, st) {
-      state = AsyncError(e, st);
-      rethrow;
+
+    final result = await AsyncValue.guard(
+      () => _repo.loginWithGoogle(idToken),
+    );
+
+    if (result.hasValue && result.value != null) {
+      print("✅ Google login thành công, auth đã được lưu");
+    } else {
+      print("❌ Google login thất bại");
     }
+
+    state = result;
   }
 
   Future<bool> activateAccount(String email, String otp) async {
@@ -65,8 +112,36 @@ class AuthNotifier extends AsyncNotifier<LoginRespond?> {
 
 
   Future<void> logout() async {
+    print("🚪 Bắt đầu logout...");
+    
+    // Đóng database connection trước khi xóa
+    try {
+      final db = ref.read(appDatabaseProvider);
+      await db.close();
+      print("✅ Đã đóng database connection");
+    } catch (e) {
+      print("⚠️ Error closing database: $e");
+    }
+    
+    // Xóa toàn bộ database (auth, profile, services, etc.)
     await _repo.logout();
+    print("✅ Đã xóa database file");
+    
+    // Invalidate tất cả các provider phụ thuộc trước
+    // Invalidate authDaoProvider trước để nó không giữ reference đến database cũ
+    ref.invalidate(authDaoProvider);
+    print("✅ Đã invalidate authDaoProvider");
+    
+    // Invalidate appDatabaseProvider để tạo database mới
+    ref.invalidate(appDatabaseProvider);
+    print("✅ Đã invalidate appDatabaseProvider");
+    
+    // Đợi một chút để database được đóng hoàn toàn và provider được dispose
+    await Future.delayed(const Duration(milliseconds: 500));
+    
+    // Reset state về null
     state = const AsyncData(null);
+    print("✅ Logout hoàn tất");
   }
 
   // OTP / Forgot password flows

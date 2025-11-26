@@ -7,6 +7,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:vhs_mobile_user/data/models/user/profile_model.dart';
 import 'package:vhs_mobile_user/routing/routes.dart';
 import 'package:vhs_mobile_user/ui/profile/profile_viewmodel.dart';
+import 'package:vhs_mobile_user/ui/auth/auth_viewmodel.dart';
+import 'package:vhs_mobile_user/routing/routes.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -62,6 +64,8 @@ class _ProfileView extends ConsumerWidget {
         _buildChangePasswordButton(context),
         const SizedBox(height: 12),
         _buildChangeEmailButton(context),
+        const SizedBox(height: 12),
+        _buildLogoutButton(context, ref),
       ],
     );
   }
@@ -253,7 +257,7 @@ class _ProfileView extends ConsumerWidget {
       icon: const Icon(Icons.edit),
       label: const Text("Chỉnh sửa hồ sơ"),
       onPressed: () {
-        context.push(Routes.editProfile);
+        context.push(Routes.editProfile, extra: profile);
       },
     );
   }
@@ -273,7 +277,49 @@ class _ProfileView extends ConsumerWidget {
       icon: const Icon(Icons.email),
       label: const Text("Đổi email"),
       onPressed: () {
-        context.push(Routes.changeEmail);
+        context.push(Routes.changeEmail, extra: profile);
+      },
+    );
+  }
+
+  Widget _buildLogoutButton(BuildContext context, WidgetRef ref) {
+    return OutlinedButton.icon(
+      icon: const Icon(Icons.logout_rounded),
+      label: const Text("Đăng xuất"),
+      style: OutlinedButton.styleFrom(
+        foregroundColor: Colors.red,
+        side: const BorderSide(color: Colors.red),
+      ),
+      onPressed: () async {
+        // Hiển thị dialog xác nhận
+        final confirm = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text("Xác nhận đăng xuất"),
+            content: const Text("Bạn có chắc chắn muốn đăng xuất không?"),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text("Hủy"),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                style: TextButton.styleFrom(foregroundColor: Colors.red),
+                child: const Text("Đăng xuất"),
+              ),
+            ],
+          ),
+        );
+
+        if (confirm == true && context.mounted) {
+          // Gọi logout
+          await ref.read(authStateProvider.notifier).logout();
+          
+          // Navigate về login screen
+          if (context.mounted) {
+            context.go(Routes.login);
+          }
+        }
       },
     );
   }

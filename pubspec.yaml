@@ -53,6 +53,7 @@ dependencies:
   google_sign_in: ^7.2.0
   google_sign_in_android: ^7.2.6
   cached_network_image: ^3.4.1
+  intl: ^0.19.0
   
 
 dev_dependencies:

@@ -56,6 +56,30 @@ class AuthApi {
   return false;
 }
 
+  /// Validate token bằng cách gọi API Profile
+  /// Nếu token hợp lệ, API sẽ trả về thông tin profile
+  /// Nếu token không hợp lệ, API sẽ trả về 401
+  Future<bool> validateToken(String accountId) async {
+    try {
+      // Sử dụng endpoint Profile để validate token
+      // Nếu token hợp lệ, sẽ trả về 200
+      // Nếu token không hợp lệ, sẽ trả về 401
+      await _dio.get('/api/Profile');
+      return true;
+    } on DioException catch (e) {
+      // Nếu là lỗi 401 (Unauthorized), token không hợp lệ
+      if (e.response?.statusCode == 401) {
+        return false;
+      }
+      // Các lỗi khác (network, timeout, etc.) - giả sử token vẫn hợp lệ
+      // để tránh logout khi mất mạng
+      return true;
+    } catch (e) {
+      // Lỗi không mong đợi - giả sử token vẫn hợp lệ
+      return true;
+    }
+  }
+
 }
 final authApiProvider = Provider<AuthApi>((ref) {
   final dio = ref.watch(dioClientProvider).instance;
