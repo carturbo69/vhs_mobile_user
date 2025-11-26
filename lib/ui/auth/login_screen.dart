@@ -176,13 +176,21 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                       errorMessage = "Lỗi kết nối: ${e.message ?? e.toString()}";
                     }
                   } else {
-                    errorMessage = e.toString();
+                    // Xử lý lỗi từ Google Sign-In
+                    final errorStr = e.toString();
+                    if (errorStr.contains('no credential') || 
+                        errorStr.contains('no credentials available') ||
+                        errorStr.contains('Google Play Services')) {
+                      errorMessage = errorStr;
+                    } else {
+                      errorMessage = errorStr;
+                    }
                   }
                   
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text(errorMessage),
-                      duration: const Duration(seconds: 4),
+                      duration: const Duration(seconds: 5),
                       backgroundColor: Colors.red,
                     ),
                   );
