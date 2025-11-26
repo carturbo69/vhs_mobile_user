@@ -48,6 +48,7 @@ dependencies:
   drift: ^2.29.0
   drift_flutter: ^0.2.7
   path_provider: ^2.1.5
+  path: ^1.9.0
   carousel_slider: ^5.1.1
   google_sign_in: ^7.2.0
   google_sign_in_android: ^7.2.6

@@ -1,3 +1,5 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:vhs_mobile_user/routing/routes.dart';
 import 'package:vhs_mobile_user/ui/auth/forgot_password_screen.dart';
@@ -6,7 +8,11 @@ import 'package:vhs_mobile_user/ui/auth/register_screen.dart';
 import 'package:vhs_mobile_user/ui/auth/reset_password_screen.dart';
 import 'package:vhs_mobile_user/ui/auth/verify_otp_screen.dart';
 import 'package:vhs_mobile_user/ui/core/bottom_navbar_widget.dart';
+import 'package:vhs_mobile_user/ui/profile/change_email_screen.dart';
+import 'package:vhs_mobile_user/ui/profile/change_password_screen.dart';
+import 'package:vhs_mobile_user/ui/profile/edit_profile_screen.dart';
 import 'package:vhs_mobile_user/ui/profile/profile_screen.dart';
+import 'package:vhs_mobile_user/ui/profile/profile_viewmodel.dart';
 import 'package:vhs_mobile_user/ui/service_detail/service_detail_page.dart';
 import 'package:vhs_mobile_user/ui/service_list/service_list_screen.dart';
 
@@ -49,6 +55,20 @@ final GoRouter router = GoRouter(
       },
     ),
 
+    // Profile routes (outside shell for full-screen experience)
+    GoRoute(
+      path: Routes.editProfile,
+      builder: (context, state) => const _EditProfileRoute(),
+    ),
+    GoRoute(
+      path: Routes.changePassword,
+      builder: (_, __) => const ChangePasswordScreen(),
+    ),
+    GoRoute(
+      path: Routes.changeEmail,
+      builder: (context, state) => const _ChangeEmailRoute(),
+    ),
+
     //  Why flutter of all thing does not have offical nested navigation support yet?
     // ===========================================================
     // MAIN APP SHELL (BOTTOM NAVIGATION)
@@ -81,3 +101,40 @@ final GoRouter router = GoRouter(
     ),
   ],
 );
+
+// Helper widgets to handle async profile loading in routes
+class _EditProfileRoute extends ConsumerWidget {
+  const _EditProfileRoute();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final profileAsync = ref.watch(profileProvider);
+    return profileAsync.when(
+      data: (profile) => EditProfileScreen(profile: profile),
+      loading: () => const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      ),
+      error: (_, __) => const Scaffold(
+        body: Center(child: Text('Lỗi tải hồ sơ')),
+      ),
+    );
+  }
+}
+
+class _ChangeEmailRoute extends ConsumerWidget {
+  const _ChangeEmailRoute();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final profileAsync = ref.watch(profileProvider);
+    return profileAsync.when(
+      data: (profile) => ChangeEmailScreen(profile: profile),
+      loading: () => const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      ),
+      error: (_, __) => const Scaffold(
+        body: Center(child: Text('Lỗi tải hồ sơ')),
+      ),
+    );
+  }
+}
