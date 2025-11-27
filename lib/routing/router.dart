@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:vhs_mobile_user/data/repositories/auth_repository.dart';
 import 'package:vhs_mobile_user/routing/routes.dart';
 import 'package:vhs_mobile_user/ui/auth/auth_viewmodel.dart';
 import 'package:vhs_mobile_user/ui/auth/forgot_password_screen.dart';
@@ -44,17 +45,14 @@ final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     initialLocation: Routes.login,
     refreshListenable: authNotifier,
-    redirect: (context, state) {
-      // Read auth state (refreshListenable sẽ trigger khi auth thay đổi)
-      final authState = ref.read(authStateProvider);
+    redirect: (context, state) async {
+
+
+      late AuthRepository authRepo = ref.read(authRepositoryProvider);
+       final  isLoggedIn = await authRepo.isLoggedIn();
       
-      // Nếu đang loading, không redirect (đợi load xong)
-      // Điều này đảm bảo router đợi auth load xong trước khi quyết định
-      if (authState.isLoading) {
-        return null;
-      }
       
-      final isLoggedIn = authState.hasValue && authState.value != null;
+      
       final isLoginPage = state.matchedLocation == Routes.login;
       final isRegisterPage = state.matchedLocation == Routes.register;
       final isForgotPasswordPage = state.matchedLocation == Routes.forgotPassword;
@@ -66,13 +64,11 @@ final routerProvider = Provider<GoRouter>((ref) {
       
       // Nếu đã đăng nhập và đang ở trang auth, redirect về home (service list)
       if (isLoggedIn && isAuthPage) {
-        print("✅ Redirect về home (đã đăng nhập)");
         return Routes.listService;
       }
       
       // Nếu chưa đăng nhập và không phải trang auth, redirect về login
       if (!isLoggedIn && !isAuthPage) {
-        print("✅ Redirect về login (chưa đăng nhập)");
         return Routes.login;
       }
       

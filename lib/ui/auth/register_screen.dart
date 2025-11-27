@@ -148,7 +148,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
 
                   await ref
                       .read(authStateProvider.notifier)
-                      .registerWithGoogle(idToken);
+                      .loginWithGoogle(idToken);
 
                   if (!mounted) return;
 

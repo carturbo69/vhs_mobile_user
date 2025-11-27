@@ -55,6 +55,10 @@ class AuthDao extends DatabaseAccessor<AppDatabase> with _$AuthDaoMixin {
     await (delete(authsTable)..where((t) => t.id.equals('auth'))).go();
   }
 
+  Future<void> logout() async {
+    await AppDatabase.deleteDatabase();
+  }
+
   Future<String?> getToken() async {
     final row = await (select(
       authsTable,
