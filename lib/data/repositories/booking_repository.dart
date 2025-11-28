@@ -63,9 +63,5 @@ class BookingRepository {
     final res = await api.createMany(payload);
     return res;  
   }
-     /// Lấy danh sách lịch sử đơn hàng
-  Future<List<BookingHistoryItem>> getHistoryByAccount(String accountId) async {
-    final response = await api.getHistoryByAccount(accountId);
-    return response.items;
-  }
+
 }

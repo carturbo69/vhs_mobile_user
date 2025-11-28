@@ -9,7 +9,7 @@ final cartTotalProvider = Provider<double>((ref) {
   );
   double sum = 0.0;
   for (var i in items) {
-    sum += i.price * i.quantity;
+    sum += i.servicePrice * i.quantity;
   }
   return sum;
 });

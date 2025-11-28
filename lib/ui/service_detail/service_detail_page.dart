@@ -4,6 +4,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:vhs_mobile_user/data/models/service/service_detail.dart';
+import 'package:vhs_mobile_user/routing/routes.dart';
 import 'package:vhs_mobile_user/ui/cart/cart_list_viewmodel.dart';
 import 'package:vhs_mobile_user/ui/service_detail/service_detail_viewmodel.dart';
 
@@ -408,7 +409,7 @@ class _BottomActionBar extends ConsumerWidget {
                   await ref
                       .read(cartProvider.notifier)
                       .addToCartFromDetail(serviceId: detail.serviceId);
-                  context.push("/checkout");
+                  context.go(Routes.cart);
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text("Đã thêm vào giỏ")),
                   );
@@ -434,7 +435,7 @@ class _BottomActionBar extends ConsumerWidget {
                       .addToCartFromDetail(serviceId: detail.serviceId);
 
                   // Sau khi add → đi đến Checkout
-                  context.push("/checkout");
+                  context.push(Routes.checkout);
                 } catch (e) {
                   ScaffoldMessenger.of(
                     context,

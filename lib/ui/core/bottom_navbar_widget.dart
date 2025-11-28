@@ -39,6 +39,11 @@ class BottomNavbarWidget extends StatelessWidget {
             selectedIcon: Icon(Icons.person),
             label: "Hồ sơ",
           ),
+          NavigationDestination(
+            icon: Icon(Icons.shopping_cart_outlined),
+            selectedIcon: Icon(Icons.shopping_cart),
+            label: "Giỏ hàng",
+          ),
         ],
       ),
     );

@@ -10,6 +10,7 @@ abstract final class Routes {
   static const resetPassword = "/reset-password";
   static const profile = "/profile";
   static const history = "/history";
+  static const bookingDetail ="/history/detail";
   static const editProfile = "/profile/edit";
   static const changePassword = "/profile/change-password";
   static const changeEmail = "/profile/change-email";
