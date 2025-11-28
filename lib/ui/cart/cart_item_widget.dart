@@ -9,44 +9,75 @@ class CartItemWidget extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // item expected fields: cartItemId, serviceName, providerName, price, quantity
+    final img = (item.serviceImages.isNotEmpty)
+        ? item.serviceImages.first
+        : null;
+
     return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      elevation: 1.2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // optional thumbnail
-            Container(
-              width: 64,
-              height: 64,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(8),
-                color: Colors.grey.shade100,
-                image: item.imageUrl != null
-                    ? DecorationImage(image: NetworkImage(item.imageUrl!), fit: BoxFit.cover)
-                    : null,
+            // ---------- IMAGE ----------
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: Container(
+                width: 72,
+                height: 72,
+                color: Colors.grey.shade200,
+                child: img != null
+                    ? Image.network(img, fit: BoxFit.cover)
+                    : const Icon(Icons.image_outlined),
               ),
-              child: item.imageUrl == null ? const Icon(Icons.image_outlined) : null,
             ),
+
             const SizedBox(width: 12),
+
+            // ---------- MAIN CONTENT ----------
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(item.serviceName, style: const TextStyle(fontWeight: FontWeight.w600)),
-                  const SizedBox(height: 6),
-                  Text(item.providerName ?? '', style: TextStyle(color: Colors.grey.shade600)),
-                  const SizedBox(height: 10),
+                  Text(
+                    item.serviceName,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 15,
+                    ),
+                  ),
+
+                  const SizedBox(height: 4),
+
+                  Text(
+                    item.providerName,
+                    style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  // ---------- PRICE + QTY + DELETE ----------
                   Row(
                     children: [
-                      Text('${item.price.toStringAsFixed(0)} đ', style: const TextStyle(fontWeight: FontWeight.bold)),
+                      Text(
+                        "${item.servicePrice.toStringAsFixed(0)} ₫",
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.red,
+                        ),
+                      ),
                       const Spacer(),
+
                       _QtyControl(item: item),
-                      const SizedBox(width: 8),
+
                       IconButton(
                         icon: const Icon(Icons.delete_outline),
-                        onPressed: () => ref.read(cartProvider.notifier).remove(item.cartItemId),
+                        onPressed: () {
+                          ref.read(cartProvider.notifier).remove(item.cartItemId);
+                        },
                       ),
                     ],
                   ),
@@ -60,6 +91,7 @@ class CartItemWidget extends ConsumerWidget {
   }
 }
 
+/// ================= QTY CONTROL =================
 class _QtyControl extends ConsumerWidget {
   final CartItemModel item;
   const _QtyControl({required this.item});
@@ -69,17 +101,15 @@ class _QtyControl extends ConsumerWidget {
     final qty = item.quantity;
     return Row(
       children: [
-        IconButton(
-          icon: const Icon(Icons.remove_circle_outline),
-          onPressed: qty > 1
-              ? () => ref.read(cartProvider.notifier).updateQuantity(item.cartItemId, qty - 1)
-              : null,
+        
+        Text(
+          qty.toString(),
+          style: const TextStyle(
+            fontWeight: FontWeight.w600,
+            fontSize: 15,
+          ),
         ),
-        Text(qty.toString(), style: const TextStyle(fontWeight: FontWeight.w600)),
-        IconButton(
-          icon: const Icon(Icons.add_circle_outline),
-          onPressed: () => ref.read(cartProvider.notifier).updateQuantity(item.cartItemId, qty + 1),
-        ),
+        
       ],
     );
   }

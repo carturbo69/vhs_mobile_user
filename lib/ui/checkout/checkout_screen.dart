@@ -49,7 +49,10 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
               return ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
-                  const Text('Địa chỉ giao hàng', style: TextStyle(fontWeight: FontWeight.bold)),
+                  const Text(
+                    'Địa chỉ giao hàng',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
                   const SizedBox(height: 8),
                   _AddressSelector(
                     addresses: addrs,
@@ -57,25 +60,35 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                     onChanged: (a) => setState(() => selectedAddress = a),
                   ),
                   const SizedBox(height: 14),
-                  const Text('Chọn ngày', style: TextStyle(fontWeight: FontWeight.bold)),
+                  const Text(
+                    'Chọn ngày',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
                   const SizedBox(height: 8),
                   _DateSelector(
                     selected: selectedDate!,
                     onDaySelected: (d) => setState(() => selectedDate = d),
                     onCheckAvailability: (d) async {
                       // brute-force: ask viewmodel to check that day
-                      return await ref.read(checkoutProvider.notifier).checkDateAvailability(d);
+                      return await ref
+                          .read(checkoutProvider.notifier)
+                          .checkDateAvailability(d);
                     },
                   ),
                   const SizedBox(height: 14),
-                  const Text('Chọn khung giờ', style: TextStyle(fontWeight: FontWeight.bold)),
+                  const Text(
+                    'Chọn khung giờ',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
                   const SizedBox(height: 8),
                   _TimeSelector(
                     date: selectedDate!,
                     selected: selectedTime,
                     onTimeSelected: (t) => setState(() => selectedTime = t),
                     onCheckTime: (date, timeOfDay) async {
-                      final dto = await ref.read(checkoutProvider.notifier).checkTimeAvailability(date, timeOfDay);
+                      final dto = await ref
+                          .read(checkoutProvider.notifier)
+                          .checkTimeAvailability(date, timeOfDay);
                       return dto; // expect ProviderAvailabilityCheckDTO
                     },
                   ),
@@ -83,20 +96,29 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                   _OrderSummary(),
                   const SizedBox(height: 12),
                   ElevatedButton(
-                    onPressed: items.isEmpty || selectedAddress == null || selectedTime == null
+                    onPressed:
+                        items.isEmpty ||
+                            selectedAddress == null ||
+                            selectedTime == null
                         ? null
                         : () async {
                             // submit booking
-                            final dynamic res = await ref.read(checkoutProvider.notifier).submitBooking(
+                            final result = await ref
+                                .read(checkoutProvider.notifier)
+                                .submitBooking(
                                   address: selectedAddress!,
                                   date: selectedDate!,
                                   time: selectedTime!,
                                 );
-                            if (res.success) {
-                              // navigate to result
-                              context.go(Routes.bookingResult, extra: res);
+
+                            if (result.bookingIds.isNotEmpty) {
+                              context.go(Routes.bookingResult, extra: result);
                             } else {
-                              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(res.message ?? 'Lỗi')));
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text("Đặt lịch thất bại"),
+                                ),
+                              );
                             }
                           },
                     child: const Padding(
@@ -119,7 +141,11 @@ class _AddressSelector extends StatelessWidget {
   final UserAddressModel? selected;
   final ValueChanged<UserAddressModel> onChanged;
 
-  const _AddressSelector({required this.addresses, required this.selected, required this.onChanged});
+  const _AddressSelector({
+    required this.addresses,
+    required this.selected,
+    required this.onChanged,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -144,8 +170,12 @@ class _AddressSelector extends StatelessWidget {
             groupValue: selected,
             onChanged: (v) => onChanged(v!),
             title: Text(a.fullAddress),
-            subtitle: Text('${a.recipientName ?? ''} • ${a.recipientPhone ?? ''}'),
-            secondary: isSelected ? const Icon(Icons.check_circle, color: Colors.green) : null,
+            subtitle: Text(
+              '${a.recipientName ?? ''} • ${a.recipientPhone ?? ''}',
+            ),
+            secondary: isSelected
+                ? const Icon(Icons.check_circle, color: Colors.green)
+                : null,
           ),
         );
       }).toList(),
@@ -158,7 +188,11 @@ class _DateSelector extends StatefulWidget {
   final ValueChanged<DateTime> onDaySelected;
   final Future<bool> Function(DateTime) onCheckAvailability;
 
-  const _DateSelector({required this.selected, required this.onDaySelected, required this.onCheckAvailability});
+  const _DateSelector({
+    required this.selected,
+    required this.onDaySelected,
+    required this.onCheckAvailability,
+  });
 
   @override
   State<_DateSelector> createState() => _DateSelectorState();
@@ -171,7 +205,11 @@ class _DateSelectorState extends State<_DateSelector> {
   void initState() {
     super.initState();
     final today = DateTime.now();
-    days = List.generate(14, (i) => DateTime(today.year, today.month, today.day).add(Duration(days: i)));
+    days = List.generate(
+      14,
+      (i) =>
+          DateTime(today.year, today.month, today.day).add(Duration(days: i)),
+    );
   }
 
   @override
@@ -196,18 +234,42 @@ class _DateSelectorState extends State<_DateSelector> {
                   width: 84,
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: isSelected ? Theme.of(context).colorScheme.primary : Colors.white,
+                    color: isSelected
+                        ? Theme.of(context).colorScheme.primary
+                        : Colors.white,
                     borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: available ? Colors.green.shade200 : Colors.grey.shade300),
+                    border: Border.all(
+                      color: available
+                          ? Colors.green.shade200
+                          : Colors.grey.shade300,
+                    ),
                   ),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Text(weekdayShort(d.weekday), style: TextStyle(color: isSelected ? Colors.white : Colors.black)),
+                      Text(
+                        weekdayShort(d.weekday),
+                        style: TextStyle(
+                          color: isSelected ? Colors.white : Colors.black,
+                        ),
+                      ),
                       const SizedBox(height: 6),
-                      Text('${d.day}/${d.month}', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: isSelected ? Colors.white : Colors.black)),
+                      Text(
+                        '${d.day}/${d.month}',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: isSelected ? Colors.white : Colors.black,
+                        ),
+                      ),
                       const SizedBox(height: 6),
-                      Text(available ? 'Có lịch' : 'Ngưng', style: TextStyle(fontSize: 12, color: isSelected ? Colors.white70 : Colors.grey)),
+                      Text(
+                        available ? 'Có lịch' : 'Ngưng',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: isSelected ? Colors.white70 : Colors.grey,
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -224,7 +286,7 @@ class _DateSelectorState extends State<_DateSelector> {
   }
 
   String weekdayShort(int w) {
-    const names = ['T2','T3','T4','T5','T6','T7','CN'];
+    const names = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
     return names[(w - 1) % 7];
   }
 }
@@ -233,9 +295,18 @@ class _TimeSelector extends StatefulWidget {
   final DateTime date;
   final TimeOfDay? selected;
   final ValueChanged<TimeOfDay> onTimeSelected;
-  final Future<ProviderAvailabilityModel> Function(DateTime date, TimeOfDay time) onCheckTime;
+  final Future<ProviderAvailabilityModel> Function(
+    DateTime date,
+    TimeOfDay time,
+  )
+  onCheckTime;
 
-  const _TimeSelector({required this.date, required this.selected, required this.onTimeSelected, required this.onCheckTime});
+  const _TimeSelector({
+    required this.date,
+    required this.selected,
+    required this.onTimeSelected,
+    required this.onCheckTime,
+  });
 
   @override
   State<_TimeSelector> createState() => _TimeSelectorState();
@@ -264,7 +335,13 @@ class _TimeSelectorState extends State<_TimeSelector> {
   }
 
   TimeOfDay _addMinutes(TimeOfDay t, int minutes) {
-    final dt = DateTime(2020,1,1, t.hour, t.minute).add(Duration(minutes: minutes));
+    final dt = DateTime(
+      2020,
+      1,
+      1,
+      t.hour,
+      t.minute,
+    ).add(Duration(minutes: minutes));
     return TimeOfDay(hour: dt.hour, minute: dt.minute);
   }
 
@@ -283,7 +360,9 @@ class _TimeSelectorState extends State<_TimeSelector> {
           builder: (context, snap) {
             final dto = snap.data;
             final enabled = dto?.isAvailable ?? false;
-            final isSelected = widget.selected?.hour == slot.hour && widget.selected?.minute == slot.minute;
+            final isSelected =
+                widget.selected?.hour == slot.hour &&
+                widget.selected?.minute == slot.minute;
             return ChoiceChip(
               label: Text('${slot.format(context)}'),
               selected: isSelected,
@@ -303,27 +382,34 @@ class _OrderSummary extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final total = ref.watch(cartTotalProvider);
     final cartAsync = ref.watch(cartProvider);
-    final items = cartAsync.maybeWhen(
-      data: (data) => data,
-      orElse: () => [],
-    );
+    final items = cartAsync.maybeWhen(data: (data) => data, orElse: () => []);
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(12.0),
         child: Column(
           children: [
-            ...items.map((i) => Row(
-                  children: [
-                    Expanded(child: Text(i.serviceName)),
-                    Text('${(i.price * i.quantity).toStringAsFixed(0)} đ'),
-                  ],
-                )),
+            ...items.map(
+              (i) => Row(
+                children: [
+                  Expanded(child: Text(i.serviceName)),
+                  Text('${(i.servicePrice * i.quantity).toStringAsFixed(0)} đ'),
+                ],
+              ),
+            ),
             const Divider(),
             Row(
               children: [
-                const Text('Tổng cộng', style: TextStyle(fontWeight: FontWeight.bold)),
+                const Text(
+                  'Tổng cộng',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
                 const Spacer(),
-                Text(total is double ? '${total.toStringAsFixed(0)} đ' : '$total đ', style: const TextStyle(fontWeight: FontWeight.bold)),
+                Text(
+                  total is double
+                      ? '${total.toStringAsFixed(0)} đ'
+                      : '$total đ',
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
               ],
             ),
           ],

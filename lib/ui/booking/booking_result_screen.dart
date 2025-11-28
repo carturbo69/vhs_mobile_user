@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:vhs_mobile_user/data/models/booking/booking_result_model.dart';
+import 'package:vhs_mobile_user/routing/routes.dart';
 
 class BookingResultScreen extends StatelessWidget {
   final BookingResultModel result;
@@ -29,7 +31,7 @@ class BookingResultScreen extends StatelessWidget {
             ),
             ElevatedButton(
               onPressed: () {
-                Navigator.popUntil(context, (route) => route.isFirst);
+                context.go(Routes.listService); // Quay về trang chủ
               },
               child: const Text('Quay về Trang chủ'),
             ),
