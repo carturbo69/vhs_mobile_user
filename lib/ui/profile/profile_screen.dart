@@ -15,7 +15,7 @@ class ProfileScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    late final  asyncProfile = ref.watch(profileProvider);
+    late final asyncProfile = ref.watch(profileProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -26,7 +26,7 @@ class ProfileScreen extends ConsumerWidget {
             onPressed: () {
               ref.read(profileProvider.notifier).refresh();
             },
-          )
+          ),
         ],
       ),
       body: asyncProfile.when(
@@ -57,7 +57,10 @@ class _ProfileView extends ConsumerWidget {
         _buildInfoCard("Họ và tên", profile.fullName ?? "Chưa có"),
         _buildInfoCard("Số điện thoại", profile.phoneNumber ?? "Chưa có"),
         _buildInfoCard("Địa chỉ", profile.address ?? "Chưa có"),
-        _buildInfoCard("Ngày tạo", profile.createdAt?.toLocal().toString() ?? "Không rõ"),
+        _buildInfoCard(
+          "Ngày tạo",
+          profile.createdAt?.toLocal().toString() ?? "Không rõ",
+        ),
         const SizedBox(height: 30),
         _buildEditButton(context),
         const SizedBox(height: 12),
@@ -65,13 +68,17 @@ class _ProfileView extends ConsumerWidget {
         const SizedBox(height: 12),
         _buildChangeEmailButton(context),
         const SizedBox(height: 12),
+        _buildManageAddressButton(context),
+        const SizedBox(height: 12),
         _buildLogoutButton(context, ref),
       ],
     );
   }
 
   Widget _buildHeader(BuildContext context, WidgetRef ref) {
-    final imageUrl = profile.imageList.isNotEmpty ? profile.imageList.first : null;
+    final imageUrl = profile.imageList.isNotEmpty
+        ? profile.imageList.first
+        : null;
     final baseUrl = 'http://apivhs.cuahangkinhdoanh.com';
     final fullImageUrl = imageUrl != null && !imageUrl.startsWith('http')
         ? '$baseUrl$imageUrl'
@@ -101,7 +108,11 @@ class _ProfileView extends ConsumerWidget {
                   border: Border.all(color: Colors.white, width: 2),
                 ),
                 child: IconButton(
-                  icon: const Icon(Icons.camera_alt, color: Colors.white, size: 20),
+                  icon: const Icon(
+                    Icons.camera_alt,
+                    color: Colors.white,
+                    size: 20,
+                  ),
                   onPressed: () => _showImagePicker(context, ref),
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(),
@@ -113,17 +124,11 @@ class _ProfileView extends ConsumerWidget {
         const SizedBox(height: 12),
         Text(
           profile.fullName ?? profile.accountName,
-          style: const TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-          ),
+          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
         ),
         Text(
           profile.email,
-          style: TextStyle(
-            fontSize: 14,
-            color: Colors.grey.shade600,
-          ),
+          style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
         ),
         if (fullImageUrl != null) ...[
           const SizedBox(height: 8),
@@ -171,10 +176,12 @@ class _ProfileView extends ConsumerWidget {
       final pickedFile = await picker.pickImage(source: source);
       if (pickedFile != null) {
         final file = File(pickedFile.path);
-        final success = await ref.read(profileProvider.notifier).uploadImage(file);
-        
+        final success = await ref
+            .read(profileProvider.notifier)
+            .uploadImage(file);
+
         if (!context.mounted) return;
-        
+
         if (success) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Tải ảnh lên thành công')),
@@ -191,10 +198,7 @@ class _ProfileView extends ConsumerWidget {
     } catch (e) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Lỗi: $e'),
-          backgroundColor: Colors.red,
-        ),
+        SnackBar(content: Text('Lỗi: $e'), backgroundColor: Colors.red),
       );
     }
   }
@@ -220,13 +224,13 @@ class _ProfileView extends ConsumerWidget {
 
     if (confirm == true) {
       final success = await ref.read(profileProvider.notifier).deleteImage();
-      
+
       if (!context.mounted) return;
-      
+
       if (success) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Xóa ảnh thành công')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Xóa ảnh thành công')));
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -244,10 +248,7 @@ class _ProfileView extends ConsumerWidget {
       margin: const EdgeInsets.symmetric(vertical: 6),
       child: ListTile(
         title: Text(title),
-        subtitle: Text(
-          value,
-          style: const TextStyle(fontSize: 14),
-        ),
+        subtitle: Text(value, style: const TextStyle(fontSize: 14)),
       ),
     );
   }
@@ -278,6 +279,16 @@ class _ProfileView extends ConsumerWidget {
       label: const Text("Đổi email"),
       onPressed: () {
         context.push(Routes.changeEmail, extra: profile);
+      },
+    );
+  }
+
+  Widget _buildManageAddressButton(BuildContext context) {
+    return OutlinedButton.icon(
+      icon: const Icon(Icons.location_on),
+      label: const Text("Quản lý địa chỉ"),
+      onPressed: () {
+        context.push(Routes.addressList, extra: profile);
       },
     );
   }
@@ -314,7 +325,7 @@ class _ProfileView extends ConsumerWidget {
         if (confirm == true && context.mounted) {
           // Gọi logout
           await ref.read(authStateProvider.notifier).logout();
-          
+
           // Navigate về login screen
           if (context.mounted) {
             context.go(Routes.login);

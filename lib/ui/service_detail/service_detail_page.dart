@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:carousel_slider/carousel_slider.dart';
+import 'package:go_router/go_router.dart';
 import 'package:vhs_mobile_user/data/models/service/service_detail.dart';
+import 'package:vhs_mobile_user/routing/routes.dart';
+import 'package:vhs_mobile_user/ui/cart/cart_list_viewmodel.dart';
 import 'package:vhs_mobile_user/ui/service_detail/service_detail_viewmodel.dart';
 
 class ServiceDetailPage extends ConsumerWidget {
@@ -27,7 +30,17 @@ class ServiceDetailPage extends ConsumerWidget {
       body: asyncDetail.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text("Lỗi: $e")),
-        data: (detail) => _DetailContent(detail: detail),
+        data: (detail) => Stack(
+          children: [
+            _DetailContent(detail: detail),
+            Positioned(
+              bottom: 0,
+              left: 0,
+              right: 0,
+              child: _BottomActionBar(detail: detail),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -155,9 +168,7 @@ class _DetailContent extends StatelessWidget {
         children: [
           CircleAvatar(
             radius: 24,
-            backgroundImage: p.images != null
-                ? NetworkImage(p.images!)
-                : null,
+            backgroundImage: p.images != null ? NetworkImage(p.images!) : null,
             child: p.images == null ? const Icon(Icons.store) : null,
           ),
           const SizedBox(width: 12),
@@ -168,7 +179,9 @@ class _DetailContent extends StatelessWidget {
                 Text(
                   p.providerName,
                   style: const TextStyle(
-                      fontWeight: FontWeight.bold, fontSize: 16),
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Text(
@@ -184,10 +197,7 @@ class _DetailContent extends StatelessWidget {
               color: Colors.red.shade50,
               borderRadius: BorderRadius.circular(8),
             ),
-            child: const Text(
-              "Xem shop",
-              style: TextStyle(color: Colors.red),
-            ),
+            child: const Text("Xem shop", style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -219,7 +229,9 @@ class _DetailContent extends StatelessWidget {
                 .map(
                   (o) => Container(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 6),
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(10),
                       border: Border.all(color: Colors.grey.shade300),
@@ -256,7 +268,7 @@ class _DetailContent extends StatelessWidget {
           Text(
             detail.description ?? "Không có mô tả",
             style: const TextStyle(fontSize: 14),
-          )
+          ),
         ],
       ),
     );
@@ -274,10 +286,12 @@ class _DetailContent extends StatelessWidget {
       child: Wrap(
         spacing: 8,
         children: detail.tags
-            .map((t) => Chip(
-                  label: Text(t.name),
-                  backgroundColor: Colors.orange.shade50,
-                ))
+            .map(
+              (t) => Chip(
+                label: Text(t.name),
+                backgroundColor: Colors.orange.shade50,
+              ),
+            )
             .toList(),
       ),
     );
@@ -322,8 +336,9 @@ class _DetailContent extends StatelessWidget {
             children: [
               CircleAvatar(
                 radius: 18,
-                backgroundImage:
-                    r.avatar != null ? NetworkImage(r.avatar!) : null,
+                backgroundImage: r.avatar != null
+                    ? NetworkImage(r.avatar!)
+                    : null,
               ),
               const SizedBox(width: 8),
               Text(r.fullName ?? "Người dùng ẩn"),
@@ -338,10 +353,7 @@ class _DetailContent extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           if (r.comment != null)
-            Text(
-              r.comment!,
-              style: const TextStyle(fontSize: 14),
-            ),
+            Text(r.comment!, style: const TextStyle(fontSize: 14)),
           if (r.images.isNotEmpty)
             Padding(
               padding: const EdgeInsets.only(top: 8),
@@ -349,18 +361,90 @@ class _DetailContent extends StatelessWidget {
                 spacing: 8,
                 runSpacing: 8,
                 children: r.images
-                    .map((img) => ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: CachedNetworkImage(
-                            imageUrl: img,
-                            width: 80,
-                            height: 80,
-                            fit: BoxFit.cover,
-                          ),
-                        ))
+                    .map(
+                      (img) => ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: CachedNetworkImage(
+                          imageUrl: img,
+                          width: 80,
+                          height: 80,
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                    )
                     .toList(),
               ),
-            )
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BottomActionBar extends ConsumerWidget {
+  final ServiceDetail detail;
+  const _BottomActionBar({required this.detail});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.06),
+            blurRadius: 6,
+            offset: const Offset(0, -2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          // ----------- Nút thêm vào giỏ ----------
+          Expanded(
+            child: OutlinedButton(
+              onPressed: () async {
+                try {
+                  await ref
+                      .read(cartProvider.notifier)
+                      .addToCartFromDetail(serviceId: detail.serviceId);
+                  context.go(Routes.cart);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("Đã thêm vào giỏ")),
+                  );
+                } catch (e) {
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(SnackBar(content: Text("Lỗi: $e")));
+                }
+              },
+              child: const Text("Thêm vào giỏ"),
+            ),
+          ),
+
+          const SizedBox(width: 12),
+
+          // ----------- Nút Đặt ngay (đi đến checkout) ----------
+          Expanded(
+            child: ElevatedButton(
+              onPressed: () async {
+                try {
+                  await ref
+                      .read(cartProvider.notifier)
+                      .addToCartFromDetail(serviceId: detail.serviceId);
+
+                  // Sau khi add → đi đến Checkout
+                  context.push(Routes.checkout);
+                } catch (e) {
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(SnackBar(content: Text("Lỗi: $e")));
+                }
+              },
+              child: const Text("Đặt ngay"),
+            ),
+          ),
         ],
       ),
     );

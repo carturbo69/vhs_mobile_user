@@ -162,7 +162,8 @@ class BookingHistoryItem {
     final s = status.trim().toLowerCase();
     if (s == 'pending') return 'Chờ xác nhận';
     if (s == 'confirmed') return 'Đã xác nhận';
-    if (s == 'inprogress') return 'Đang thực hiện';
+    if (s == 'in progress') return 'Đang thực hiện';
+    if (s == 'service completed') return 'Dịch vụ hoàn thành';
     if (s == 'completed') return 'Hoàn thành';
     if (s == 'cancelled') return 'Đã hủy';
     return status;
