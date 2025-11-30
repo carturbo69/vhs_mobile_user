@@ -8,7 +8,7 @@ final cartProvider = AsyncNotifierProvider<CartNotifier, List<CartItemModel>>(
 );
 
 class CartNotifier extends AsyncNotifier<List<CartItemModel>> {
-  late final CartRepository _repo;
+  late  CartRepository _repo;
 
   @override
   Future<List<CartItemModel>> build() async {

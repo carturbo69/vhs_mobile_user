@@ -10,7 +10,7 @@ final userAddressProvider =
     );
 
 class UserAddressNotifier extends AsyncNotifier<List<UserAddressModel>> {
-  late final UserAddressRepository _repo;
+  late  UserAddressRepository _repo;
 
   @override
   Future<List<UserAddressModel>> build() async {
