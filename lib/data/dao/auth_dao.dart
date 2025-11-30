@@ -10,7 +10,7 @@ part 'auth_dao.g.dart';
 
 @DriftAccessor(tables: [AuthsTable])
 class AuthDao extends DatabaseAccessor<AppDatabase> with _$AuthDaoMixin {
-  AuthDao(AppDatabase db) : super(db);
+  AuthDao(super.db);
 
   Future<void> upsertLogin({
     String? token,

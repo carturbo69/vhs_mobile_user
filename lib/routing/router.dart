@@ -15,16 +15,17 @@ import 'package:vhs_mobile_user/ui/booking/booking_result_screen.dart';
 import 'package:vhs_mobile_user/ui/cart/cart_screen.dart';
 import 'package:vhs_mobile_user/ui/checkout/checkout_screen.dart';
 import 'package:vhs_mobile_user/ui/core/bottom_navbar_widget.dart';
+import 'package:vhs_mobile_user/ui/profile/change_email_screen.dart';
+import 'package:vhs_mobile_user/ui/profile/change_password_screen.dart';
+import 'package:vhs_mobile_user/ui/profile/edit_profile_screen.dart';
 import 'package:vhs_mobile_user/ui/history/history_detail_screen.dart';
 import 'package:vhs_mobile_user/ui/history/history_screen.dart';
 import 'package:vhs_mobile_user/ui/profile/profile_screen.dart';
-import 'package:vhs_mobile_user/ui/profile/profile_viewmodel.dart';
-import 'package:vhs_mobile_user/ui/profile/edit_profile_screen.dart';
-import 'package:vhs_mobile_user/ui/profile/change_password_screen.dart';
-import 'package:vhs_mobile_user/ui/profile/change_email_screen.dart';
 import 'package:vhs_mobile_user/data/models/user/profile_model.dart';
 import 'package:vhs_mobile_user/ui/service_detail/service_detail_page.dart';
 import 'package:vhs_mobile_user/ui/service_list/service_list_screen.dart';
+import 'package:vhs_mobile_user/ui/chat/chat_list_screen.dart';
+import 'package:vhs_mobile_user/ui/chat/chat_detail_screen.dart';
 import 'package:vhs_mobile_user/ui/user_address/address_add_screen.dart';
 import 'package:vhs_mobile_user/ui/user_address/address_list_screen.dart';
 
@@ -131,6 +132,14 @@ final routerProvider = Provider<GoRouter>((ref) {
         },
       ),
 
+      GoRoute(
+        path: Routes.chatDetail,
+        builder: (context, state) {
+          final conversationId = state.pathParameters['conversationId']!;
+          return ChatDetailScreen(conversationId: conversationId);
+        },
+      ),
+
       // -------------------------
       // PROFILE ROUTES (ngoài shell)
       // -------------------------
@@ -197,7 +206,17 @@ final routerProvider = Provider<GoRouter>((ref) {
             ],
           ),
 
-          // ---------- TAB 2: HISTORY ----------
+          // ---------- TAB 2: CHAT LIST ----------
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: Routes.chatList,
+                builder: (_, __) => const ChatListScreen(),
+              ),
+            ],
+          ),
+
+          // ---------- TAB 3: HISTORY ----------
           StatefulShellBranch(
             routes: [
               GoRoute(
@@ -207,7 +226,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             ],
           ),
 
-          // ---------- TAB 3: PROFILE ----------
+          // ---------- TAB 4: PROFILE ----------
           StatefulShellBranch(
             routes: [
               GoRoute(
