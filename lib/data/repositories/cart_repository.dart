@@ -1,132 +1,178 @@
+import 'dart:convert';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:vhs_mobile_user/data/dao/auth_dao.dart';
 import 'package:vhs_mobile_user/data/dao/cart_dao.dart';
 import 'package:vhs_mobile_user/data/database/app_database.dart';
-import 'package:vhs_mobile_user/data/models/cart/add_cart_item_request.dart';
 import 'package:vhs_mobile_user/data/models/cart/cart_item_model.dart';
+import 'package:vhs_mobile_user/data/models/cart/add_cart_item_request.dart';
 import 'package:drift/drift.dart';
 import 'package:vhs_mobile_user/data/services/cart_api.dart';
 
 final cartRepositoryProvider = Provider<CartRepository>((ref) {
   return CartRepository(
     api: ref.read(cartApiProvider),
-    dao: ref.read(cartDaoProvider),
     authDao: ref.read(authDaoProvider),
+    dao: ref.read(cartDaoProvider),
   );
 });
 
 class CartRepository {
   final CartApi api;
-  final CartDao dao;
   final AuthDao authDao;
+  final CartDao dao;
 
   CartRepository({
     required this.api,
-    required this.dao,
     required this.authDao,
+    required this.dao,
   });
 
+  // ============================================================
+  // FETCH REMOTE + CACHE LOCAL
+  // ============================================================
   Future<List<CartItemModel>> fetchRemote() async {
-    final saved = await authDao.getSavedAuth();
-    final accountId = saved?['accountId'];
+    final auth = await authDao.getSavedAuth();
+    final accountId = auth?["accountId"];
     if (accountId == null) return [];
-    final list = await api.getCartItems(accountId.toString());
-    // cache to drift
-    await dao.clear();
-    if (list.isNotEmpty) {
-      final companions = list.map((e) => CartTableCompanion(
-            cartItemId: Value(e.cartItemId),
-            serviceId: Value(e.serviceId),
-            serviceName: Value(e.serviceName),
-            providerId: Value(e.providerId),
-            providerName: Value(e.providerName),
-            price: Value(e.price),
-            quantity: Value(e.quantity),
-            imageUrl: Value(e.imageUrl),
-            optionsJson: Value(e.cartItemOptionsJson),
-          )).toList();
-      await dao.upsertMany(companions);
-    }
-    return list;
+
+    final items = await api.getCartItems(accountId);
+
+    // Convert → drift
+    final companions = items.map((i) {
+      return CartTableCompanion(
+        cartItemId: Value(i.cartItemId),
+        cartId: Value(i.cartId),
+        serviceId: Value(i.serviceId),
+        createdAt: Value(i.createdAt.toIso8601String()),
+        serviceName: Value(i.serviceName),
+        servicePrice: Value(i.servicePrice),
+        serviceImages: Value(i.serviceImages.join(",")),
+        providerId: Value(i.providerId),
+        providerName: Value(i.providerName),
+        providerImages: Value(i.providerImages),
+
+        // ⭐ LƯU OPTIONS DƯỚI DẠNG JSON STRING ⭐
+        optionsJson: Value(
+          jsonEncode(i.options.map((e) => e.toJson()).toList()),
+        ),
+
+        quantity: Value(i.quantity),
+      );
+    }).toList();
+
+    await dao.clearAll();
+    await dao.upsertMany(companions);
+
+    return items;
   }
 
+  // ============================================================
+  // READ LOCAL
+  // ============================================================
   Future<List<CartItemModel>> readLocal() async {
-    final rows = await dao.getAllCartItems();
-    return rows.map((r) => CartItemModel(
-      cartItemId: r.cartItemId,
-      serviceId: r.serviceId,
-      serviceName: r.serviceName,
-      providerId: r.providerId,
-      providerName: r.providerName,
-      price: r.price,
-      quantity: r.quantity,
-      imageUrl: r.imageUrl,
-      cartItemOptionsJson: r.optionsJson,
-    )).toList();
+    final rows = await dao.getAllCart();
+    return rows.map(_rowToModel).toList();
   }
 
+  // ============================================================
+  // WATCH LOCAL STREAM
+  // ============================================================
   Stream<List<CartItemModel>> watchLocal() {
-    return dao.watchAll().map((rows) => rows.map((r) => CartItemModel(
-      cartItemId: r.cartItemId,
-      serviceId: r.serviceId,
-      serviceName: r.serviceName,
-      providerId: r.providerId,
-      providerName: r.providerName,
-      price: r.price,
-      quantity: r.quantity,
-      imageUrl: r.imageUrl,
-      cartItemOptionsJson: r.optionsJson,
-    )).toList());
+    return dao.watchCart().map(
+      (rows) => rows.map(_rowToModel).toList(),
+    );
   }
 
-  Future<void> addToCart(AddCartItemRequest payload) async {
-    final saved = await authDao.getSavedAuth();
-    final accountId = saved?['accountId'];
-    if (accountId == null) throw Exception('No accountId');
-    final body = payload.toJson();
-    body['accountId'] = accountId;
-    await api.addCartItem(body);
-    // refresh remote -> update local cache
+  // ============================================================
+  // MAP DRIFT ROW → MODEL
+  // ============================================================
+  CartItemModel _rowToModel(CartTableData r) {
+    final List<CartOptionModel> parsedOptions =
+        r.optionsJson == null
+            ? []
+            : (jsonDecode(r.optionsJson!) as List)
+                .map((e) => CartOptionModel.fromJson(e))
+                .toList();
+
+    return CartItemModel(
+      cartItemId: r.cartItemId,
+      cartId: r.cartId,
+      serviceId: r.serviceId,
+      createdAt: DateTime.parse(r.createdAt),
+      serviceName: r.serviceName,
+      servicePrice: r.servicePrice,
+      serviceImages: r.serviceImages.split(","),
+      providerId: r.providerId,
+      providerName: r.providerName,
+      providerImages: r.providerImages,
+      options: parsedOptions,
+      quantity: r.quantity,
+    );
+  }
+
+  // ============================================================
+  // ADD TO CART (API)
+  // ============================================================
+  Future<void> addToCart(AddCartItemRequest req) async {
+    final auth = await authDao.getSavedAuth();
+    final accountId = auth?["accountId"];
+    if (accountId == null) {
+      throw Exception("User chưa đăng nhập");
+    }
+
+    await api.addCartItem(
+      accountId: accountId,
+      request: req,
+    );
+
     await fetchRemote();
   }
 
+  // ============================================================
+  // REMOVE ONE ITEM
+  // ============================================================
   Future<void> removeItem(String id) async {
-    final saved = await authDao.getSavedAuth();
-    final accountId = saved?['accountId'];
-    if (accountId == null) return;
-    await api.removeCartItem(accountId.toString(), id);
+    final auth = await authDao.getSavedAuth();
+    final accountId = auth?["accountId"];
+
+    await api.removeCartItem(accountId, id);
     await dao.deleteById(id);
   }
 
+  // ============================================================
+  // CLEAR ALL ITEMS
+  // ============================================================
   Future<void> clearAll() async {
-    final saved = await authDao.getSavedAuth();
-    final accountId = saved?['accountId'];
-    if (accountId == null) return;
-    await api.clearCart(accountId.toString());
-    await dao.clear();
+    final auth = await authDao.getSavedAuth();
+    final accountId = auth?["accountId"];
+
+    await api.clearCart(accountId);
+    await dao.clearAll();
   }
 
-  Future<int> totalCount() async {
-    final saved = await authDao.getSavedAuth();
-    final accountId = saved?['accountId'];
-    if (accountId == null) return 0;
-    return await api.getTotalCount(accountId.toString());
-  }
+  // ============================================================
+  // UPDATE QUANTITY LOCAL ONLY
+  // ============================================================
+  Future<void> updateQuantityLocal(String id, int qty) async {
+    final rows = await dao.getAllCart();
+    final r = rows.firstWhere((x) => x.cartItemId == id);
 
-  Future<void> updateQuantityLocal(String cartItemId, int qty) async {
-    final row = await (dao.db.select(dao.db.cartTable)..where((t) => t.cartItemId.equals(cartItemId))).getSingleOrNull();
-    if (row == null) return;
-    final companion = CartTableCompanion(
-      cartItemId: Value(row.cartItemId),
-      serviceId: Value(row.serviceId),
-      serviceName: Value(row.serviceName),
-      providerId: Value(row.providerId),
-      providerName: Value(row.providerName),
-      price: Value(row.price),
+    final updated = CartTableCompanion(
+      cartItemId: Value(r.cartItemId),
+      cartId: Value(r.cartId),
+      serviceId: Value(r.serviceId),
+      createdAt: Value(r.createdAt),
+      serviceName: Value(r.serviceName),
+      servicePrice: Value(r.servicePrice),
+      serviceImages: Value(r.serviceImages),
+      providerId: Value(r.providerId),
+      providerName: Value(r.providerName),
+      providerImages: Value(r.providerImages),
+      optionsJson: Value(r.optionsJson),
       quantity: Value(qty),
-      imageUrl: Value(row.imageUrl),
-      optionsJson: Value(row.optionsJson),
     );
-    await dao.upsertCartItem(companion);
+
+    await dao.upsert(updated);
   }
 }

@@ -1,8 +1,10 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:vhs_mobile_user/data/models/booking/booking_history_item.dart';
+import 'package:vhs_mobile_user/routing/routes.dart';
 import 'package:vhs_mobile_user/ui/history/history_viewmodel.dart';
 
 class HistoryScreen extends ConsumerStatefulWidget {
@@ -44,21 +46,21 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
       filtered = filtered.where((item) {
         final status = item.status.trim().toLowerCase();
         final selected = _selectedStatus.toLowerCase();
-        
+
         if (selected == "pending") {
-          return status == "pending" || 
-                 status.contains("chờ xác nhận") ||
-                 status.contains("đang chờ");
+          return status == "pending" ||
+              status.contains("chờ xác nhận") ||
+              status.contains("đang chờ");
         } else if (selected == "confirmed") {
           return status == "confirmed" || status.contains("xác nhận");
         } else if (selected == "inprogress") {
-          return status == "inprogress" || 
-                 status.contains("bắt đầu") ||
-                 status.contains("đang thực hiện");
+          return status == "inprogress" ||
+              status.contains("bắt đầu") ||
+              status.contains("đang thực hiện");
         } else if (selected == "completed") {
-          return status == "completed" || 
-                 status == "servicecompleted" ||
-                 status.contains("hoàn thành");
+          return status == "completed" ||
+              status == "servicecompleted" ||
+              status.contains("hoàn thành");
         } else if (selected == "cancelled") {
           return status == "cancelled" || status.contains("hủy");
         }
@@ -71,9 +73,9 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
       final query = _searchQuery.toLowerCase();
       filtered = filtered.where((item) {
         return item.serviceTitle.toLowerCase().contains(query) ||
-               item.providerName.toLowerCase().contains(query) ||
-               item.bookingId.toString().toLowerCase().contains(query) ||
-               item.address.toLowerCase().contains(query);
+            item.providerName.toLowerCase().contains(query) ||
+            item.bookingId.toString().toLowerCase().contains(query) ||
+            item.address.toLowerCase().contains(query);
       }).toList();
     }
 
@@ -83,10 +85,10 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
   @override
   Widget build(BuildContext context) {
     final historyState = ref.watch(historyProvider);
-    
+
     // Đảm bảo load khi màn hình được build và state chưa được load
-    if (!historyState.isLoading && 
-        !historyState.hasValue && 
+    if (!historyState.isLoading &&
+        !historyState.hasValue &&
         !historyState.hasError &&
         !_hasInitialized) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -122,21 +124,46 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                     _StatusTab("All", "Tất cả", _selectedStatus == "All", () {
                       setState(() => _selectedStatus = "All");
                     }),
-                    _StatusTab("Pending", "Chờ xác nhận", _selectedStatus == "Pending", () {
-                      setState(() => _selectedStatus = "Pending");
-                    }),
-                    _StatusTab("Confirmed", "Xác Nhận", _selectedStatus == "Confirmed", () {
-                      setState(() => _selectedStatus = "Confirmed");
-                    }),
-                    _StatusTab("InProgress", "Bắt Đầu Làm Việc", _selectedStatus == "InProgress", () {
-                      setState(() => _selectedStatus = "InProgress");
-                    }),
-                    _StatusTab("Completed", "Hoàn thành", _selectedStatus == "Completed", () {
-                      setState(() => _selectedStatus = "Completed");
-                    }),
-                    _StatusTab("Cancelled", "Đã hủy", _selectedStatus == "Cancelled", () {
-                      setState(() => _selectedStatus = "Cancelled");
-                    }),
+                    _StatusTab(
+                      "Pending",
+                      "Chờ xác nhận",
+                      _selectedStatus == "Pending",
+                      () {
+                        setState(() => _selectedStatus = "Pending");
+                      },
+                    ),
+                    _StatusTab(
+                      "Confirmed",
+                      "Xác Nhận",
+                      _selectedStatus == "Confirmed",
+                      () {
+                        setState(() => _selectedStatus = "Confirmed");
+                      },
+                    ),
+                    _StatusTab(
+                      "InProgress",
+                      "Bắt Đầu Làm Việc",
+                      _selectedStatus == "InProgress",
+                      () {
+                        setState(() => _selectedStatus = "InProgress");
+                      },
+                    ),
+                    _StatusTab(
+                      "Completed",
+                      "Hoàn thành",
+                      _selectedStatus == "Completed",
+                      () {
+                        setState(() => _selectedStatus = "Completed");
+                      },
+                    ),
+                    _StatusTab(
+                      "Cancelled",
+                      "Đã hủy",
+                      _selectedStatus == "Cancelled",
+                      () {
+                        setState(() => _selectedStatus = "Cancelled");
+                      },
+                    ),
                   ],
                 ),
               ),
@@ -149,7 +176,8 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                     setState(() => _searchQuery = value);
                   },
                   decoration: InputDecoration(
-                    hintText: "Tìm kiếm theo tên Shop, ID đơn hàng hoặc Tên dịch vụ",
+                    hintText:
+                        "Tìm kiếm theo tên Shop, ID đơn hàng hoặc Tên dịch vụ",
                     prefixIcon: const Icon(Icons.search),
                     suffixIcon: _searchQuery.isNotEmpty
                         ? IconButton(
@@ -165,7 +193,10 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                       borderRadius: BorderRadius.circular(10),
                       borderSide: BorderSide.none,
                     ),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
                   ),
                 ),
               ),
@@ -177,17 +208,23 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, stack) {
           String errorMessage = "Đã xảy ra lỗi khi tải lịch sử";
-          
+
           if (error.toString().contains('404')) {
-            errorMessage = "Không tìm thấy dữ liệu. Có thể bạn chưa có đơn hàng nào.";
+            errorMessage =
+                "Không tìm thấy dữ liệu. Có thể bạn chưa có đơn hàng nào.";
           } else if (error.toString().contains('401')) {
-            errorMessage = "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.";
-          } else if (error.toString().contains('timeout') || error.toString().contains('Timeout')) {
-            errorMessage = "Kết nối timeout. Vui lòng kiểm tra kết nối mạng và thử lại.";
-          } else if (error.toString().contains('connection') || error.toString().contains('Connection')) {
-            errorMessage = "Không thể kết nối đến server. Vui lòng kiểm tra kết nối mạng.";
+            errorMessage =
+                "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.";
+          } else if (error.toString().contains('timeout') ||
+              error.toString().contains('Timeout')) {
+            errorMessage =
+                "Kết nối timeout. Vui lòng kiểm tra kết nối mạng và thử lại.";
+          } else if (error.toString().contains('connection') ||
+              error.toString().contains('Connection')) {
+            errorMessage =
+                "Không thể kết nối đến server. Vui lòng kiểm tra kết nối mạng.";
           }
-          
+
           return Center(
             child: Padding(
               padding: const EdgeInsets.all(24),
@@ -198,19 +235,13 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                   const SizedBox(height: 16),
                   Text(
                     errorMessage,
-                    style: const TextStyle(
-                      color: Colors.red,
-                      fontSize: 16,
-                    ),
+                    style: const TextStyle(color: Colors.red, fontSize: 16),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 8),
                   Text(
                     error.toString(),
-                    style: TextStyle(
-                      color: Colors.grey.shade600,
-                      fontSize: 12,
-                    ),
+                    style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
                     textAlign: TextAlign.center,
                     maxLines: 3,
                     overflow: TextOverflow.ellipsis,
@@ -230,32 +261,22 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
         },
         data: (items) {
           final filteredItems = _filterItems(items);
-          
+
           if (items.isEmpty) {
             return const Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(
-                    Icons.history,
-                    size: 64,
-                    color: Colors.grey,
-                  ),
+                  Icon(Icons.history, size: 64, color: Colors.grey),
                   SizedBox(height: 16),
                   Text(
                     "Chưa có lịch sử",
-                    style: TextStyle(
-                      fontSize: 18,
-                      color: Colors.grey,
-                    ),
+                    style: TextStyle(fontSize: 18, color: Colors.grey),
                   ),
                   SizedBox(height: 8),
                   Text(
                     "Lịch sử đặt dịch vụ của bạn sẽ hiển thị ở đây",
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey,
-                    ),
+                    style: TextStyle(fontSize: 14, color: Colors.grey),
                     textAlign: TextAlign.center,
                   ),
                 ],
@@ -268,26 +289,16 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(
-                    Icons.search_off,
-                    size: 64,
-                    color: Colors.grey,
-                  ),
+                  const Icon(Icons.search_off, size: 64, color: Colors.grey),
                   const SizedBox(height: 16),
                   Text(
                     "Không tìm thấy kết quả",
-                    style: TextStyle(
-                      fontSize: 18,
-                      color: Colors.grey.shade700,
-                    ),
+                    style: TextStyle(fontSize: 18, color: Colors.grey.shade700),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     "Thử thay đổi bộ lọc hoặc từ khóa tìm kiếm",
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey,
-                    ),
+                    style: TextStyle(fontSize: 14, color: Colors.grey),
                     textAlign: TextAlign.center,
                   ),
                 ],
@@ -328,11 +339,13 @@ class _StatusTab extends StatelessWidget {
         margin: const EdgeInsets.symmetric(horizontal: 4),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected ? Theme.of(context).primaryColor : Colors.transparent,
+          color: isSelected
+              ? Theme.of(context).primaryColor
+              : Colors.transparent,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: isSelected 
-                ? Theme.of(context).primaryColor 
+            color: isSelected
+                ? Theme.of(context).primaryColor
                 : Colors.grey.shade300,
             width: 1,
           ),
@@ -370,7 +383,9 @@ class _BookingHistoryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dateFormat = DateFormat('dd/MM/yyyy HH:mm');
-    final firstImage = item.serviceImageList.isNotEmpty ? item.serviceImageList.first : null;
+    final firstImage = item.serviceImageList.isNotEmpty
+        ? item.serviceImageList.first
+        : null;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
@@ -389,7 +404,10 @@ class _BookingHistoryCard extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: _getStatusColor(item.status).withOpacity(0.1),
                       borderRadius: BorderRadius.circular(4),
@@ -409,15 +427,12 @@ class _BookingHistoryCard extends StatelessWidget {
                   ),
                   Text(
                     dateFormat.format(item.bookingTime),
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey.shade600,
-                    ),
+                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
                   ),
                 ],
               ),
               const SizedBox(height: 12),
-              
+
               // Provider Header với Logo
               Row(
                 children: [
@@ -461,7 +476,7 @@ class _BookingHistoryCard extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 12),
-              
+
               // Service Info
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -480,7 +495,9 @@ class _BookingHistoryCard extends StatelessWidget {
                               height: 100,
                               color: Colors.grey.shade200,
                               child: const Center(
-                                child: CircularProgressIndicator(strokeWidth: 2),
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
                               ),
                             ),
                             errorWidget: (context, url, error) => Container(
@@ -498,7 +515,7 @@ class _BookingHistoryCard extends StatelessWidget {
                           ),
                   ),
                   const SizedBox(width: 12),
-                  
+
                   // Service Details
                   Expanded(
                     child: Column(
@@ -516,7 +533,11 @@ class _BookingHistoryCard extends StatelessWidget {
                         const SizedBox(height: 6),
                         Row(
                           children: [
-                            Icon(Icons.location_on, size: 14, color: Colors.grey.shade600),
+                            Icon(
+                              Icons.location_on,
+                              size: 14,
+                              color: Colors.grey.shade600,
+                            ),
                             const SizedBox(width: 4),
                             Expanded(
                               child: Text(
@@ -558,7 +579,8 @@ class _BookingHistoryCard extends StatelessWidget {
                             if (item.voucherDiscount > 0) ...[
                               const SizedBox(height: 4),
                               Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(
                                     'Giảm giá:',
@@ -608,15 +630,16 @@ class _BookingHistoryCard extends StatelessWidget {
                   ),
                 ],
               ),
-              
+
               // Options (nếu có) - Hiển thị chi tiết như web
               if (item.options.isNotEmpty) ...[
                 const SizedBox(height: 12),
                 const Divider(),
                 const SizedBox(height: 8),
                 ...item.options.map((option) {
-                  final isTextarea = option.type.toLowerCase() == "textarea" || 
-                                   option.type.toLowerCase() == "text";
+                  final isTextarea =
+                      option.type.toLowerCase() == "textarea" ||
+                      option.type.toLowerCase() == "text";
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 8),
                     child: Column(
@@ -641,7 +664,8 @@ class _BookingHistoryCard extends StatelessWidget {
                             ),
                           ],
                         ),
-                        if (option.value != null && option.value!.isNotEmpty) ...[
+                        if (option.value != null &&
+                            option.value!.isNotEmpty) ...[
                           const SizedBox(height: 4),
                           Padding(
                             padding: const EdgeInsets.only(left: 22),
@@ -668,14 +692,14 @@ class _BookingHistoryCard extends StatelessWidget {
                   );
                 }).toList(),
               ],
-              
+
               // Action Button
               const SizedBox(height: 12),
               SizedBox(
                 width: double.infinity,
                 child: OutlinedButton.icon(
                   onPressed: () {
-                    // TODO: Navigate to booking detail
+                    context.push(Routes.bookingDetail, extra: item);
                   },
                   icon: const Icon(Icons.visibility, size: 18),
                   label: const Text("Xem chi tiết"),
@@ -691,4 +715,3 @@ class _BookingHistoryCard extends StatelessWidget {
     );
   }
 }
-

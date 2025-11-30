@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:vhs_mobile_user/core/network/dio_client.dart';
+import 'package:vhs_mobile_user/data/models/cart/add_cart_item_request.dart';
 import 'package:vhs_mobile_user/data/models/cart/cart_item_model.dart';
 
 final cartApiProvider = Provider<CartApi>((ref) {
@@ -12,17 +13,38 @@ class CartApi {
   CartApi(this._dio);
 
   // GET /api/carts/account/{accountId}/items
-  Future<List<CartItemModel>> getCartItems(String accountId) async {
-    final resp = await _dio.get('/api/carts/account/$accountId/items');
-    // backend may return Data or data
-    final raw = resp.data['data'] ?? resp.data['Data'] ?? resp.data;
-    if (raw == null) return [];
-    return (raw as List).map((e) => CartItemModel.fromJson(e)).toList();
+ Future<List<CartItemModel>> getCartItems(String accountId) async {
+  final resp = await _dio.get('/api/carts/account/$accountId/items');
+
+  final data = resp.data;
+
+  // Case 1: Backend trả trực tiếp List
+  if (data is List) {
+    return data.map((e) => CartItemModel.fromJson(e)).toList();
   }
 
+  // Case 2: Backend trả Map có "data": List
+  if (data is Map && data['data'] is List) {
+    return (data['data'] as List)
+        .map((e) => CartItemModel.fromJson(e))
+        .toList();
+  }
+
+  return [];
+}
+
   // POST /api/carts/addtocart-items
-  Future<void> addCartItem(Map<String, dynamic> payload) async {
-    await _dio.post('/api/carts/addtocart-items', data: payload);
+ Future<void> addCartItem({
+    required String accountId,
+    required AddCartItemRequest request,
+  }) async {
+    await _dio.post(
+      "/api/Carts/addtocart-items",
+      queryParameters: {
+        "accountId": accountId,
+      },
+      data: request.toJson(),
+    );
   }
 
   // DELETE single

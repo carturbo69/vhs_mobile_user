@@ -2631,12 +2631,32 @@ class $CartTableTable extends CartTable
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _cartIdMeta = const VerificationMeta('cartId');
+  @override
+  late final GeneratedColumn<String> cartId = GeneratedColumn<String>(
+    'cart_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
   static const VerificationMeta _serviceIdMeta = const VerificationMeta(
     'serviceId',
   );
   @override
   late final GeneratedColumn<String> serviceId = GeneratedColumn<String>(
     'service_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<String> createdAt = GeneratedColumn<String>(
+    'created_at',
     aliasedName,
     false,
     type: DriftSqlType.string,
@@ -2653,6 +2673,28 @@ class $CartTableTable extends CartTable
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _servicePriceMeta = const VerificationMeta(
+    'servicePrice',
+  );
+  @override
+  late final GeneratedColumn<double> servicePrice = GeneratedColumn<double>(
+    'service_price',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _serviceImagesMeta = const VerificationMeta(
+    'serviceImages',
+  );
+  @override
+  late final GeneratedColumn<String> serviceImages = GeneratedColumn<String>(
+    'service_images',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
   static const VerificationMeta _providerIdMeta = const VerificationMeta(
     'providerId',
   );
@@ -2660,9 +2702,9 @@ class $CartTableTable extends CartTable
   late final GeneratedColumn<String> providerId = GeneratedColumn<String>(
     'provider_id',
     aliasedName,
-    true,
+    false,
     type: DriftSqlType.string,
-    requiredDuringInsert: false,
+    requiredDuringInsert: true,
   );
   static const VerificationMeta _providerNameMeta = const VerificationMeta(
     'providerName',
@@ -2671,41 +2713,20 @@ class $CartTableTable extends CartTable
   late final GeneratedColumn<String> providerName = GeneratedColumn<String>(
     'provider_name',
     aliasedName,
-    true,
-    type: DriftSqlType.string,
-    requiredDuringInsert: false,
-  );
-  static const VerificationMeta _priceMeta = const VerificationMeta('price');
-  @override
-  late final GeneratedColumn<double> price = GeneratedColumn<double>(
-    'price',
-    aliasedName,
     false,
-    type: DriftSqlType.double,
+    type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
-  static const VerificationMeta _quantityMeta = const VerificationMeta(
-    'quantity',
+  static const VerificationMeta _providerImagesMeta = const VerificationMeta(
+    'providerImages',
   );
   @override
-  late final GeneratedColumn<int> quantity = GeneratedColumn<int>(
-    'quantity',
+  late final GeneratedColumn<String> providerImages = GeneratedColumn<String>(
+    'provider_images',
     aliasedName,
     false,
-    type: DriftSqlType.int,
-    requiredDuringInsert: false,
-    defaultValue: const Constant(1),
-  );
-  static const VerificationMeta _imageUrlMeta = const VerificationMeta(
-    'imageUrl',
-  );
-  @override
-  late final GeneratedColumn<String> imageUrl = GeneratedColumn<String>(
-    'image_url',
-    aliasedName,
-    true,
     type: DriftSqlType.string,
-    requiredDuringInsert: false,
+    requiredDuringInsert: true,
   );
   static const VerificationMeta _optionsJsonMeta = const VerificationMeta(
     'optionsJson',
@@ -2718,17 +2739,32 @@ class $CartTableTable extends CartTable
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _quantityMeta = const VerificationMeta(
+    'quantity',
+  );
+  @override
+  late final GeneratedColumn<int> quantity = GeneratedColumn<int>(
+    'quantity',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: Constant(1),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     cartItemId,
+    cartId,
     serviceId,
+    createdAt,
     serviceName,
+    servicePrice,
+    serviceImages,
     providerId,
     providerName,
-    price,
-    quantity,
-    imageUrl,
+    providerImages,
     optionsJson,
+    quantity,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -2753,6 +2789,14 @@ class $CartTableTable extends CartTable
     } else if (isInserting) {
       context.missing(_cartItemIdMeta);
     }
+    if (data.containsKey('cart_id')) {
+      context.handle(
+        _cartIdMeta,
+        cartId.isAcceptableOrUnknown(data['cart_id']!, _cartIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_cartIdMeta);
+    }
     if (data.containsKey('service_id')) {
       context.handle(
         _serviceIdMeta,
@@ -2760,6 +2804,14 @@ class $CartTableTable extends CartTable
       );
     } else if (isInserting) {
       context.missing(_serviceIdMeta);
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
     }
     if (data.containsKey('service_name')) {
       context.handle(
@@ -2772,11 +2824,35 @@ class $CartTableTable extends CartTable
     } else if (isInserting) {
       context.missing(_serviceNameMeta);
     }
+    if (data.containsKey('service_price')) {
+      context.handle(
+        _servicePriceMeta,
+        servicePrice.isAcceptableOrUnknown(
+          data['service_price']!,
+          _servicePriceMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_servicePriceMeta);
+    }
+    if (data.containsKey('service_images')) {
+      context.handle(
+        _serviceImagesMeta,
+        serviceImages.isAcceptableOrUnknown(
+          data['service_images']!,
+          _serviceImagesMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_serviceImagesMeta);
+    }
     if (data.containsKey('provider_id')) {
       context.handle(
         _providerIdMeta,
         providerId.isAcceptableOrUnknown(data['provider_id']!, _providerIdMeta),
       );
+    } else if (isInserting) {
+      context.missing(_providerIdMeta);
     }
     if (data.containsKey('provider_name')) {
       context.handle(
@@ -2786,26 +2862,19 @@ class $CartTableTable extends CartTable
           _providerNameMeta,
         ),
       );
+    } else if (isInserting) {
+      context.missing(_providerNameMeta);
     }
-    if (data.containsKey('price')) {
+    if (data.containsKey('provider_images')) {
       context.handle(
-        _priceMeta,
-        price.isAcceptableOrUnknown(data['price']!, _priceMeta),
+        _providerImagesMeta,
+        providerImages.isAcceptableOrUnknown(
+          data['provider_images']!,
+          _providerImagesMeta,
+        ),
       );
     } else if (isInserting) {
-      context.missing(_priceMeta);
-    }
-    if (data.containsKey('quantity')) {
-      context.handle(
-        _quantityMeta,
-        quantity.isAcceptableOrUnknown(data['quantity']!, _quantityMeta),
-      );
-    }
-    if (data.containsKey('image_url')) {
-      context.handle(
-        _imageUrlMeta,
-        imageUrl.isAcceptableOrUnknown(data['image_url']!, _imageUrlMeta),
-      );
+      context.missing(_providerImagesMeta);
     }
     if (data.containsKey('options_json')) {
       context.handle(
@@ -2814,6 +2883,12 @@ class $CartTableTable extends CartTable
           data['options_json']!,
           _optionsJsonMeta,
         ),
+      );
+    }
+    if (data.containsKey('quantity')) {
+      context.handle(
+        _quantityMeta,
+        quantity.isAcceptableOrUnknown(data['quantity']!, _quantityMeta),
       );
     }
     return context;
@@ -2829,38 +2904,50 @@ class $CartTableTable extends CartTable
         DriftSqlType.string,
         data['${effectivePrefix}cart_item_id'],
       )!,
+      cartId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}cart_id'],
+      )!,
       serviceId: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}service_id'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}created_at'],
       )!,
       serviceName: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}service_name'],
       )!,
+      servicePrice: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}service_price'],
+      )!,
+      serviceImages: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}service_images'],
+      )!,
       providerId: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}provider_id'],
-      ),
+      )!,
       providerName: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}provider_name'],
-      ),
-      price: attachedDatabase.typeMapping.read(
-        DriftSqlType.double,
-        data['${effectivePrefix}price'],
       )!,
-      quantity: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}quantity'],
-      )!,
-      imageUrl: attachedDatabase.typeMapping.read(
+      providerImages: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
-        data['${effectivePrefix}image_url'],
-      ),
+        data['${effectivePrefix}provider_images'],
+      )!,
       optionsJson: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}options_json'],
       ),
+      quantity: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}quantity'],
+      )!,
     );
   }
 
@@ -2872,67 +2959,67 @@ class $CartTableTable extends CartTable
 
 class CartTableData extends DataClass implements Insertable<CartTableData> {
   final String cartItemId;
+  final String cartId;
   final String serviceId;
+  final String createdAt;
   final String serviceName;
-  final String? providerId;
-  final String? providerName;
-  final double price;
-  final int quantity;
-  final String? imageUrl;
+  final double servicePrice;
+  final String serviceImages;
+  final String providerId;
+  final String providerName;
+  final String providerImages;
   final String? optionsJson;
+  final int quantity;
   const CartTableData({
     required this.cartItemId,
+    required this.cartId,
     required this.serviceId,
+    required this.createdAt,
     required this.serviceName,
-    this.providerId,
-    this.providerName,
-    required this.price,
-    required this.quantity,
-    this.imageUrl,
+    required this.servicePrice,
+    required this.serviceImages,
+    required this.providerId,
+    required this.providerName,
+    required this.providerImages,
     this.optionsJson,
+    required this.quantity,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['cart_item_id'] = Variable<String>(cartItemId);
+    map['cart_id'] = Variable<String>(cartId);
     map['service_id'] = Variable<String>(serviceId);
+    map['created_at'] = Variable<String>(createdAt);
     map['service_name'] = Variable<String>(serviceName);
-    if (!nullToAbsent || providerId != null) {
-      map['provider_id'] = Variable<String>(providerId);
-    }
-    if (!nullToAbsent || providerName != null) {
-      map['provider_name'] = Variable<String>(providerName);
-    }
-    map['price'] = Variable<double>(price);
-    map['quantity'] = Variable<int>(quantity);
-    if (!nullToAbsent || imageUrl != null) {
-      map['image_url'] = Variable<String>(imageUrl);
-    }
+    map['service_price'] = Variable<double>(servicePrice);
+    map['service_images'] = Variable<String>(serviceImages);
+    map['provider_id'] = Variable<String>(providerId);
+    map['provider_name'] = Variable<String>(providerName);
+    map['provider_images'] = Variable<String>(providerImages);
     if (!nullToAbsent || optionsJson != null) {
       map['options_json'] = Variable<String>(optionsJson);
     }
+    map['quantity'] = Variable<int>(quantity);
     return map;
   }
 
   CartTableCompanion toCompanion(bool nullToAbsent) {
     return CartTableCompanion(
       cartItemId: Value(cartItemId),
+      cartId: Value(cartId),
       serviceId: Value(serviceId),
+      createdAt: Value(createdAt),
       serviceName: Value(serviceName),
-      providerId: providerId == null && nullToAbsent
-          ? const Value.absent()
-          : Value(providerId),
-      providerName: providerName == null && nullToAbsent
-          ? const Value.absent()
-          : Value(providerName),
-      price: Value(price),
-      quantity: Value(quantity),
-      imageUrl: imageUrl == null && nullToAbsent
-          ? const Value.absent()
-          : Value(imageUrl),
+      servicePrice: Value(servicePrice),
+      serviceImages: Value(serviceImages),
+      providerId: Value(providerId),
+      providerName: Value(providerName),
+      providerImages: Value(providerImages),
       optionsJson: optionsJson == null && nullToAbsent
           ? const Value.absent()
           : Value(optionsJson),
+      quantity: Value(quantity),
     );
   }
 
@@ -2943,14 +3030,17 @@ class CartTableData extends DataClass implements Insertable<CartTableData> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return CartTableData(
       cartItemId: serializer.fromJson<String>(json['cartItemId']),
+      cartId: serializer.fromJson<String>(json['cartId']),
       serviceId: serializer.fromJson<String>(json['serviceId']),
+      createdAt: serializer.fromJson<String>(json['createdAt']),
       serviceName: serializer.fromJson<String>(json['serviceName']),
-      providerId: serializer.fromJson<String?>(json['providerId']),
-      providerName: serializer.fromJson<String?>(json['providerName']),
-      price: serializer.fromJson<double>(json['price']),
-      quantity: serializer.fromJson<int>(json['quantity']),
-      imageUrl: serializer.fromJson<String?>(json['imageUrl']),
+      servicePrice: serializer.fromJson<double>(json['servicePrice']),
+      serviceImages: serializer.fromJson<String>(json['serviceImages']),
+      providerId: serializer.fromJson<String>(json['providerId']),
+      providerName: serializer.fromJson<String>(json['providerName']),
+      providerImages: serializer.fromJson<String>(json['providerImages']),
       optionsJson: serializer.fromJson<String?>(json['optionsJson']),
+      quantity: serializer.fromJson<int>(json['quantity']),
     );
   }
   @override
@@ -2958,59 +3048,77 @@ class CartTableData extends DataClass implements Insertable<CartTableData> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
       'cartItemId': serializer.toJson<String>(cartItemId),
+      'cartId': serializer.toJson<String>(cartId),
       'serviceId': serializer.toJson<String>(serviceId),
+      'createdAt': serializer.toJson<String>(createdAt),
       'serviceName': serializer.toJson<String>(serviceName),
-      'providerId': serializer.toJson<String?>(providerId),
-      'providerName': serializer.toJson<String?>(providerName),
-      'price': serializer.toJson<double>(price),
-      'quantity': serializer.toJson<int>(quantity),
-      'imageUrl': serializer.toJson<String?>(imageUrl),
+      'servicePrice': serializer.toJson<double>(servicePrice),
+      'serviceImages': serializer.toJson<String>(serviceImages),
+      'providerId': serializer.toJson<String>(providerId),
+      'providerName': serializer.toJson<String>(providerName),
+      'providerImages': serializer.toJson<String>(providerImages),
       'optionsJson': serializer.toJson<String?>(optionsJson),
+      'quantity': serializer.toJson<int>(quantity),
     };
   }
 
   CartTableData copyWith({
     String? cartItemId,
+    String? cartId,
     String? serviceId,
+    String? createdAt,
     String? serviceName,
-    Value<String?> providerId = const Value.absent(),
-    Value<String?> providerName = const Value.absent(),
-    double? price,
-    int? quantity,
-    Value<String?> imageUrl = const Value.absent(),
+    double? servicePrice,
+    String? serviceImages,
+    String? providerId,
+    String? providerName,
+    String? providerImages,
     Value<String?> optionsJson = const Value.absent(),
+    int? quantity,
   }) => CartTableData(
     cartItemId: cartItemId ?? this.cartItemId,
+    cartId: cartId ?? this.cartId,
     serviceId: serviceId ?? this.serviceId,
+    createdAt: createdAt ?? this.createdAt,
     serviceName: serviceName ?? this.serviceName,
-    providerId: providerId.present ? providerId.value : this.providerId,
-    providerName: providerName.present ? providerName.value : this.providerName,
-    price: price ?? this.price,
-    quantity: quantity ?? this.quantity,
-    imageUrl: imageUrl.present ? imageUrl.value : this.imageUrl,
+    servicePrice: servicePrice ?? this.servicePrice,
+    serviceImages: serviceImages ?? this.serviceImages,
+    providerId: providerId ?? this.providerId,
+    providerName: providerName ?? this.providerName,
+    providerImages: providerImages ?? this.providerImages,
     optionsJson: optionsJson.present ? optionsJson.value : this.optionsJson,
+    quantity: quantity ?? this.quantity,
   );
   CartTableData copyWithCompanion(CartTableCompanion data) {
     return CartTableData(
       cartItemId: data.cartItemId.present
           ? data.cartItemId.value
           : this.cartItemId,
+      cartId: data.cartId.present ? data.cartId.value : this.cartId,
       serviceId: data.serviceId.present ? data.serviceId.value : this.serviceId,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       serviceName: data.serviceName.present
           ? data.serviceName.value
           : this.serviceName,
+      servicePrice: data.servicePrice.present
+          ? data.servicePrice.value
+          : this.servicePrice,
+      serviceImages: data.serviceImages.present
+          ? data.serviceImages.value
+          : this.serviceImages,
       providerId: data.providerId.present
           ? data.providerId.value
           : this.providerId,
       providerName: data.providerName.present
           ? data.providerName.value
           : this.providerName,
-      price: data.price.present ? data.price.value : this.price,
-      quantity: data.quantity.present ? data.quantity.value : this.quantity,
-      imageUrl: data.imageUrl.present ? data.imageUrl.value : this.imageUrl,
+      providerImages: data.providerImages.present
+          ? data.providerImages.value
+          : this.providerImages,
       optionsJson: data.optionsJson.present
           ? data.optionsJson.value
           : this.optionsJson,
+      quantity: data.quantity.present ? data.quantity.value : this.quantity,
     );
   }
 
@@ -3018,14 +3126,17 @@ class CartTableData extends DataClass implements Insertable<CartTableData> {
   String toString() {
     return (StringBuffer('CartTableData(')
           ..write('cartItemId: $cartItemId, ')
+          ..write('cartId: $cartId, ')
           ..write('serviceId: $serviceId, ')
+          ..write('createdAt: $createdAt, ')
           ..write('serviceName: $serviceName, ')
+          ..write('servicePrice: $servicePrice, ')
+          ..write('serviceImages: $serviceImages, ')
           ..write('providerId: $providerId, ')
           ..write('providerName: $providerName, ')
-          ..write('price: $price, ')
-          ..write('quantity: $quantity, ')
-          ..write('imageUrl: $imageUrl, ')
-          ..write('optionsJson: $optionsJson')
+          ..write('providerImages: $providerImages, ')
+          ..write('optionsJson: $optionsJson, ')
+          ..write('quantity: $quantity')
           ..write(')'))
         .toString();
   }
@@ -3033,116 +3144,149 @@ class CartTableData extends DataClass implements Insertable<CartTableData> {
   @override
   int get hashCode => Object.hash(
     cartItemId,
+    cartId,
     serviceId,
+    createdAt,
     serviceName,
+    servicePrice,
+    serviceImages,
     providerId,
     providerName,
-    price,
-    quantity,
-    imageUrl,
+    providerImages,
     optionsJson,
+    quantity,
   );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is CartTableData &&
           other.cartItemId == this.cartItemId &&
+          other.cartId == this.cartId &&
           other.serviceId == this.serviceId &&
+          other.createdAt == this.createdAt &&
           other.serviceName == this.serviceName &&
+          other.servicePrice == this.servicePrice &&
+          other.serviceImages == this.serviceImages &&
           other.providerId == this.providerId &&
           other.providerName == this.providerName &&
-          other.price == this.price &&
-          other.quantity == this.quantity &&
-          other.imageUrl == this.imageUrl &&
-          other.optionsJson == this.optionsJson);
+          other.providerImages == this.providerImages &&
+          other.optionsJson == this.optionsJson &&
+          other.quantity == this.quantity);
 }
 
 class CartTableCompanion extends UpdateCompanion<CartTableData> {
   final Value<String> cartItemId;
+  final Value<String> cartId;
   final Value<String> serviceId;
+  final Value<String> createdAt;
   final Value<String> serviceName;
-  final Value<String?> providerId;
-  final Value<String?> providerName;
-  final Value<double> price;
-  final Value<int> quantity;
-  final Value<String?> imageUrl;
+  final Value<double> servicePrice;
+  final Value<String> serviceImages;
+  final Value<String> providerId;
+  final Value<String> providerName;
+  final Value<String> providerImages;
   final Value<String?> optionsJson;
+  final Value<int> quantity;
   final Value<int> rowid;
   const CartTableCompanion({
     this.cartItemId = const Value.absent(),
+    this.cartId = const Value.absent(),
     this.serviceId = const Value.absent(),
+    this.createdAt = const Value.absent(),
     this.serviceName = const Value.absent(),
+    this.servicePrice = const Value.absent(),
+    this.serviceImages = const Value.absent(),
     this.providerId = const Value.absent(),
     this.providerName = const Value.absent(),
-    this.price = const Value.absent(),
-    this.quantity = const Value.absent(),
-    this.imageUrl = const Value.absent(),
+    this.providerImages = const Value.absent(),
     this.optionsJson = const Value.absent(),
+    this.quantity = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   CartTableCompanion.insert({
     required String cartItemId,
+    required String cartId,
     required String serviceId,
+    required String createdAt,
     required String serviceName,
-    this.providerId = const Value.absent(),
-    this.providerName = const Value.absent(),
-    required double price,
-    this.quantity = const Value.absent(),
-    this.imageUrl = const Value.absent(),
+    required double servicePrice,
+    required String serviceImages,
+    required String providerId,
+    required String providerName,
+    required String providerImages,
     this.optionsJson = const Value.absent(),
+    this.quantity = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : cartItemId = Value(cartItemId),
+       cartId = Value(cartId),
        serviceId = Value(serviceId),
+       createdAt = Value(createdAt),
        serviceName = Value(serviceName),
-       price = Value(price);
+       servicePrice = Value(servicePrice),
+       serviceImages = Value(serviceImages),
+       providerId = Value(providerId),
+       providerName = Value(providerName),
+       providerImages = Value(providerImages);
   static Insertable<CartTableData> custom({
     Expression<String>? cartItemId,
+    Expression<String>? cartId,
     Expression<String>? serviceId,
+    Expression<String>? createdAt,
     Expression<String>? serviceName,
+    Expression<double>? servicePrice,
+    Expression<String>? serviceImages,
     Expression<String>? providerId,
     Expression<String>? providerName,
-    Expression<double>? price,
-    Expression<int>? quantity,
-    Expression<String>? imageUrl,
+    Expression<String>? providerImages,
     Expression<String>? optionsJson,
+    Expression<int>? quantity,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
       if (cartItemId != null) 'cart_item_id': cartItemId,
+      if (cartId != null) 'cart_id': cartId,
       if (serviceId != null) 'service_id': serviceId,
+      if (createdAt != null) 'created_at': createdAt,
       if (serviceName != null) 'service_name': serviceName,
+      if (servicePrice != null) 'service_price': servicePrice,
+      if (serviceImages != null) 'service_images': serviceImages,
       if (providerId != null) 'provider_id': providerId,
       if (providerName != null) 'provider_name': providerName,
-      if (price != null) 'price': price,
-      if (quantity != null) 'quantity': quantity,
-      if (imageUrl != null) 'image_url': imageUrl,
+      if (providerImages != null) 'provider_images': providerImages,
       if (optionsJson != null) 'options_json': optionsJson,
+      if (quantity != null) 'quantity': quantity,
       if (rowid != null) 'rowid': rowid,
     });
   }
 
   CartTableCompanion copyWith({
     Value<String>? cartItemId,
+    Value<String>? cartId,
     Value<String>? serviceId,
+    Value<String>? createdAt,
     Value<String>? serviceName,
-    Value<String?>? providerId,
-    Value<String?>? providerName,
-    Value<double>? price,
-    Value<int>? quantity,
-    Value<String?>? imageUrl,
+    Value<double>? servicePrice,
+    Value<String>? serviceImages,
+    Value<String>? providerId,
+    Value<String>? providerName,
+    Value<String>? providerImages,
     Value<String?>? optionsJson,
+    Value<int>? quantity,
     Value<int>? rowid,
   }) {
     return CartTableCompanion(
       cartItemId: cartItemId ?? this.cartItemId,
+      cartId: cartId ?? this.cartId,
       serviceId: serviceId ?? this.serviceId,
+      createdAt: createdAt ?? this.createdAt,
       serviceName: serviceName ?? this.serviceName,
+      servicePrice: servicePrice ?? this.servicePrice,
+      serviceImages: serviceImages ?? this.serviceImages,
       providerId: providerId ?? this.providerId,
       providerName: providerName ?? this.providerName,
-      price: price ?? this.price,
-      quantity: quantity ?? this.quantity,
-      imageUrl: imageUrl ?? this.imageUrl,
+      providerImages: providerImages ?? this.providerImages,
       optionsJson: optionsJson ?? this.optionsJson,
+      quantity: quantity ?? this.quantity,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -3153,11 +3297,23 @@ class CartTableCompanion extends UpdateCompanion<CartTableData> {
     if (cartItemId.present) {
       map['cart_item_id'] = Variable<String>(cartItemId.value);
     }
+    if (cartId.present) {
+      map['cart_id'] = Variable<String>(cartId.value);
+    }
     if (serviceId.present) {
       map['service_id'] = Variable<String>(serviceId.value);
     }
+    if (createdAt.present) {
+      map['created_at'] = Variable<String>(createdAt.value);
+    }
     if (serviceName.present) {
       map['service_name'] = Variable<String>(serviceName.value);
+    }
+    if (servicePrice.present) {
+      map['service_price'] = Variable<double>(servicePrice.value);
+    }
+    if (serviceImages.present) {
+      map['service_images'] = Variable<String>(serviceImages.value);
     }
     if (providerId.present) {
       map['provider_id'] = Variable<String>(providerId.value);
@@ -3165,17 +3321,14 @@ class CartTableCompanion extends UpdateCompanion<CartTableData> {
     if (providerName.present) {
       map['provider_name'] = Variable<String>(providerName.value);
     }
-    if (price.present) {
-      map['price'] = Variable<double>(price.value);
-    }
-    if (quantity.present) {
-      map['quantity'] = Variable<int>(quantity.value);
-    }
-    if (imageUrl.present) {
-      map['image_url'] = Variable<String>(imageUrl.value);
+    if (providerImages.present) {
+      map['provider_images'] = Variable<String>(providerImages.value);
     }
     if (optionsJson.present) {
       map['options_json'] = Variable<String>(optionsJson.value);
+    }
+    if (quantity.present) {
+      map['quantity'] = Variable<int>(quantity.value);
     }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
@@ -3187,14 +3340,289 @@ class CartTableCompanion extends UpdateCompanion<CartTableData> {
   String toString() {
     return (StringBuffer('CartTableCompanion(')
           ..write('cartItemId: $cartItemId, ')
+          ..write('cartId: $cartId, ')
           ..write('serviceId: $serviceId, ')
+          ..write('createdAt: $createdAt, ')
           ..write('serviceName: $serviceName, ')
+          ..write('servicePrice: $servicePrice, ')
+          ..write('serviceImages: $serviceImages, ')
           ..write('providerId: $providerId, ')
           ..write('providerName: $providerName, ')
-          ..write('price: $price, ')
-          ..write('quantity: $quantity, ')
-          ..write('imageUrl: $imageUrl, ')
+          ..write('providerImages: $providerImages, ')
           ..write('optionsJson: $optionsJson, ')
+          ..write('quantity: $quantity, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $BookingHistoryTableTable extends BookingHistoryTable
+    with TableInfo<$BookingHistoryTableTable, BookingHistoryTableData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $BookingHistoryTableTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _bookingIdMeta = const VerificationMeta(
+    'bookingId',
+  );
+  @override
+  late final GeneratedColumn<String> bookingId = GeneratedColumn<String>(
+    'booking_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _jsonMeta = const VerificationMeta('json');
+  @override
+  late final GeneratedColumn<String> json = GeneratedColumn<String>(
+    'json',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [bookingId, json, createdAt];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'booking_history_table';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<BookingHistoryTableData> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('booking_id')) {
+      context.handle(
+        _bookingIdMeta,
+        bookingId.isAcceptableOrUnknown(data['booking_id']!, _bookingIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_bookingIdMeta);
+    }
+    if (data.containsKey('json')) {
+      context.handle(
+        _jsonMeta,
+        json.isAcceptableOrUnknown(data['json']!, _jsonMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_jsonMeta);
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {bookingId};
+  @override
+  BookingHistoryTableData map(
+    Map<String, dynamic> data, {
+    String? tablePrefix,
+  }) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return BookingHistoryTableData(
+      bookingId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}booking_id'],
+      )!,
+      json: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}json'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+    );
+  }
+
+  @override
+  $BookingHistoryTableTable createAlias(String alias) {
+    return $BookingHistoryTableTable(attachedDatabase, alias);
+  }
+}
+
+class BookingHistoryTableData extends DataClass
+    implements Insertable<BookingHistoryTableData> {
+  final String bookingId;
+  final String json;
+  final DateTime createdAt;
+  const BookingHistoryTableData({
+    required this.bookingId,
+    required this.json,
+    required this.createdAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['booking_id'] = Variable<String>(bookingId);
+    map['json'] = Variable<String>(json);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    return map;
+  }
+
+  BookingHistoryTableCompanion toCompanion(bool nullToAbsent) {
+    return BookingHistoryTableCompanion(
+      bookingId: Value(bookingId),
+      json: Value(json),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory BookingHistoryTableData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return BookingHistoryTableData(
+      bookingId: serializer.fromJson<String>(json['bookingId']),
+      json: serializer.fromJson<String>(json['json']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'bookingId': serializer.toJson<String>(bookingId),
+      'json': serializer.toJson<String>(json),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+    };
+  }
+
+  BookingHistoryTableData copyWith({
+    String? bookingId,
+    String? json,
+    DateTime? createdAt,
+  }) => BookingHistoryTableData(
+    bookingId: bookingId ?? this.bookingId,
+    json: json ?? this.json,
+    createdAt: createdAt ?? this.createdAt,
+  );
+  BookingHistoryTableData copyWithCompanion(BookingHistoryTableCompanion data) {
+    return BookingHistoryTableData(
+      bookingId: data.bookingId.present ? data.bookingId.value : this.bookingId,
+      json: data.json.present ? data.json.value : this.json,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('BookingHistoryTableData(')
+          ..write('bookingId: $bookingId, ')
+          ..write('json: $json, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(bookingId, json, createdAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is BookingHistoryTableData &&
+          other.bookingId == this.bookingId &&
+          other.json == this.json &&
+          other.createdAt == this.createdAt);
+}
+
+class BookingHistoryTableCompanion
+    extends UpdateCompanion<BookingHistoryTableData> {
+  final Value<String> bookingId;
+  final Value<String> json;
+  final Value<DateTime> createdAt;
+  final Value<int> rowid;
+  const BookingHistoryTableCompanion({
+    this.bookingId = const Value.absent(),
+    this.json = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  BookingHistoryTableCompanion.insert({
+    required String bookingId,
+    required String json,
+    required DateTime createdAt,
+    this.rowid = const Value.absent(),
+  }) : bookingId = Value(bookingId),
+       json = Value(json),
+       createdAt = Value(createdAt);
+  static Insertable<BookingHistoryTableData> custom({
+    Expression<String>? bookingId,
+    Expression<String>? json,
+    Expression<DateTime>? createdAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (bookingId != null) 'booking_id': bookingId,
+      if (json != null) 'json': json,
+      if (createdAt != null) 'created_at': createdAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  BookingHistoryTableCompanion copyWith({
+    Value<String>? bookingId,
+    Value<String>? json,
+    Value<DateTime>? createdAt,
+    Value<int>? rowid,
+  }) {
+    return BookingHistoryTableCompanion(
+      bookingId: bookingId ?? this.bookingId,
+      json: json ?? this.json,
+      createdAt: createdAt ?? this.createdAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (bookingId.present) {
+      map['booking_id'] = Variable<String>(bookingId.value);
+    }
+    if (json.present) {
+      map['json'] = Variable<String>(json.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('BookingHistoryTableCompanion(')
+          ..write('bookingId: $bookingId, ')
+          ..write('json: $json, ')
+          ..write('createdAt: $createdAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -3211,6 +3639,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     this,
   );
   late final $CartTableTable cartTable = $CartTableTable(this);
+  late final $BookingHistoryTableTable bookingHistoryTable =
+      $BookingHistoryTableTable(this);
   late final ServicesDao servicesDao = ServicesDao(this as AppDatabase);
   late final AuthDao authDao = AuthDao(this as AppDatabase);
   late final ProfileDao profileDao = ProfileDao(this as AppDatabase);
@@ -3218,6 +3648,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     this as AppDatabase,
   );
   late final CartDao cartDao = CartDao(this as AppDatabase);
+  late final BookingHistoryDao bookingHistoryDao = BookingHistoryDao(
+    this as AppDatabase,
+  );
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -3228,6 +3661,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     profileTable,
     userAddressTable,
     cartTable,
+    bookingHistoryTable,
   ];
 }
 
@@ -4498,27 +4932,33 @@ typedef $$UserAddressTableTableProcessedTableManager =
 typedef $$CartTableTableCreateCompanionBuilder =
     CartTableCompanion Function({
       required String cartItemId,
+      required String cartId,
       required String serviceId,
+      required String createdAt,
       required String serviceName,
-      Value<String?> providerId,
-      Value<String?> providerName,
-      required double price,
-      Value<int> quantity,
-      Value<String?> imageUrl,
+      required double servicePrice,
+      required String serviceImages,
+      required String providerId,
+      required String providerName,
+      required String providerImages,
       Value<String?> optionsJson,
+      Value<int> quantity,
       Value<int> rowid,
     });
 typedef $$CartTableTableUpdateCompanionBuilder =
     CartTableCompanion Function({
       Value<String> cartItemId,
+      Value<String> cartId,
       Value<String> serviceId,
+      Value<String> createdAt,
       Value<String> serviceName,
-      Value<String?> providerId,
-      Value<String?> providerName,
-      Value<double> price,
-      Value<int> quantity,
-      Value<String?> imageUrl,
+      Value<double> servicePrice,
+      Value<String> serviceImages,
+      Value<String> providerId,
+      Value<String> providerName,
+      Value<String> providerImages,
       Value<String?> optionsJson,
+      Value<int> quantity,
       Value<int> rowid,
     });
 
@@ -4536,13 +4976,33 @@ class $$CartTableTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<String> get cartId => $composableBuilder(
+    column: $table.cartId,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<String> get serviceId => $composableBuilder(
     column: $table.serviceId,
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<String> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<String> get serviceName => $composableBuilder(
     column: $table.serviceName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get servicePrice => $composableBuilder(
+    column: $table.servicePrice,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get serviceImages => $composableBuilder(
+    column: $table.serviceImages,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -4556,23 +5016,18 @@ class $$CartTableTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<double> get price => $composableBuilder(
-    column: $table.price,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<int> get quantity => $composableBuilder(
-    column: $table.quantity,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get imageUrl => $composableBuilder(
-    column: $table.imageUrl,
+  ColumnFilters<String> get providerImages => $composableBuilder(
+    column: $table.providerImages,
     builder: (column) => ColumnFilters(column),
   );
 
   ColumnFilters<String> get optionsJson => $composableBuilder(
     column: $table.optionsJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get quantity => $composableBuilder(
+    column: $table.quantity,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -4591,13 +5046,33 @@ class $$CartTableTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get cartId => $composableBuilder(
+    column: $table.cartId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get serviceId => $composableBuilder(
     column: $table.serviceId,
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get serviceName => $composableBuilder(
     column: $table.serviceName,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get servicePrice => $composableBuilder(
+    column: $table.servicePrice,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get serviceImages => $composableBuilder(
+    column: $table.serviceImages,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -4611,23 +5086,18 @@ class $$CartTableTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<double> get price => $composableBuilder(
-    column: $table.price,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<int> get quantity => $composableBuilder(
-    column: $table.quantity,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get imageUrl => $composableBuilder(
-    column: $table.imageUrl,
+  ColumnOrderings<String> get providerImages => $composableBuilder(
+    column: $table.providerImages,
     builder: (column) => ColumnOrderings(column),
   );
 
   ColumnOrderings<String> get optionsJson => $composableBuilder(
     column: $table.optionsJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get quantity => $composableBuilder(
+    column: $table.quantity,
     builder: (column) => ColumnOrderings(column),
   );
 }
@@ -4646,11 +5116,27 @@ class $$CartTableTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<String> get cartId =>
+      $composableBuilder(column: $table.cartId, builder: (column) => column);
+
   GeneratedColumn<String> get serviceId =>
       $composableBuilder(column: $table.serviceId, builder: (column) => column);
 
+  GeneratedColumn<String> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
   GeneratedColumn<String> get serviceName => $composableBuilder(
     column: $table.serviceName,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get servicePrice => $composableBuilder(
+    column: $table.servicePrice,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get serviceImages => $composableBuilder(
+    column: $table.serviceImages,
     builder: (column) => column,
   );
 
@@ -4664,19 +5150,18 @@ class $$CartTableTableAnnotationComposer
     builder: (column) => column,
   );
 
-  GeneratedColumn<double> get price =>
-      $composableBuilder(column: $table.price, builder: (column) => column);
-
-  GeneratedColumn<int> get quantity =>
-      $composableBuilder(column: $table.quantity, builder: (column) => column);
-
-  GeneratedColumn<String> get imageUrl =>
-      $composableBuilder(column: $table.imageUrl, builder: (column) => column);
+  GeneratedColumn<String> get providerImages => $composableBuilder(
+    column: $table.providerImages,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<String> get optionsJson => $composableBuilder(
     column: $table.optionsJson,
     builder: (column) => column,
   );
+
+  GeneratedColumn<int> get quantity =>
+      $composableBuilder(column: $table.quantity, builder: (column) => column);
 }
 
 class $$CartTableTableTableManager
@@ -4711,49 +5196,61 @@ class $$CartTableTableTableManager
           updateCompanionCallback:
               ({
                 Value<String> cartItemId = const Value.absent(),
+                Value<String> cartId = const Value.absent(),
                 Value<String> serviceId = const Value.absent(),
+                Value<String> createdAt = const Value.absent(),
                 Value<String> serviceName = const Value.absent(),
-                Value<String?> providerId = const Value.absent(),
-                Value<String?> providerName = const Value.absent(),
-                Value<double> price = const Value.absent(),
-                Value<int> quantity = const Value.absent(),
-                Value<String?> imageUrl = const Value.absent(),
+                Value<double> servicePrice = const Value.absent(),
+                Value<String> serviceImages = const Value.absent(),
+                Value<String> providerId = const Value.absent(),
+                Value<String> providerName = const Value.absent(),
+                Value<String> providerImages = const Value.absent(),
                 Value<String?> optionsJson = const Value.absent(),
+                Value<int> quantity = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => CartTableCompanion(
                 cartItemId: cartItemId,
+                cartId: cartId,
                 serviceId: serviceId,
+                createdAt: createdAt,
                 serviceName: serviceName,
+                servicePrice: servicePrice,
+                serviceImages: serviceImages,
                 providerId: providerId,
                 providerName: providerName,
-                price: price,
-                quantity: quantity,
-                imageUrl: imageUrl,
+                providerImages: providerImages,
                 optionsJson: optionsJson,
+                quantity: quantity,
                 rowid: rowid,
               ),
           createCompanionCallback:
               ({
                 required String cartItemId,
+                required String cartId,
                 required String serviceId,
+                required String createdAt,
                 required String serviceName,
-                Value<String?> providerId = const Value.absent(),
-                Value<String?> providerName = const Value.absent(),
-                required double price,
-                Value<int> quantity = const Value.absent(),
-                Value<String?> imageUrl = const Value.absent(),
+                required double servicePrice,
+                required String serviceImages,
+                required String providerId,
+                required String providerName,
+                required String providerImages,
                 Value<String?> optionsJson = const Value.absent(),
+                Value<int> quantity = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => CartTableCompanion.insert(
                 cartItemId: cartItemId,
+                cartId: cartId,
                 serviceId: serviceId,
+                createdAt: createdAt,
                 serviceName: serviceName,
+                servicePrice: servicePrice,
+                serviceImages: serviceImages,
                 providerId: providerId,
                 providerName: providerName,
-                price: price,
-                quantity: quantity,
-                imageUrl: imageUrl,
+                providerImages: providerImages,
                 optionsJson: optionsJson,
+                quantity: quantity,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
@@ -4781,6 +5278,184 @@ typedef $$CartTableTableProcessedTableManager =
       CartTableData,
       PrefetchHooks Function()
     >;
+typedef $$BookingHistoryTableTableCreateCompanionBuilder =
+    BookingHistoryTableCompanion Function({
+      required String bookingId,
+      required String json,
+      required DateTime createdAt,
+      Value<int> rowid,
+    });
+typedef $$BookingHistoryTableTableUpdateCompanionBuilder =
+    BookingHistoryTableCompanion Function({
+      Value<String> bookingId,
+      Value<String> json,
+      Value<DateTime> createdAt,
+      Value<int> rowid,
+    });
+
+class $$BookingHistoryTableTableFilterComposer
+    extends Composer<_$AppDatabase, $BookingHistoryTableTable> {
+  $$BookingHistoryTableTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get bookingId => $composableBuilder(
+    column: $table.bookingId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get json => $composableBuilder(
+    column: $table.json,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$BookingHistoryTableTableOrderingComposer
+    extends Composer<_$AppDatabase, $BookingHistoryTableTable> {
+  $$BookingHistoryTableTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get bookingId => $composableBuilder(
+    column: $table.bookingId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get json => $composableBuilder(
+    column: $table.json,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$BookingHistoryTableTableAnnotationComposer
+    extends Composer<_$AppDatabase, $BookingHistoryTableTable> {
+  $$BookingHistoryTableTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get bookingId =>
+      $composableBuilder(column: $table.bookingId, builder: (column) => column);
+
+  GeneratedColumn<String> get json =>
+      $composableBuilder(column: $table.json, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+}
+
+class $$BookingHistoryTableTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $BookingHistoryTableTable,
+          BookingHistoryTableData,
+          $$BookingHistoryTableTableFilterComposer,
+          $$BookingHistoryTableTableOrderingComposer,
+          $$BookingHistoryTableTableAnnotationComposer,
+          $$BookingHistoryTableTableCreateCompanionBuilder,
+          $$BookingHistoryTableTableUpdateCompanionBuilder,
+          (
+            BookingHistoryTableData,
+            BaseReferences<
+              _$AppDatabase,
+              $BookingHistoryTableTable,
+              BookingHistoryTableData
+            >,
+          ),
+          BookingHistoryTableData,
+          PrefetchHooks Function()
+        > {
+  $$BookingHistoryTableTableTableManager(
+    _$AppDatabase db,
+    $BookingHistoryTableTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$BookingHistoryTableTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$BookingHistoryTableTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$BookingHistoryTableTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> bookingId = const Value.absent(),
+                Value<String> json = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => BookingHistoryTableCompanion(
+                bookingId: bookingId,
+                json: json,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String bookingId,
+                required String json,
+                required DateTime createdAt,
+                Value<int> rowid = const Value.absent(),
+              }) => BookingHistoryTableCompanion.insert(
+                bookingId: bookingId,
+                json: json,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$BookingHistoryTableTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $BookingHistoryTableTable,
+      BookingHistoryTableData,
+      $$BookingHistoryTableTableFilterComposer,
+      $$BookingHistoryTableTableOrderingComposer,
+      $$BookingHistoryTableTableAnnotationComposer,
+      $$BookingHistoryTableTableCreateCompanionBuilder,
+      $$BookingHistoryTableTableUpdateCompanionBuilder,
+      (
+        BookingHistoryTableData,
+        BaseReferences<
+          _$AppDatabase,
+          $BookingHistoryTableTable,
+          BookingHistoryTableData
+        >,
+      ),
+      BookingHistoryTableData,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -4795,4 +5470,6 @@ class $AppDatabaseManager {
       $$UserAddressTableTableTableManager(_db, _db.userAddressTable);
   $$CartTableTableTableManager get cartTable =>
       $$CartTableTableTableManager(_db, _db.cartTable);
+  $$BookingHistoryTableTableTableManager get bookingHistoryTable =>
+      $$BookingHistoryTableTableTableManager(_db, _db.bookingHistoryTable);
 }

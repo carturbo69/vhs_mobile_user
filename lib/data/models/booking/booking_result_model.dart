@@ -1,35 +1,6 @@
-class BookingAmountItem {
-  final String bookingId;
-  final String serviceId;
-  final String serviceName;
-  final double subtotal;
-  final double discount;
-  final double amount;
-
-  BookingAmountItem({
-    required this.bookingId,
-    required this.serviceId,
-    required this.serviceName,
-    required this.subtotal,
-    required this.discount,
-    required this.amount,
-  });
-
-  factory BookingAmountItem.fromJson(Map<String, dynamic> j) {
-    return BookingAmountItem(
-      bookingId: j['bookingId']?.toString() ?? "",
-      serviceId: j['serviceId']?.toString() ?? "",
-      serviceName: j['serviceName'] ?? "",
-      subtotal: (j['subtotal'] as num?)?.toDouble() ?? 0.0,
-      discount: (j['discount'] as num?)?.toDouble() ?? 0.0,
-      amount: (j['amount'] as num?)?.toDouble() ?? 0.0,
-    );
-  }
-}
-
 class BookingResultModel {
   final List<String> bookingIds;
-  final List<BookingAmountItem> breakdown;
+  final List<BookingBreakdownItem> breakdown;
   final double subtotal;
   final double discount;
   final double total;
@@ -42,15 +13,44 @@ class BookingResultModel {
     required this.total,
   });
 
-  factory BookingResultModel.fromJson(Map<String, dynamic> j) {
+  factory BookingResultModel.fromJson(Map<String, dynamic> json) {
     return BookingResultModel(
-      bookingIds: (j['bookingIds'] as List).map((e) => e.toString()).toList(),
-      breakdown: ((j['breakdown'] ?? []) as List)
-          .map((e) => BookingAmountItem.fromJson(e))
+      bookingIds: List<String>.from(json['bookingIds'] ?? []),
+      breakdown: (json['breakdown'] as List<dynamic>)
+          .map((e) => BookingBreakdownItem.fromJson(e))
           .toList(),
-      subtotal: (j['subtotal'] as num?)?.toDouble() ?? 0.0,
-      discount: (j['discount'] as num?)?.toDouble() ?? 0.0,
-      total: (j['total'] as num?)?.toDouble() ?? 0.0,
+      subtotal: (json['subtotal'] ?? 0).toDouble(),
+      discount: (json['discount'] ?? 0).toDouble(),
+      total: (json['total'] ?? 0).toDouble(),
+    );
+  }
+}
+
+class BookingBreakdownItem {
+  final String bookingId;
+  final String serviceId;
+  final String serviceName;
+  final double subtotal;
+  final double discount;
+  final double amount;
+
+  BookingBreakdownItem({
+    required this.bookingId,
+    required this.serviceId,
+    required this.serviceName,
+    required this.subtotal,
+    required this.discount,
+    required this.amount,
+  });
+
+  factory BookingBreakdownItem.fromJson(Map<String, dynamic> json) {
+    return BookingBreakdownItem(
+      bookingId: json['bookingId'],
+      serviceId: json['serviceId'],
+      serviceName: json['serviceName'],
+      subtotal: (json['subtotal'] ?? 0).toDouble(),
+      discount: (json['discount'] ?? 0).toDouble(),
+      amount: (json['amount'] ?? 0).toDouble(),
     );
   }
 }
