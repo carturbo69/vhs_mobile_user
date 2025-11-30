@@ -1,5 +1,15 @@
 import 'package:google_sign_in/google_sign_in.dart';
 
+/// Custom exception for emulator-specific Google Sign-In errors
+class GoogleSignInEmulatorException implements Exception {
+  final String message;
+  
+  GoogleSignInEmulatorException(this.message);
+  
+  @override
+  String toString() => message;
+}
+
 class GoogleSignInHelperV7 {
   final GoogleSignIn _google = GoogleSignIn.instance;
 
@@ -45,8 +55,14 @@ class GoogleSignInHelperV7 {
       }
 
       print("Attempting lightweight authentication...");
-      GoogleSignInAccount? account = await _google
-          .attemptLightweightAuthentication();
+      GoogleSignInAccount? account;
+      
+      try {
+        account = await _google.attemptLightweightAuthentication();
+      } catch (e) {
+        print("Lightweight authentication error (non-fatal): $e");
+        // Continue to full authentication
+      }
 
       if (account == null) {
         print("Lightweight auth failed, trying full authentication...");
@@ -64,22 +80,40 @@ class GoogleSignInHelperV7 {
           // Xử lý lỗi unknownError - thường xảy ra trên emulator
           if (e.code == GoogleSignInExceptionCode.unknownError) {
             final errorMessage = e.toString().toLowerCase();
+            
+            // Check for common emulator/credential issues
             if (errorMessage.contains('no credential') || 
                 errorMessage.contains('no credentials available')) {
-              throw Exception(
-                "Không thể đăng nhập Google. Vui lòng:\n"
-                "1. Đảm bảo emulator có Google Play Services\n"
-                "2. Đăng nhập Google account trên emulator\n"
-                "3. Hoặc thử trên thiết bị thật"
+              // Return a more descriptive error that can be handled by the UI
+              throw GoogleSignInEmulatorException(
+                "Không thể đăng nhập Google trên emulator này.\n\n"
+                "Vui lòng:\n"
+                "• Sử dụng emulator có Google Play Services\n"
+                "• Đăng nhập Google account trên emulator (Settings > Accounts)\n"
+                "• Hoặc thử trên thiết bị thật"
               );
             }
+            
+            // Handle other unknown errors
+            print("Google Sign-In unknown error: $e");
+            throw Exception(
+              "Lỗi đăng nhập Google: Không xác định được lỗi\n\n"
+              "Vui lòng thử lại hoặc sử dụng đăng nhập bằng username/password."
+            );
           }
+          
           // Log other error codes for debugging
-          print("Google Sign-In error code: ${e.code}");
-          rethrow;
+          print("Google Sign-In error code: ${e.code}, error: $e");
+          throw Exception(
+            "Lỗi đăng nhập Google: Mã lỗi ${e.code}"
+          );
         } catch (e) {
+          // Re-throw if it's already a custom exception
+          if (e is GoogleSignInEmulatorException || e is Exception) {
+            rethrow;
+          }
           print("Unexpected error during authenticate(): $e");
-          rethrow;
+          throw Exception("Lỗi không xác định khi đăng nhập Google: $e");
         }
 
         if (account == null) {
@@ -94,7 +128,10 @@ class GoogleSignInHelperV7 {
       
       if (auth.idToken == null) {
         print("Warning: idToken is null after authentication");
-        throw Exception("Failed to obtain idToken from Google Sign-In. Please ensure the OAuth client is properly configured.");
+        throw Exception(
+          "Không thể lấy idToken từ Google Sign-In.\n"
+          "Vui lòng kiểm tra cấu hình OAuth client."
+        );
       }
       
       print("Successfully obtained idToken");
@@ -109,22 +146,36 @@ class GoogleSignInHelperV7 {
       // Xử lý lỗi unknownError
       if (e.code == GoogleSignInExceptionCode.unknownError) {
         final errorMessage = e.toString().toLowerCase();
+        
         if (errorMessage.contains('no credential') || 
             errorMessage.contains('no credentials available')) {
-          throw Exception(
-            "Không thể đăng nhập Google. Vui lòng:\n"
-            "1. Đảm bảo emulator có Google Play Services\n"
-            "2. Đăng nhập Google account trên emulator\n"
-            "3. Hoặc thử trên thiết bị thật"
+          throw GoogleSignInEmulatorException(
+            "Không thể đăng nhập Google trên emulator này.\n\n"
+            "Vui lòng:\n"
+            "• Sử dụng emulator có Google Play Services\n"
+            "• Đăng nhập Google account trên emulator (Settings > Accounts)\n"
+            "• Hoặc thử trên thiết bị thật"
           );
         }
+        
+        throw Exception(
+          "Lỗi đăng nhập Google: Không xác định được lỗi"
+        );
       }
-      // Re-throw other GoogleSignInExceptions
+      
+      // Re-throw other GoogleSignInExceptions as generic exceptions
+      throw Exception("Lỗi đăng nhập Google: Mã lỗi ${e.code}");
+    } on GoogleSignInEmulatorException {
+      // Re-throw emulator-specific exceptions
       rethrow;
     } catch (e, stackTrace) {
       print("Unexpected error during Google Sign-In: $e");
       print("Stack trace: $stackTrace");
-      rethrow;
+      // If it's already an Exception, rethrow it
+      if (e is Exception) {
+        rethrow;
+      }
+      throw Exception("Lỗi không xác định khi đăng nhập Google: $e");
     }
   }
 

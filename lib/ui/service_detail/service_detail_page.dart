@@ -411,12 +411,20 @@ class _BottomActionBar extends ConsumerWidget {
                       .addToCartFromDetail(serviceId: detail.serviceId);
                   context.go(Routes.cart);
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("Đã thêm vào giỏ")),
+                    const SnackBar(
+                      content: Text("Đã thêm vào giỏ"),
+                      backgroundColor: Colors.green,
+                    ),
                   );
                 } catch (e) {
-                  ScaffoldMessenger.of(
-                    context,
-                  ).showSnackBar(SnackBar(content: Text("Lỗi: $e")));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(e.toString().contains('đã có trong giỏ hàng') 
+                          ? "Dịch vụ này đã có trong giỏ hàng" 
+                          : "Lỗi: $e"),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
                 }
               },
               child: const Text("Thêm vào giỏ"),
@@ -437,6 +445,15 @@ class _BottomActionBar extends ConsumerWidget {
                   // Sau khi add → đi đến Checkout
                   context.push(Routes.checkout);
                 } catch (e) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(e.toString().contains('đã có trong giỏ hàng') 
+                          ? "Dịch vụ này đã có trong giỏ hàng" 
+                          : "Lỗi: $e"),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                  return;
                   ScaffoldMessenger.of(
                     context,
                   ).showSnackBar(SnackBar(content: Text("Lỗi: $e")));
