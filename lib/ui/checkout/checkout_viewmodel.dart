@@ -14,8 +14,8 @@ final checkoutProvider = AsyncNotifierProvider<CheckoutNotifier, void>(
 );
 
 class CheckoutNotifier extends AsyncNotifier<void> {
-  late final BookingRepository _bookingRepo;
-  late final CartRepository _cartRepo;
+  late  BookingRepository _bookingRepo;
+  late  CartRepository _cartRepo;
   late final Ref _ref;
 
   @override
