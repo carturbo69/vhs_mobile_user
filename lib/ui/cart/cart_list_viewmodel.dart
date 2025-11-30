@@ -32,12 +32,24 @@ class CartNotifier extends AsyncNotifier<List<CartItemModel>> {
   // 🔥 HÀM QUAN TRỌNG: Add Cart Item (dùng backend chuẩn)
   // =====================================================
   Future<void> addCartItem(AddCartItemRequest req) async {
+    // Kiểm tra xem dịch vụ đã có trong giỏ hàng chưa
+    final currentItems = state.maybeWhen(
+      data: (items) => items,
+      orElse: () => <CartItemModel>[],
+    );
+    final serviceExists = currentItems.any((item) => item.serviceId == req.serviceId);
+    
+    if (serviceExists) {
+      throw Exception('Dịch vụ này đã có trong giỏ hàng');
+    }
+    
     try {
       await _repo.addToCart(req); // map tới CartRepository
       final local = await _repo.readLocal();
       state = AsyncData(local);
     } catch (e, st) {
-      state = AsyncError(e, st);
+      // Chỉ set error nếu là lỗi thực sự, không phải validation error
+      // Giữ nguyên state hiện tại để không làm mất dữ liệu
       rethrow;
     }
   }

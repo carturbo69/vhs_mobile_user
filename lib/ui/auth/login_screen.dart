@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:vhs_mobile_user/helper/google_sign_in_helper.dart';
 import 'package:vhs_mobile_user/routing/routes.dart';
 import 'package:vhs_mobile_user/ui/auth/auth_viewmodel.dart';
+import 'package:vhs_mobile_user/ui/auth/terms_and_policy_screen.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({super.key});
@@ -22,12 +23,12 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
 
-  // Màu xanh nước biển chủ đạo - cải thiện palette
-  static const Color primaryBlue = Color(0xFF00BCD4); // Cyan
-  static const Color darkBlue = Color(0xFF00838F); // Darker cyan
-  static const Color lightBlue = Color(0xFFB2EBF2); // Light cyan
-  static const Color accentBlue = Color(0xFF4DD0E1); // Accent cyan
-  static const Color deepBlue = Color(0xFF006064); // Deep cyan
+  // Màu xanh theo web - Sky blue palette
+  static const Color primaryBlue = Color(0xFF0284C7); // Sky-600
+  static const Color darkBlue = Color(0xFF0369A1); // Sky-700
+  static const Color lightBlue = Color(0xFFE0F2FE); // Sky-100
+  static const Color accentBlue = Color(0xFFBAE6FD); // Sky-200
+  static const Color deepBlue = Color(0xFF0C4A6E); // Sky-800
 
   @override
   void initState() {
@@ -57,14 +58,16 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
 
     return Scaffold(
       body: Container(
+        width: double.infinity,
+        height: double.infinity,
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
               Colors.white,
-              lightBlue.withOpacity(0.4),
-              primaryBlue.withOpacity(0.1),
+              lightBlue.withOpacity(0.3),
+              accentBlue.withOpacity(0.2),
             ],
             stops: const [0.0, 0.5, 1.0],
           ),
@@ -113,48 +116,67 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
                 opacity: _fadeAnimation,
                 child: SingleChildScrollView(
                   physics: const BouncingScrollPhysics(),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 28.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        const SizedBox(height: 50),
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      minHeight: MediaQuery.of(context).size.height - MediaQuery.of(context).padding.top - MediaQuery.of(context).padding.bottom,
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 28.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const SizedBox(height: 20),
                         
-                        // Logo/Icon Section
+                        // Logo Section
                         Center(
                           child: Container(
-                            width: 100,
-                            height: 100,
+                            width: 110,
+                            height: 110,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
-                              gradient: LinearGradient(
-                                colors: [primaryBlue, darkBlue],
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                              ),
+                              color: Colors.white,
                               boxShadow: [
                                 BoxShadow(
-                                  color: primaryBlue.withOpacity(0.4),
+                                  color: primaryBlue.withOpacity(0.2),
                                   blurRadius: 20,
-                                  offset: const Offset(0, 10),
+                                  offset: const Offset(0, 8),
                                 ),
                               ],
                             ),
-                            child: const Icon(
-                              Icons.person,
-                              size: 50,
-                              color: Colors.white,
+                            padding: const EdgeInsets.all(10),
+                            child: ClipOval(
+                              child: Image.asset(
+                                'assets/images/vhs_logo.png',
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) {
+                                  return Container(
+                                    decoration: BoxDecoration(
+                                      gradient: LinearGradient(
+                                        colors: [primaryBlue, darkBlue],
+                                        begin: Alignment.topLeft,
+                                        end: Alignment.bottomRight,
+                                      ),
+                                    ),
+                                    child: const Icon(
+                                      Icons.person,
+                                      size: 50,
+                                      color: Colors.white,
+                                    ),
+                                  );
+                                },
+                              ),
                             ),
                           ),
                         ),
                         
-                        const SizedBox(height: 40),
+                        const SizedBox(height: 28),
                         
                         // Title Section
                         const Text(
                           "Đăng nhập",
                           style: TextStyle(
-                            fontSize: 36,
+                            fontSize: 30,
                             fontWeight: FontWeight.bold,
                             color: Color(0xFF1A1A1A),
                             letterSpacing: 0.5,
@@ -162,11 +184,11 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
                           ),
                           textAlign: TextAlign.center,
                         ),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 6),
                         Text(
                           "Chào mừng bạn trở lại!",
                           style: TextStyle(
-                            fontSize: 16,
+                            fontSize: 14,
                             color: Colors.grey[600],
                             fontWeight: FontWeight.w400,
                             letterSpacing: 0.3,
@@ -174,7 +196,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
                           textAlign: TextAlign.center,
                         ),
                         
-                        const SizedBox(height: 50),
+                        const SizedBox(height: 36),
                         
                         // Form Section
                         Form(
@@ -197,7 +219,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
                                 child: TextFormField(
                                   controller: _username,
                                   decoration: InputDecoration(
-                                    labelText: "Username",
+                                    labelText: "Tên đăng nhập hoặc email",
                                     labelStyle: TextStyle(
                                       color: Colors.grey[600],
                                       fontSize: 15,
@@ -240,14 +262,14 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
                                   ),
                                   validator: (value) {
                                     if (value == null || value.isEmpty) {
-                                      return 'Vui lòng nhập username';
+                                      return 'Vui lòng nhập tên đăng nhập';
                                     }
                                     return null;
                                   },
                                 ),
                               ),
                               
-                              const SizedBox(height: 20),
+                              const SizedBox(height: 18),
                               
                               // Password Field
                               Container(
@@ -266,7 +288,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
                                   controller: _password,
                                   obscureText: _hide,
                                   decoration: InputDecoration(
-                                    labelText: "Password",
+                                    labelText: "Mật khẩu",
                                     labelStyle: TextStyle(
                                       color: Colors.grey[600],
                                       fontSize: 15,
@@ -324,7 +346,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
                                 ),
                               ),
                               
-                              const SizedBox(height: 12),
+                              const SizedBox(height: 10),
                               
                               // Forgot Password Link
                               Align(
@@ -345,7 +367,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
                                 ),
                               ),
                               
-                              const SizedBox(height: 32),
+                              const SizedBox(height: 28),
                               
                               // Login Button
                               auth.isLoading
@@ -457,7 +479,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
                           ),
                         ),
                         
-                        const SizedBox(height: 32),
+                        const SizedBox(height: 28),
                         
                         // Register Link
                         Center(
@@ -487,7 +509,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
                           ),
                         ),
                         
-                        const SizedBox(height: 40),
+                        const SizedBox(height: 32),
                         
                         // Divider
                         Row(
@@ -595,29 +617,74 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
                                     } else {
                                       errorMessage = "Lỗi kết nối: ${e.message ?? e.toString()}";
                                     }
-                                  } else {
+                                  } else if (e is GoogleSignInEmulatorException) {
+                                    // Handle emulator-specific errors with better formatting
+                                    errorMessage = e.message;
+                                  } else if (e is Exception) {
+                                    // Handle other exceptions
                                     final errorStr = e.toString();
-                                    if (errorStr.contains('no credential') || 
-                                        errorStr.contains('no credentials available') ||
-                                        errorStr.contains('Google Play Services')) {
-                                      errorMessage = errorStr;
+                                    // Remove "Exception: " prefix if present
+                                    if (errorStr.startsWith('Exception: ')) {
+                                      errorMessage = errorStr.substring(11);
                                     } else {
                                       errorMessage = errorStr;
                                     }
+                                  } else {
+                                    errorMessage = e.toString();
                                   }
                                   
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(errorMessage),
-                                      duration: const Duration(seconds: 5),
-                                      backgroundColor: Colors.red,
-                                      behavior: SnackBarBehavior.floating,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(12),
+                                  // Show error in a dialog for better readability (especially for emulator errors)
+                                  if (e is GoogleSignInEmulatorException || 
+                                      (errorMessage.contains('emulator') || 
+                                       errorMessage.contains('Google Play Services'))) {
+                                    showDialog(
+                                      context: context,
+                                      builder: (context) => AlertDialog(
+                                        title: const Row(
+                                          children: [
+                                            Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 28),
+                                            SizedBox(width: 12),
+                                            Expanded(
+                                              child: Text(
+                                                "Lỗi đăng nhập Google",
+                                                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        content: Text(
+                                          errorMessage,
+                                          style: const TextStyle(fontSize: 15, height: 1.5),
+                                        ),
+                                        actions: [
+                                          TextButton(
+                                            onPressed: () => Navigator.of(context).pop(),
+                                            child: const Text(
+                                              "Đã hiểu",
+                                              style: TextStyle(fontWeight: FontWeight.bold),
+                                            ),
+                                          ),
+                                        ],
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(16),
+                                        ),
                                       ),
-                                      margin: const EdgeInsets.all(16),
-                                    ),
-                                  );
+                                    );
+                                  } else {
+                                    // Show regular snackbar for other errors
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(errorMessage),
+                                        duration: const Duration(seconds: 5),
+                                        backgroundColor: Colors.red,
+                                        behavior: SnackBarBehavior.floating,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(12),
+                                        ),
+                                        margin: const EdgeInsets.all(16),
+                                      ),
+                                    );
+                                  }
                                 }
                               },
                               borderRadius: BorderRadius.circular(16),
@@ -655,12 +722,89 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
                           ),
                         ),
                         
-                        const SizedBox(height: 40),
+                        const SizedBox(height: 32),
+                        
+                        // Terms and Privacy Links
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            TextButton(
+                              onPressed: () {
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (context) => const TermsAndPolicyScreen(),
+                                  ),
+                                );
+                              },
+                              style: TextButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.description_outlined,
+                                    size: 16,
+                                    color: primaryBlue,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    "Điều khoản",
+                                    style: TextStyle(
+                                      color: primaryBlue,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Container(
+                              width: 1,
+                              height: 16,
+                              color: Colors.grey[300],
+                            ),
+                            TextButton(
+                              onPressed: () {
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (context) => const TermsAndPolicyScreen(initialTab: 2),
+                                  ),
+                                );
+                              },
+                              style: TextButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.lock_outline,
+                                    size: 16,
+                                    color: primaryBlue,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    "Bảo mật",
+                                    style: TextStyle(
+                                      color: primaryBlue,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        
+                        const SizedBox(height: 20),
                       ],
                     ),
                   ),
                 ),
               ),
+            ),
             ],
           ),
         ),
