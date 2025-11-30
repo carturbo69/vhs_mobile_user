@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:go_router/go_router.dart';
@@ -7,6 +8,8 @@ import 'package:vhs_mobile_user/data/models/service/service_detail.dart';
 import 'package:vhs_mobile_user/routing/routes.dart';
 import 'package:vhs_mobile_user/ui/cart/cart_list_viewmodel.dart';
 import 'package:vhs_mobile_user/ui/service_detail/service_detail_viewmodel.dart';
+import 'package:vhs_mobile_user/ui/chat/chat_list_viewmodel.dart';
+import 'package:vhs_mobile_user/routing/routes.dart';
 
 class ServiceDetailPage extends ConsumerWidget {
   final String serviceId;
@@ -32,7 +35,7 @@ class ServiceDetailPage extends ConsumerWidget {
         error: (e, _) => Center(child: Text("Lỗi: $e")),
         data: (detail) => Stack(
           children: [
-            _DetailContent(detail: detail),
+            _DetailContent(detail: detail, serviceId: '',),
             Positioned(
               bottom: 0,
               left: 0,
@@ -46,12 +49,13 @@ class ServiceDetailPage extends ConsumerWidget {
   }
 }
 
-class _DetailContent extends StatelessWidget {
+class _DetailContent extends ConsumerWidget {
   final ServiceDetail detail;
-  const _DetailContent({required this.detail});
+  final String serviceId;
+  const _DetailContent({required this.detail, required this.serviceId});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final imageList = detail.imageList;
 
     return SingleChildScrollView(
@@ -62,7 +66,7 @@ class _DetailContent extends StatelessWidget {
           _buildPriceSection(),
           _buildTitleSection(),
           _buildRatingSection(),
-          _buildProviderSection(),
+          _buildProviderSection(context, ref),
           _buildOptionsSection(),
           _buildDescriptionSection(),
           _buildTagsSection(),
@@ -157,7 +161,7 @@ class _DetailContent extends StatelessWidget {
   }
 
   // ================= PROVIDER (SHOP) SECTION ====================
-  Widget _buildProviderSection() {
+  Widget _buildProviderSection(BuildContext context, WidgetRef ref) {
     final p = detail.provider;
     return Container(
       width: double.infinity,
@@ -411,12 +415,20 @@ class _BottomActionBar extends ConsumerWidget {
                       .addToCartFromDetail(serviceId: detail.serviceId);
                   context.go(Routes.cart);
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("Đã thêm vào giỏ")),
+                    const SnackBar(
+                      content: Text("Đã thêm vào giỏ"),
+                      backgroundColor: Colors.green,
+                    ),
                   );
                 } catch (e) {
-                  ScaffoldMessenger.of(
-                    context,
-                  ).showSnackBar(SnackBar(content: Text("Lỗi: $e")));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(e.toString().contains('đã có trong giỏ hàng') 
+                          ? "Dịch vụ này đã có trong giỏ hàng" 
+                          : "Lỗi: $e"),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
                 }
               },
               child: const Text("Thêm vào giỏ"),
@@ -437,6 +449,15 @@ class _BottomActionBar extends ConsumerWidget {
                   // Sau khi add → đi đến Checkout
                   context.push(Routes.checkout);
                 } catch (e) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(e.toString().contains('đã có trong giỏ hàng') 
+                          ? "Dịch vụ này đã có trong giỏ hàng" 
+                          : "Lỗi: $e"),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                  return;
                   ScaffoldMessenger.of(
                     context,
                   ).showSnackBar(SnackBar(content: Text("Lỗi: $e")));

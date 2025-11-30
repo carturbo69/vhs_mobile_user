@@ -18,6 +18,10 @@ class BottomNavbarWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Kiểm tra route hiện tại để ẩn bottom navigation bar khi ở cart
+    final currentLocation = GoRouterState.of(context).uri.path;
+    final isCartScreen = currentLocation == '/cart';
+    
     return Scaffold(
       body: navigationShell,
       bottomNavigationBar: NavigationBar(
@@ -30,6 +34,11 @@ class BottomNavbarWidget extends StatelessWidget {
             label: "Trang chủ",
           ),
           NavigationDestination(
+            icon: Icon(Icons.chat_bubble_outline),
+            selectedIcon: Icon(Icons.chat_bubble),
+            label: "Tin nhắn",
+          ),
+          NavigationDestination(
             icon: Icon(Icons.history_outlined),
             selectedIcon: Icon(Icons.history),
             label: "Lịch sử",
@@ -39,13 +48,16 @@ class BottomNavbarWidget extends StatelessWidget {
             selectedIcon: Icon(Icons.person),
             label: "Hồ sơ",
           ),
-          NavigationDestination(
-            icon: Icon(Icons.shopping_cart_outlined),
-            selectedIcon: Icon(Icons.shopping_cart),
-            label: "Giỏ hàng",
-          ),
-        ],
-      ),
+      
+              
+               
+                NavigationDestination(
+                  icon: Icon(Icons.shopping_cart_outlined),
+                  selectedIcon: Icon(Icons.shopping_cart),
+                  label: "Giỏ hàng",
+                ),
+              ],
+            ),
     );
   }
 }
