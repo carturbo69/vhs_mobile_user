@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:vhs_mobile_user/data/models/cart/cart_item_model.dart';
+import 'package:vhs_mobile_user/ui/core/theme_helper.dart';
 
 // Màu xanh theo web - Sky blue palette
 const Color primaryBlue = Color(0xFF0284C7); // Sky-600
@@ -40,25 +41,34 @@ class CartItemWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final img = item.serviceImages.isNotEmpty ? item.serviceImages.first : null;
+    final isDark = ThemeHelper.isDarkMode(context);
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
       decoration: BoxDecoration(
+        color: isSelected
+            ? (isDark
+                ? Colors.blue.shade900.withOpacity(0.3)
+                : lightBlue.withOpacity(0.3))
+            : ThemeHelper.getCardBackgroundColor(context),
         border: Border(
-          bottom: BorderSide(color: Colors.grey[200]!, width: 1),
+          bottom: BorderSide(color: ThemeHelper.getBorderColor(context), width: 1),
         ),
       ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
           // Checkbox
           Checkbox(
             value: isSelected,
             onChanged: onSelectChanged,
             activeColor: primaryBlue,
             materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(4),
+            ),
           ),
-          const SizedBox(width: 4),
+          const SizedBox(width: 8),
 
           // Service Image + Name (flex: 4)
           Expanded(
@@ -66,85 +76,103 @@ class CartItemWidget extends StatelessWidget {
             child: Row(
               children: [
                 // Image
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(6),
-                  child: Container(
-                    width: 60,
-                    height: 60,
-                    color: Colors.grey[200],
-                    child: img != null
+            ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+              child: Container(
+                    width: 70,
+                    height: 70,
+                    decoration: BoxDecoration(
+                      color: isDark ? Colors.grey.shade800 : Colors.grey[200],
+                      borderRadius: BorderRadius.circular(10),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(isDark ? 0.3 : 0.05),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                child: img != null
                         ? CachedNetworkImage(
                             imageUrl: img,
                             fit: BoxFit.cover,
                             placeholder: (_, __) => Container(
-                              color: Colors.grey[200],
-                              child: const Center(
-                                child: CircularProgressIndicator(strokeWidth: 2),
+                              color: isDark ? Colors.grey.shade800 : Colors.grey[200],
+                              child: Center(
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: primaryBlue,
+                                ),
                               ),
                             ),
-                            errorWidget: (_, __, ___) => const Icon(Icons.image_outlined, size: 24),
+                            errorWidget: (_, __, ___) => Icon(
+                              Icons.image_outlined,
+                              size: 28,
+                              color: isDark ? Colors.grey.shade400 : Colors.grey,
+                            ),
                           )
-                        : const Icon(Icons.image_outlined, size: 24),
-                  ),
-                ),
-                const SizedBox(width: 8),
+                        : Icon(
+                            Icons.image_outlined,
+                            size: 28,
+                            color: isDark ? Colors.grey.shade400 : Colors.grey,
+                          ),
+              ),
+            ),
+            const SizedBox(width: 12),
                 // Service Name
                 Flexible(
                   child: Text(
                     item.serviceName,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w500,
-                      fontSize: 12,
-                      color: Colors.black87,
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                      color: ThemeHelper.getTextColor(context),
+                      height: 1.3,
                     ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],
-            ),
-          ),
+                    ),
+                  ),
 
-          const SizedBox(width: 4),
-
-          // Unit Price (flex: 2)
-          Expanded(
-            flex: 2,
-            child: Center(
-              child: Text(
-                '${_formatPrice(item.servicePrice)}₫',
-                style: const TextStyle(
-                  fontWeight: FontWeight.w600,
-                  color: primaryBlue,
-                  fontSize: 11,
-                ),
-                textAlign: TextAlign.center,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ),
-
+          const SizedBox(width: 8),
 
           // Amount (flex: 2)
           Expanded(
             flex: 2,
             child: Center(
-              child: Text(
-                '${_formatPrice(item.subtotal)}₫',
-                style: const TextStyle(
-                  fontWeight: FontWeight.w600,
-                  color: Colors.red,
-                  fontSize: 11,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                decoration: BoxDecoration(
+                  color: isDark 
+                      ? Colors.red.shade900.withOpacity(0.3)
+                      : Colors.red.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: isDark 
+                        ? Colors.red.shade700.withOpacity(0.5)
+                        : Colors.red.shade200,
+                    width: 1,
+                  ),
                 ),
-                textAlign: TextAlign.center,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+                child: Text(
+                  '${_formatPrice(item.subtotal)}₫',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    color: Colors.red.shade400,
+                    fontSize: 12,
+                        ),
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
             ),
           ),
 
-          const SizedBox(width: 4),
+          const SizedBox(width: 8),
 
           // Action (flex: 1)
           Expanded(
@@ -153,21 +181,25 @@ class CartItemWidget extends StatelessWidget {
               child: TextButton(
                 onPressed: onDelete,
                 style: TextButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
                   minimumSize: Size.zero,
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
                 ),
                 child: const Text(
                   'Xoá',
                   style: TextStyle(
                     color: Colors.red,
-                    fontSize: 10,
-                  ),
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                      ),
                 ),
+                  ),
               ),
             ),
-          ),
-        ],
+          ],
       ),
     );
   }

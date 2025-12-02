@@ -123,32 +123,23 @@ class MessageModel {
     };
   }
 
-  // Helper method để parse DateTime và giữ nguyên UTC (sẽ convert sang VN time khi hiển thị)
+  // Helper method để parse DateTime và convert sang giờ Việt Nam (UTC+7) để lưu vào model
   static DateTime _parseDateTime(String dateTimeString) {
     try {
-      // Debug: In ra để kiểm tra format từ backend
-      print('Parsing DateTime string: $dateTimeString');
-      
       // Parse DateTime từ string
       DateTime parsed = DateTime.parse(dateTimeString);
       
-      // Debug: In ra thông tin sau khi parse
-      print('Parsed DateTime: $parsed, isUtc: ${parsed.isUtc}');
-      
       // Backend trả về UTC time (thường có 'Z' ở cuối hoặc không có timezone)
-      // Nếu có 'Z' ở cuối hoặc có timezone offset, DateTime.parse sẽ tự động parse đúng
-      // Nếu không có timezone info, giả sử là UTC
+      // Convert sang UTC nếu chưa phải UTC
       if (!parsed.isUtc) {
         // Kiểm tra xem string có chứa timezone info không
-        // Tìm timezone offset trong string (ví dụ: +07:00, -05:00, Z)
         final hasTimezone = dateTimeString.contains('+') || 
                            dateTimeString.contains('-') || 
                            dateTimeString.endsWith('Z') ||
                            (dateTimeString.contains('T') && (dateTimeString.contains('+') || dateTimeString.contains('Z')));
         
         if (!hasTimezone) {
-          // Không có timezone info trong string
-          // Giả sử các giá trị trong string đã là UTC, tạo UTC DateTime
+          // Không có timezone info, giả sử là UTC và tạo UTC DateTime
           parsed = DateTime.utc(
             parsed.year,
             parsed.month,
@@ -159,22 +150,19 @@ class MessageModel {
             parsed.millisecond,
             parsed.microsecond,
           );
-          print('No timezone info, created UTC: $parsed');
         } else {
           // Có timezone info, convert sang UTC
           parsed = parsed.toUtc();
-          print('Has timezone info, converted to UTC: $parsed');
         }
       }
       
-      // Đảm bảo trả về UTC DateTime
-      final result = parsed.isUtc ? parsed : parsed.toUtc();
-      print('Final UTC DateTime: $result');
-      return result;
+      // Convert UTC sang giờ Việt Nam (UTC+7) để lưu vào model
+      final vietnamTime = parsed.add(const Duration(hours: 7));
+      return vietnamTime;
     } catch (e) {
-      // Nếu parse lỗi, trả về thời gian hiện tại (UTC)
+      // Nếu parse lỗi, trả về thời gian hiện tại ở giờ Việt Nam
       print('Error parsing DateTime: $dateTimeString, error: $e');
-      return DateTime.now().toUtc();
+      return DateTime.now().toUtc().add(const Duration(hours: 7));
     }
   }
 }

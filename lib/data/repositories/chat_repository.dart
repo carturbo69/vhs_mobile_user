@@ -91,6 +91,28 @@ class ChatRepository {
       hide: hide,
     );
   }
+
+  // Xóa tất cả tin nhắn của người dùng trong conversation
+  Future<void> deleteAllMyMessages({
+    required String conversationId,
+    required String accountId,
+  }) async {
+    await api.deleteAllMyMessages(
+      conversationId: conversationId,
+      accountId: accountId,
+    );
+  }
+
+  // Xóa một tin nhắn cụ thể
+  Future<void> deleteMessage({
+    required String messageId,
+    required String accountId,
+  }) async {
+    await api.deleteMessage(
+      messageId: messageId,
+      accountId: accountId,
+    );
+  }
 }
 
 final chatRepositoryProvider = Provider<ChatRepository>((ref) {

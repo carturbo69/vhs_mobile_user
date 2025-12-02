@@ -202,10 +202,18 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> with Si
                                       fontSize: 15,
                                       fontWeight: FontWeight.w500,
                                     ),
-                                    prefixIcon: Icon(
-                                      Icons.email_outlined,
-                                      color: primaryBlue,
-                                      size: 22,
+                                    prefixIcon: Container(
+                                      margin: const EdgeInsets.all(12),
+                                      padding: const EdgeInsets.all(8),
+                                      decoration: BoxDecoration(
+                                        color: primaryBlue.withOpacity(0.1),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Icon(
+                                        Icons.email_rounded,
+                                        color: primaryBlue,
+                                        size: 20,
+                                      ),
                                     ),
                                     filled: true,
                                     fillColor: Colors.white,
@@ -361,15 +369,26 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> with Si
                                             }
                                           },
                                           borderRadius: BorderRadius.circular(16),
-                                          child: const Center(
-                                            child: Text(
-                                              "Gửi mã OTP",
-                                              style: TextStyle(
-                                                fontSize: 18,
-                                                fontWeight: FontWeight.bold,
-                                                color: Colors.white,
-                                                letterSpacing: 1,
-                                              ),
+                                          child: Center(
+                                            child: Row(
+                                              mainAxisAlignment: MainAxisAlignment.center,
+                                              children: [
+                                                const Icon(
+                                                  Icons.send_rounded,
+                                                  color: Colors.white,
+                                                  size: 20,
+                                                ),
+                                                const SizedBox(width: 8),
+                                                const Text(
+                                                  "Gửi mã OTP",
+                                                  style: TextStyle(
+                                                    fontSize: 18,
+                                                    fontWeight: FontWeight.bold,
+                                                    color: Colors.white,
+                                                    letterSpacing: 1,
+                                                  ),
+                                                ),
+                                              ],
                                             ),
                                           ),
                                         ),
@@ -394,10 +413,17 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> with Si
                           ),
                           child: Row(
                             children: [
-                              Icon(
-                                Icons.info_outline,
-                                color: primaryBlue,
-                                size: 24,
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: primaryBlue.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Icon(
+                                  Icons.info_outline_rounded,
+                                  color: primaryBlue,
+                                  size: 20,
+                                ),
                               ),
                               const SizedBox(width: 12),
                               Expanded(
@@ -423,12 +449,19 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> with Si
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Icon(
-                                  Icons.arrow_back,
-                                  size: 16,
-                                  color: primaryBlue,
+                                Container(
+                                  padding: const EdgeInsets.all(4),
+                                  decoration: BoxDecoration(
+                                    color: primaryBlue.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Icon(
+                                    Icons.arrow_back_rounded,
+                                    size: 14,
+                                    color: primaryBlue,
+                                  ),
                                 ),
-                                const SizedBox(width: 4),
+                                const SizedBox(width: 6),
                                 Text(
                                   "Quay lại đăng nhập",
                                   style: TextStyle(

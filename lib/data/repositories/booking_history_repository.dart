@@ -30,11 +30,27 @@ class BookingHistoryRepository {
     // fetch remote
     final remote = await api.getHistoryByAccount(accountId);
     var items = remote.items;
+    
+    // Sắp xếp theo thời gian tạo (createdAt) từ mới nhất đến cũ nhất
+    // Nếu createdAt null thì dùng bookingTime
+    items.sort((a, b) {
+      final aTime = a.createdAt ?? a.bookingTime;
+      final bTime = b.createdAt ?? b.bookingTime;
+      return bTime.compareTo(aTime); // Giảm dần (mới nhất trước)
+    });
+    
     // save to local
     await dao.upsertMany(items);
 
-    // read local
-    return dao.readAll();
+    // read local và sắp xếp lại
+    final localItems = await dao.readAll();
+    localItems.sort((a, b) {
+      final aTime = a.createdAt ?? a.bookingTime;
+      final bTime = b.createdAt ?? b.bookingTime;
+      return bTime.compareTo(aTime); // Giảm dần (mới nhất trước)
+    });
+    
+    return localItems;
   }
 
   // -------- GET DETAIL (always remote) ---------

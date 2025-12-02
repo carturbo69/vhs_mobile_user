@@ -9,6 +9,10 @@ import 'package:vhs_mobile_user/helper/jwt_helper.dart';
 import 'package:vhs_mobile_user/routing/routes.dart';
 import 'package:vhs_mobile_user/ui/chat/chat_list_viewmodel.dart';
 import 'package:vhs_mobile_user/ui/chat/chat_detail_screen.dart';
+import 'package:vhs_mobile_user/ui/core/theme_helper.dart';
+
+// Màu xanh theo web - Sky blue palette
+const Color primaryBlue = Color(0xFF0284C7); // Sky-600
 
 class ChatListScreen extends ConsumerStatefulWidget {
   const ChatListScreen({super.key});
@@ -46,6 +50,8 @@ class _ChatListScreenState extends ConsumerState<ChatListScreen> {
         // Listen to conversation list updates
         signalRService.listenToConversations().listen((updatedItem) {
           ref.read(chatListProvider.notifier).updateConversationListItem(updatedItem);
+          // Refresh unread total when conversation is updated
+          ref.invalidate(unreadTotalProvider);
         });
       }
     } catch (e) {
@@ -56,58 +62,136 @@ class _ChatListScreenState extends ConsumerState<ChatListScreen> {
   @override
   Widget build(BuildContext context) {
     final chatListAsync = ref.watch(chatListProvider);
-    final unreadTotalAsync = ref.watch(
-      FutureProvider((ref) => ref.read(chatListProvider.notifier).getUnreadTotal()),
-    );
+    final unreadTotalAsync = ref.watch(unreadTotalProvider);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Tin nhắn'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () {
-              ref.read(chatListProvider.notifier).refresh();
-            },
-          ),
-          if (unreadTotalAsync.hasValue && unreadTotalAsync.value! > 0)
-            Badge(
-              label: Text('${unreadTotalAsync.value}'),
-              child: const Icon(Icons.chat),
+        elevation: 0,
+        flexibleSpace: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Colors.blue.shade400,
+                Colors.blue.shade600,
+              ],
             ),
+          ),
+        ),
+        backgroundColor: Colors.transparent,
+        title: const Text(
+          'Tin nhắn',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 20,
+            color: Colors.white,
+          ),
+        ),
+        iconTheme: const IconThemeData(color: Colors.white),
+        actions: [
+          Container(
+            margin: const EdgeInsets.only(right: 8),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
+              shape: BoxShape.circle,
+            ),
+            child: IconButton(
+              icon: const Icon(Icons.refresh),
+              onPressed: () {
+                ref.read(chatListProvider.notifier).refresh();
+                // Refresh unread total when manually refreshing
+                ref.invalidate(unreadTotalProvider);
+              },
+              tooltip: 'Làm mới',
+            ),
+          ),
         ],
       ),
-      body: chatListAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+      body: Column(
+        children: [
+          Expanded(
+            child: chatListAsync.when(
+        loading: () => Center(
+          child: CircularProgressIndicator(
+            valueColor: AlwaysStoppedAnimation<Color>(
+              ThemeHelper.getPrimaryColor(context),
+            ),
+          ),
+        ),
         error: (e, st) => Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text('Lỗi: $e'),
+              Text(
+                'Lỗi: $e',
+                style: TextStyle(color: ThemeHelper.getTextColor(context)),
+              ),
               const SizedBox(height: 16),
               ElevatedButton(
-                onPressed: () => ref.read(chatListProvider.notifier).refresh(),
+                      onPressed: () {
+                        ref.read(chatListProvider.notifier).refresh();
+                        ref.invalidate(unreadTotalProvider);
+                      },
                 child: const Text('Thử lại'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: ThemeHelper.getPrimaryColor(context),
+                ),
               ),
             ],
           ),
         ),
         data: (conversations) {
+          final isDark = ThemeHelper.isDarkMode(context);
           if (conversations.isEmpty) {
             return Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.chat_bubble_outline, size: 64, color: Colors.grey.shade400),
-                  const SizedBox(height: 16),
+                        Container(
+                          padding: const EdgeInsets.all(24),
+                          decoration: BoxDecoration(
+                            color: ThemeHelper.getLightBlueBackgroundColor(context),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            Icons.chat_bubble_outline,
+                            size: 64,
+                            color: ThemeHelper.getPrimaryColor(context),
+                          ),
+                        ),
+                        const SizedBox(height: 24),
                   Text(
                     'Chưa có tin nhắn nào',
-                    style: TextStyle(color: Colors.grey.shade600),
+                          style: TextStyle(
+                            color: ThemeHelper.getSecondaryTextColor(context),
+                            fontSize: 18,
+                            fontWeight: FontWeight.w500,
+                          ),
                   ),
                   const SizedBox(height: 8),
-                  TextButton.icon(
+                        Text(
+                          'Bắt đầu trò chuyện với chúng tôi',
+                          style: TextStyle(
+                            color: ThemeHelper.getTertiaryTextColor(context),
+                            fontSize: 14,
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        ElevatedButton.icon(
                     icon: const Icon(Icons.support_agent),
                     label: const Text('Chat với Admin'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: ThemeHelper.getPrimaryColor(context),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 24,
+                              vertical: 12,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
                     onPressed: () async {
                       final conversationId = await ref
                           .read(chatListProvider.notifier)
@@ -125,9 +209,12 @@ class _ChatListScreenState extends ConsumerState<ChatListScreen> {
           return RefreshIndicator(
             onRefresh: () async {
               await ref.read(chatListProvider.notifier).refresh();
+                    // Refresh unread total when pull-to-refresh
+                    ref.invalidate(unreadTotalProvider);
             },
-            child: ListView.builder(
+                  child: ListView.builder(
               itemCount: conversations.length,
+              padding: const EdgeInsets.symmetric(vertical: 8),
               itemBuilder: (context, index) {
                 final conversation = conversations[index];
                 return _ConversationListItem(
@@ -140,6 +227,9 @@ class _ChatListScreenState extends ConsumerState<ChatListScreen> {
             ),
           );
         },
+            ),
+          ),
+        ],
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
@@ -169,114 +259,269 @@ class _ConversationListItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final baseUrl = 'http://apivhs.cuahangkinhdoanh.com';
-    final avatarUrl = conversation.avatarUrl != null &&
-            !conversation.avatarUrl!.startsWith('http')
-        ? '$baseUrl${conversation.avatarUrl}'
-        : conversation.avatarUrl;
+    String? avatarUrl;
+    
+    // Xử lý avatarUrl giống như trong chat_detail_screen
+    final rawAvatarUrl = conversation.avatarUrl;
+    if (rawAvatarUrl != null && rawAvatarUrl.trim().isNotEmpty) {
+      final trimmed = rawAvatarUrl.trim();
+      // Nếu đã là absolute URL (backend đã xử lý), dùng trực tiếp
+      if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+        avatarUrl = trimmed;
+      } else {
+        // Nếu là relative path, thêm base URL
+        final path = trimmed.startsWith('/') ? trimmed : '/$trimmed';
+        avatarUrl = '$baseUrl$path';
+      }
+    }
 
-    return ListTile(
-      leading: Stack(
-        children: [
-          CircleAvatar(
-            radius: 24,
-            backgroundImage: avatarUrl != null
-                ? CachedNetworkImageProvider(avatarUrl)
-                : null,
-            child: avatarUrl == null
-                ? const Icon(Icons.person)
-                : null,
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: ThemeHelper.getCardBackgroundColor(context),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: ThemeHelper.getBorderColor(context),
+            width: 1,
           ),
-          if (conversation.isOnline)
-            Positioned(
-              right: 0,
-              bottom: 0,
-              child: Container(
-                width: 12,
-                height: 12,
-                decoration: BoxDecoration(
-                  color: Colors.green,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white, width: 2),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(ThemeHelper.isDarkMode(context) ? 0.3 : 0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Stack(
+              children: [
+                Container(
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: ThemeHelper.getBorderColor(context),
+                      width: 2,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: ThemeHelper.getShadowColor(context),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: avatarUrl != null
+                      ? ClipOval(
+                          child: CachedNetworkImage(
+                            imageUrl: avatarUrl,
+                            width: 56,
+                            height: 56,
+                            fit: BoxFit.cover,
+                            placeholder: (context, url) => Container(
+                              width: 56,
+                              height: 56,
+                              decoration: BoxDecoration(
+                                color: ThemeHelper.getLightBackgroundColor(context),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Center(
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    ThemeHelper.getPrimaryColor(context),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            errorWidget: (context, url, error) => Container(
+                              width: 56,
+                              height: 56,
+                              decoration: BoxDecoration(
+                                color: ThemeHelper.getLightBackgroundColor(context),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                Icons.person,
+                                color: ThemeHelper.getSecondaryIconColor(context),
+                                size: 28,
+                              ),
+                            ),
+                          ),
+                        )
+                      : Container(
+                          width: 56,
+                          height: 56,
+                          decoration: BoxDecoration(
+                            color: ThemeHelper.getLightBackgroundColor(context),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            Icons.person,
+                            color: ThemeHelper.getSecondaryIconColor(context),
+                            size: 28,
+                          ),
+                        ),
                 ),
+                if (conversation.isOnline)
+                  Positioned(
+                    right: 0,
+                    bottom: 0,
+                    child: Container(
+                      width: 16,
+                      height: 16,
+                      decoration: BoxDecoration(
+                        color: Colors.green,
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: ThemeHelper.getCardBackgroundColor(context),
+                          width: 3,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.green.withOpacity(0.4),
+                            blurRadius: 6,
+                            spreadRadius: 1,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          conversation.title,
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: conversation.unreadCount > 0
+                                ? FontWeight.bold
+                                : FontWeight.w600,
+                            color: ThemeHelper.getTextColor(context),
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      if (conversation.lastMessageAt != null) ...[
+                        const SizedBox(width: 8),
+                        Text(
+                          _formatTime(conversation.lastMessageAt!),
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: ThemeHelper.getTertiaryTextColor(context),
+                            fontWeight: FontWeight.w400,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          conversation.lastMessageSnippet ?? '',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: ThemeHelper.getSecondaryTextColor(context),
+                            fontWeight: conversation.unreadCount > 0
+                                ? FontWeight.w500
+                                : FontWeight.normal,
+                          ),
+                        ),
+                      ),
+                      if (conversation.unreadCount > 0) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: ThemeHelper.getPrimaryColor(context),
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: [
+                              BoxShadow(
+                                color: ThemeHelper.getPrimaryColor(context).withOpacity(0.3),
+                                blurRadius: 6,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Text(
+                            '${conversation.unreadCount}',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ],
               ),
             ),
-        ],
-      ),
-      title: Text(
-        conversation.title,
-        style: TextStyle(
-          fontWeight: conversation.unreadCount > 0
-              ? FontWeight.bold
-              : FontWeight.normal,
+          ],
         ),
       ),
-      subtitle: Text(
-        conversation.lastMessageSnippet ?? '',
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-      ),
-      trailing: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          if (conversation.lastMessageAt != null)
-            Text(
-              _formatTime(conversation.lastMessageAt!),
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.grey.shade600,
-              ),
-            ),
-          if (conversation.unreadCount > 0)
-            Container(
-              margin: const EdgeInsets.only(top: 4),
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-              decoration: BoxDecoration(
-                color: Colors.blue,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Text(
-                '${conversation.unreadCount}',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-        ],
-      ),
-      onTap: onTap,
     );
   }
 
   String _formatTime(DateTime time) {
-    // Convert UTC sang timezone Việt Nam (UTC+7)
-    DateTime vietnamTime;
-    if (time.isUtc) {
-      // Nếu là UTC, thêm 7 giờ để có giờ Việt Nam
-      vietnamTime = time.add(const Duration(hours: 7));
-    } else {
-      // Nếu không phải UTC, giả sử nó đã là UTC và convert
-      final utcTime = time.toUtc();
-      vietnamTime = utcTime.add(const Duration(hours: 7));
-    }
+    // Convert từ UTC sang giờ Việt Nam (UTC+7) - giống logic FE
+    // Đảm bảo time là UTC trước khi convert
+    final utcTime = time.isUtc ? time : time.toUtc();
+    final vietnamTime = utcTime.add(const Duration(hours: 7));
     
-    // Lấy thời gian hiện tại ở VN (UTC+7)
+    // Lấy thời gian hiện tại ở giờ Việt Nam để so sánh
     final nowUtc = DateTime.now().toUtc();
     final nowVietnam = nowUtc.add(const Duration(hours: 7));
-    final difference = nowVietnam.difference(vietnamTime);
+    
+    // So sánh ngày tháng (chỉ lấy phần date, bỏ qua time)
+    final timeDate = DateTime(vietnamTime.year, vietnamTime.month, vietnamTime.day);
+    final nowDate = DateTime(nowVietnam.year, nowVietnam.month, nowVietnam.day);
+    final daysDiff = nowDate.difference(timeDate).inDays;
 
-    if (difference.inDays == 0) {
-      // Hôm nay: chỉ hiển thị giờ:phút
+    // Cùng ngày: chỉ hiển thị giờ:phút
+    if (daysDiff == 0) {
       return '${vietnamTime.hour.toString().padLeft(2, '0')}:${vietnamTime.minute.toString().padLeft(2, '0')}';
-    } else if (difference.inDays == 1) {
-      return 'Hôm qua';
-    } else if (difference.inDays < 7) {
-      return '${difference.inDays} ngày trước';
-    } else {
-      return '${vietnamTime.day}/${vietnamTime.month}/${vietnamTime.year}';
     }
+    
+    // Hôm qua
+    if (daysDiff == 1) {
+      return 'Hôm qua ${vietnamTime.hour.toString().padLeft(2, '0')}:${vietnamTime.minute.toString().padLeft(2, '0')}';
+    }
+    
+    // Trong 7 ngày: hiển thị thứ và giờ (giống FE: Thứ 2-7, CN)
+    if (daysDiff < 7) {
+      final dayOfWeek = vietnamTime.weekday; // 1=Monday, 7=Sunday
+      final weekdays = ['', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7', 'CN'];
+      return '${weekdays[dayOfWeek]} ${vietnamTime.hour.toString().padLeft(2, '0')}:${vietnamTime.minute.toString().padLeft(2, '0')}';
+    }
+    
+    // Trong cùng năm: hiển thị ngày/tháng và giờ
+    if (vietnamTime.year == nowVietnam.year) {
+      return '${vietnamTime.day.toString().padLeft(2, '0')}/${vietnamTime.month.toString().padLeft(2, '0')} ${vietnamTime.hour.toString().padLeft(2, '0')}:${vietnamTime.minute.toString().padLeft(2, '0')}';
+    }
+    
+    // Khác năm: hiển thị đầy đủ
+    return '${vietnamTime.day.toString().padLeft(2, '0')}/${vietnamTime.month.toString().padLeft(2, '0')}/${vietnamTime.year} ${vietnamTime.hour.toString().padLeft(2, '0')}:${vietnamTime.minute.toString().padLeft(2, '0')}';
   }
 }
 

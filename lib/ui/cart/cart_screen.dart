@@ -8,6 +8,7 @@ import 'package:vhs_mobile_user/ui/cart/cart_total_provider.dart';
 import 'package:vhs_mobile_user/data/models/cart/cart_item_model.dart';
 import 'package:vhs_mobile_user/ui/voucher/voucher_dialog.dart';
 import 'package:vhs_mobile_user/ui/voucher/voucher_viewmodel.dart';
+import 'package:vhs_mobile_user/ui/core/theme_helper.dart';
 
 // Màu xanh theo web - Sky blue palette
 const Color primaryBlue = Color(0xFF0284C7); // Sky-600
@@ -25,6 +26,25 @@ class CartScreen extends ConsumerStatefulWidget {
 class _CartScreenState extends ConsumerState<CartScreen> {
   final Set<String> _selectedItems = {};
   bool _selectAll = false;
+  String? _previousRoute;
+  bool _hasNavigatedToCheckout = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Lấy previousRoute từ extra nếu có
+    if (_previousRoute == null) {
+      try {
+        final extra = GoRouterState.of(context).extra;
+        if (extra is Map && extra['previousRoute'] is String) {
+          _previousRoute = extra['previousRoute'] as String;
+        }
+      } catch (e) {
+        // Nếu không lấy được, để null
+        _previousRoute = null;
+      }
+    }
+  }
 
   void _toggleSelectAll(bool? value) {
     setState(() {
@@ -81,24 +101,209 @@ class _CartScreenState extends ConsumerState<CartScreen> {
   Widget build(BuildContext context) {
     final asyncCart = ref.watch(cartProvider);
 
+    final isDark = ThemeHelper.isDarkMode(context);
+    
     return Scaffold(
-      backgroundColor: Colors.grey[50],
+      backgroundColor: ThemeHelper.getScaffoldBackgroundColor(context),
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: Colors.transparent,
         elevation: 0,
+        shadowColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
+        automaticallyImplyLeading: false,
+        leading: (_previousRoute != null || Navigator.canPop(context))
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+                onPressed: () {
+                  if (_previousRoute != null) {
+                    context.go(_previousRoute!);
+                  } else if (Navigator.canPop(context)) {
+                    Navigator.of(context).pop();
+                  }
+                },
+              )
+            : null,
+        flexibleSpace: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Colors.blue.shade400,
+                Colors.blue.shade600,
+              ],
+            ),
+          ),
+        ),
         title: const Text(
           'Giỏ hàng của bạn',
           style: TextStyle(
-            color: Colors.black87,
+            color: Colors.white,
             fontWeight: FontWeight.bold,
             fontSize: 20,
           ),
         ),
-        iconTheme: const IconThemeData(color: Colors.black87),
+        iconTheme: const IconThemeData(color: Colors.white),
+        actions: [
+          Container(
+            margin: const EdgeInsets.only(right: 8),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
+              shape: BoxShape.circle,
+            ),
+            child: PopupMenuButton<String>(
+              icon: const Icon(Icons.more_vert_rounded, color: Colors.white),
+              onSelected: (value) async {
+                if (value == 'delete_all') {
+                  if (!mounted) return;
+                  final ok = await showDialog<bool>(
+                        context: context,
+                        builder: (c) => AlertDialog(
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          title: const Text(
+                            'Xóa toàn bộ giỏ hàng?',
+                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                          ),
+                          content: const Text('Bạn có chắc chắn muốn xóa tất cả dịch vụ trong giỏ hàng?'),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(c, false),
+                              child: const Text('Hủy'),
+                            ),
+                            TextButton(
+                              onPressed: () => Navigator.pop(c, true),
+                              child: const Text(
+                                'Xóa tất cả',
+                                style: TextStyle(color: Colors.red, fontWeight: FontWeight.w600),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ) ??
+                      false;
+                  if (!mounted) return;
+                  if (ok) {
+                    await ref.read(cartProvider.notifier).clear();
+                    if (!mounted) return;
+                    _selectedItems.clear();
+                    setState(() {});
+                  }
+                }
+              },
+              itemBuilder: (context) => [
+                PopupMenuItem<String>(
+                  value: 'delete_all',
+                  child: Row(
+                    children: [
+                      Icon(Icons.delete_outline, color: Colors.red[700], size: 20),
+                      const SizedBox(width: 12),
+                      Text(
+                        'Xóa tất cả',
+                        style: TextStyle(
+                          color: Colors.red[700],
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
       body: asyncCart.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, st) => Center(child: Text('Lỗi: $e')),
+        loading: () => Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(
+                  ThemeHelper.getPrimaryColor(context),
+                ),
+                strokeWidth: 3,
+              ),
+              const SizedBox(height: 24),
+              Text(
+                "Đang tải...",
+                style: TextStyle(
+                  color: ThemeHelper.getSecondaryTextColor(context),
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
+        error: (e, st) => Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: isDark 
+                        ? Colors.red.shade900.withOpacity(0.3)
+                        : Colors.red.shade50,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.error_outline_rounded,
+                    size: 64,
+                    color: Colors.red.shade400,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Text(
+                  'Không thể tải giỏ hàng',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: ThemeHelper.getTextColor(context),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Vui lòng thử lại sau',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: ThemeHelper.getSecondaryTextColor(context),
+                  ),
+                ),
+                const SizedBox(height: 32),
+                ElevatedButton.icon(
+                  onPressed: () {
+                    ref.read(cartProvider.notifier).refresh();
+                  },
+                  icon: const Icon(Icons.refresh_rounded, size: 20),
+                  label: const Text(
+                    'Thử lại',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: ThemeHelper.getPrimaryColor(context),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 16,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    elevation: 2,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
         data: (items) {
           if (items.isEmpty) {
             return _EmptyCart();
@@ -120,16 +325,18 @@ class _CartScreenState extends ConsumerState<CartScreen> {
             children: [
               Expanded(
                 child: SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(),
                   child: Container(
-                    margin: const EdgeInsets.all(16),
+                    margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: ThemeHelper.getCardBackgroundColor(context),
                       borderRadius: BorderRadius.circular(12),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.05),
-                          blurRadius: 10,
+                          color: ThemeHelper.getShadowColor(context),
+                          blurRadius: 12,
                           offset: const Offset(0, 2),
+                          spreadRadius: 0,
                         ),
                       ],
                     ),
@@ -138,10 +345,18 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                       children: [
                         // Table Header
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
                           decoration: BoxDecoration(
+                            color: ThemeHelper.getLightBackgroundColor(context),
+                            borderRadius: const BorderRadius.only(
+                              topLeft: Radius.circular(12),
+                              topRight: Radius.circular(12),
+                            ),
                             border: Border(
-                              bottom: BorderSide(color: Colors.grey[200]!, width: 1),
+                              bottom: BorderSide(
+                                color: ThemeHelper.getBorderColor(context),
+                                width: 1,
+                              ),
                             ),
                           ),
                           child: Row(
@@ -149,32 +364,23 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                               Checkbox(
                                 value: _selectAll,
                                 onChanged: _toggleSelectAll,
-                                activeColor: primaryBlue,
+                                activeColor: ThemeHelper.primaryBlue,
                                 materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
                               ),
-                              const SizedBox(width: 4),
+                              const SizedBox(width: 8),
                               Expanded(
                                 flex: 4,
                                 child: Text(
                                   'Dịch vụ',
                                   style: TextStyle(
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.grey[800],
-                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                    color: ThemeHelper.getTextColor(context),
+                                    fontSize: 13,
+                                    letterSpacing: 0.2,
                                   ),
-                                ),
-                              ),
-                              const SizedBox(width: 4),
-                              Expanded(
-                                flex: 2,
-                                child: Text(
-                                  'Đơn giá',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.grey[800],
-                                    fontSize: 12,
-                                  ),
-                                  textAlign: TextAlign.center,
                                 ),
                               ),
                               Expanded(
@@ -182,9 +388,10 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                                 child: Text(
                                   'Số tiền',
                                   style: TextStyle(
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.grey[800],
-                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                    color: ThemeHelper.getTextColor(context),
+                                    fontSize: 13,
+                                    letterSpacing: 0.2,
                                   ),
                                   textAlign: TextAlign.center,
                                 ),
@@ -195,9 +402,10 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                                 child: Text(
                                   'Thao tác',
                                   style: TextStyle(
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.grey[800],
-                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                    color: ThemeHelper.getTextColor(context),
+                                    fontSize: 13,
+                                    letterSpacing: 0.2,
                                   ),
                                   textAlign: TextAlign.center,
                                 ),
@@ -215,8 +423,23 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                             children: [
                               // Provider Header
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                                color: lightBlue,
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    colors: [
+                                      ThemeHelper.getLightBlueBackgroundColor(context),
+                                      ThemeHelper.getLightBlueBackgroundColor(context).withOpacity(0.7),
+                                    ],
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                  ),
+                                  border: Border(
+                                    bottom: BorderSide(
+                                      color: ThemeHelper.getBorderColor(context),
+                                      width: 1,
+                                    ),
+                                  ),
+                                ),
                                 child: Row(
                                   children: [
                                     Checkbox(
@@ -235,15 +458,26 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                                           _selectAll = _selectedItems.length == items.length && items.isNotEmpty;
                                         });
                                       },
-                                      activeColor: primaryBlue,
+                                      activeColor: ThemeHelper.primaryBlue,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
                                     ),
-                                    const SizedBox(width: 8),
+                                    const SizedBox(width: 10),
                                     if (firstItem.providerImages.isNotEmpty)
                                       Container(
-                                        width: 24,
-                                        height: 24,
+                                        width: 28,
+                                        height: 28,
                                         decoration: BoxDecoration(
                                           shape: BoxShape.circle,
+                                          border: Border.all(color: Colors.white, width: 2),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: Colors.black.withOpacity(0.1),
+                                              blurRadius: 4,
+                                              offset: const Offset(0, 2),
+                                            ),
+                                          ],
                                           image: DecorationImage(
                                             image: NetworkImage(firstItem.providerImages),
                                             fit: BoxFit.cover,
@@ -251,15 +485,25 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                                         ),
                                       )
                                     else
-                                      Icon(Icons.business, size: 20, color: primaryBlue),
-                                    const SizedBox(width: 8),
+                                      Container(
+                                        width: 28,
+                                        height: 28,
+                                        decoration: BoxDecoration(
+                                          shape: BoxShape.circle,
+                                          color: primaryBlue.withOpacity(0.1),
+                                          border: Border.all(color: primaryBlue, width: 2),
+                                        ),
+                                        child: Icon(Icons.business, size: 16, color: primaryBlue),
+                                      ),
+                                    const SizedBox(width: 10),
                                     Expanded(
                                       child: Text(
                                         firstItem.providerName,
                                         style: TextStyle(
-                                          fontWeight: FontWeight.w600,
-                                          color: darkBlue,
-                                          fontSize: 14,
+                                          fontWeight: FontWeight.w700,
+                                          color: ThemeHelper.getPrimaryDarkColor(context),
+                                          fontSize: 15,
+                                          letterSpacing: 0.1,
                                         ),
                                       ),
                                     ),
@@ -288,19 +532,55 @@ class _CartScreenState extends ConsumerState<CartScreen> {
 
               // Voucher Section
               Container(
-                margin: const EdgeInsets.symmetric(horizontal: 16),
-                padding: const EdgeInsets.all(16),
+                margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                 decoration: BoxDecoration(
-                  color: Colors.orange[50],
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(12),
-                    topRight: Radius.circular(12),
+                  gradient: LinearGradient(
+                    colors: [
+                      isDark 
+                          ? Colors.orange.shade900.withOpacity(0.3)
+                          : Colors.orange.shade50,
+                      (isDark 
+                          ? Colors.orange.shade900.withOpacity(0.3)
+                          : Colors.orange.shade50).withOpacity(0.7),
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
                   ),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: isDark 
+                        ? Colors.orange.shade700.withOpacity(0.5)
+                        : Colors.orange.shade200,
+                    width: 1,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.orange.withOpacity(isDark ? 0.2 : 0.06),
+                      blurRadius: 4,
+                      offset: const Offset(0, 1),
+                    ),
+                  ],
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.local_offer, color: Colors.orange[700], size: 24),
-                    const SizedBox(width: 12),
+                    Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: isDark 
+                            ? Colors.orange.shade800.withOpacity(0.3)
+                            : Colors.orange.shade100,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Icon(
+                        Icons.local_offer,
+                        color: isDark 
+                            ? Colors.orange.shade300
+                            : Colors.orange.shade700,
+                        size: 16,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
                     Expanded(
                       child: Consumer(
                         builder: (context, ref, child) {
@@ -309,6 +589,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                           
                           return ElevatedButton(
                             onPressed: () {
+                              if (!mounted) return;
                               showDialog(
                                 context: context,
                                 builder: (context) => VoucherDialog(
@@ -318,21 +599,41 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                             },
                             style: ElevatedButton.styleFrom(
                               backgroundColor: selectedVoucher != null 
-                                  ? Colors.green[100] 
-                                  : accentBlue,
+                                  ? (isDark 
+                                      ? Colors.green.shade900.withOpacity(0.3)
+                                      : Colors.green.shade100)
+                                  : ThemeHelper.accentBlue,
                               foregroundColor: selectedVoucher != null 
-                                  ? Colors.green[800] 
-                                  : darkBlue,
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                  ? (isDark 
+                                      ? Colors.green.shade300
+                                      : Colors.green.shade800)
+                                  : ThemeHelper.getPrimaryDarkColor(context),
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(8),
                               ),
+                              elevation: selectedVoucher != null ? 1 : 0,
                             ),
-                            child: Text(
-                              selectedVoucher != null 
-                                  ? selectedVoucher.code 
-                                  : 'Chọn voucher',
-                              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                if (selectedVoucher != null)
+                                  Icon(Icons.check_circle, size: 16, color: Colors.green[800]),
+                                if (selectedVoucher != null) const SizedBox(width: 4),
+                                Flexible(
+                                  child: Text(
+                                    selectedVoucher != null 
+                                        ? selectedVoucher.code 
+                                        : 'Chọn voucher',
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
                             ),
                           );
                         },
@@ -344,152 +645,241 @@ class _CartScreenState extends ConsumerState<CartScreen> {
 
               // Footer Summary
               Container(
-                color: Colors.white,
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  children: [
-                    // Selection Controls
-                    Row(
-                      children: [
-                        Checkbox(
-                          value: _selectAll,
-                          onChanged: _toggleSelectAll,
-                          activeColor: primaryBlue,
-                        ),
-                        const Text(
-                          'Chọn tất cả',
-                          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-                        ),
-                        const Spacer(),
-                        TextButton(
-                          onPressed: () async {
-                            final ok = await showDialog<bool>(
-                                  context: context,
-                                  builder: (c) => AlertDialog(
-                                    title: const Text('Xóa toàn bộ giỏ hàng?'),
-                                    actions: [
-                                      TextButton(
-                                        onPressed: () => Navigator.pop(c, false),
-                                        child: const Text('Hủy'),
-                                      ),
-                                      TextButton(
-                                        onPressed: () => Navigator.pop(c, true),
-                                        child: const Text('Xóa tất cả', style: TextStyle(color: Colors.red)),
-                                      ),
-                                    ],
-                                  ),
-                                ) ??
-                                false;
-                            if (ok) {
-                              await ref.read(cartProvider.notifier).clear();
-                              _selectedItems.clear();
-                              setState(() {});
-                            }
-                          },
-                          child: const Text(
-                            'Xoá tất cả',
-                            style: TextStyle(color: Colors.red, fontSize: 13),
-                          ),
-                        ),
-                      ],
+                decoration: BoxDecoration(
+                  color: ThemeHelper.getCardBackgroundColor(context),
+                  boxShadow: [
+                    BoxShadow(
+                      color: ThemeHelper.getShadowColor(context),
+                      blurRadius: 10,
+                      offset: const Offset(0, -2),
                     ),
-                    const Divider(height: 24),
-                    // Summary
-                    Consumer(
-                      builder: (context, ref, child) {
-                        final selectedVoucher = ref.watch(selectedVoucherProvider);
-                        final voucherDiscount = selectedVoucher != null
-                            ? selectedVoucher.calculateDiscount(selectedTotal)
-                            : 0.0;
-                        final finalTotal = selectedTotal - voucherDiscount;
+                  ],
+                ),
+                child: SafeArea(
+                  top: false,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Summary
+                        Consumer(
+                          builder: (context, ref, child) {
+                            final selectedVoucher = ref.watch(selectedVoucherProvider);
+                            final voucherDiscount = selectedVoucher != null
+                                ? selectedVoucher.calculateDiscount(selectedTotal)
+                                : 0.0;
+                            final finalTotal = selectedTotal - voucherDiscount;
 
-                        return Column(
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Đã chọn $selectedCount',
-                                      style: TextStyle(color: Colors.grey[600], fontSize: 13),
+                            return Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: ThemeHelper.getLightBackgroundColor(context),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: ThemeHelper.getBorderColor(context),
+                                  width: 1,
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Row(
+                                          children: [
+                                            Icon(
+                                              Icons.check_circle_outline,
+                                              size: 14,
+                                              color: ThemeHelper.getSecondaryIconColor(context),
+                                            ),
+                                            const SizedBox(width: 4),
+                                            Text(
+                                              'Đã chọn $selectedCount',
+                                              style: TextStyle(
+                                                color: ThemeHelper.getSecondaryTextColor(context),
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          'Tạm tính',
+                                          style: TextStyle(
+                                            color: ThemeHelper.getTertiaryTextColor(context),
+                                            fontSize: 11,
+                                          ),
+                                        ),
+                                        Text(
+                                          '${_formatPrice(selectedTotal)}₫',
+                                          style: TextStyle(
+                                            color: ThemeHelper.getTextColor(context),
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                        if (selectedVoucher != null && voucherDiscount > 0) ...[
+                                          const SizedBox(height: 4),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                                            decoration: BoxDecoration(
+                                              color: isDark 
+                                                  ? Colors.green.shade900.withOpacity(0.3)
+                                                  : Colors.green.shade50,
+                                              borderRadius: BorderRadius.circular(5),
+                                            ),
+                                            child: Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Icon(
+                                                  Icons.local_offer,
+                                                  size: 12,
+                                                  color: isDark 
+                                                      ? Colors.green.shade300
+                                                      : Colors.green.shade700,
+                                                ),
+                                                const SizedBox(width: 3),
+                                                Text(
+                                                  'Giảm: -${_formatPrice(voucherDiscount)}₫',
+                                                  style: TextStyle(
+                                                    color: isDark 
+                                                        ? Colors.green.shade300
+                                                        : Colors.green.shade700,
+                                                    fontSize: 11,
+                                                    fontWeight: FontWeight.w700,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ],
+                                      ],
                                     ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      'Tạm tính ${_formatPrice(selectedTotal)}₫',
-                                      style: TextStyle(color: Colors.grey[600], fontSize: 13),
-                                    ),
-                                    if (selectedVoucher != null && voucherDiscount > 0) ...[
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Column(
+                                    crossAxisAlignment: CrossAxisAlignment.end,
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        'Tổng cộng',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: ThemeHelper.getTertiaryTextColor(context),
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
                                       const SizedBox(height: 4),
                                       Text(
-                                        'Giảm giá: -${_formatPrice(voucherDiscount)}₫',
+                                        '${_formatPrice(finalTotal)}₫',
                                         style: TextStyle(
-                                          color: Colors.green[700],
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.w600,
+                                          fontSize: 22,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.red.shade400,
+                                          letterSpacing: -0.5,
                                         ),
                                       ),
                                     ],
-                                  ],
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
+                        const SizedBox(height: 8),
+                        // Chọn tất cả và Đặt Dịch Vụ
+                        Row(
+                          children: [
+                            // Chọn tất cả
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Checkbox(
+                                  value: _selectAll,
+                                  onChanged: _toggleSelectAll,
+                                  activeColor: ThemeHelper.primaryBlue,
+                                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                  visualDensity: VisualDensity.compact,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
                                 ),
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                Text(
+                                  'Chọn tất cả',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                    color: ThemeHelper.getTextColor(context),
+                                  ),
+                ),
+                              ],
+              ),
+                            const Spacer(),
+                            // Đặt Dịch Vụ Button
+                            Expanded(
+                              flex: 2,
+                              child: ElevatedButton(
+                                onPressed: selectedCount > 0
+                                    ? () {
+                                        if (!mounted) return;
+                                        // Đánh dấu đã navigate đến checkout
+                                        _hasNavigatedToCheckout = true;
+                                        // Truyền selected item IDs qua extra
+                                        context.push(
+                                          Routes.checkout,
+                                          extra: _selectedItems.toList(),
+                                        ).then((_) {
+                                          // Khi quay lại từ checkout, clear voucher
+                                          if (mounted && _hasNavigatedToCheckout) {
+                                            ref.read(selectedVoucherProvider.notifier).clear();
+                                            _hasNavigatedToCheckout = false;
+                                          }
+                                        });
+                                      }
+                                    : null,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: selectedCount > 0 
+                                      ? ThemeHelper.getPrimaryColor(context)
+                                      : (isDark 
+                                          ? Colors.grey.shade700
+                                          : Colors.grey.shade400),
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(vertical: 16),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  elevation: selectedCount > 0 ? 4 : 0,
+                                  shadowColor: selectedCount > 0 
+                                      ? ThemeHelper.getPrimaryColor(context).withOpacity(0.3)
+                                      : Colors.transparent,
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    Text(
-                                      'Tổng cộng',
-                                      style: TextStyle(fontSize: 14, color: Colors.grey[700]),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      '${_formatPrice(finalTotal)}₫',
-                                      style: const TextStyle(
-                                        fontSize: 24,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.red,
+                                    const Icon(Icons.shopping_bag_rounded, size: 20),
+                                    const SizedBox(width: 8),
+                                    const Text(
+                                      'Đặt Dịch Vụ',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600,
                                       ),
                                     ),
                                   ],
                                 ),
-                              ],
+                              ),
                             ),
                           ],
-                        );
-                      },
-                    ),
-                    const SizedBox(height: 16),
-                    // Checkout Button
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: selectedCount > 0
-                            ? () {
-                                context.push(Routes.checkout);
-                              }
-                            : null,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: selectedCount > 0 ? primaryBlue : Colors.grey[400],
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          elevation: selectedCount > 0 ? 2 : 0,
                         ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Text(
-                              'Đặt Dịch Vụ',
-                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                            ),
-                            const SizedBox(width: 8),
-                            Icon(Icons.arrow_forward, size: 20),
-                          ],
-                        ),
-                      ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
               ),
             ],
@@ -509,19 +899,58 @@ class _EmptyCart extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.shopping_cart_outlined, size: 96, color: Colors.grey.shade400),
-            const SizedBox(height: 16),
-            const Text('Giỏ hàng trống', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+            Container(
+              padding: const EdgeInsets.all(32),
+              decoration: BoxDecoration(
+                color: ThemeHelper.getLightBlueBackgroundColor(context),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.shopping_cart_outlined,
+                size: 80,
+                color: ThemeHelper.getPrimaryColor(context),
+              ),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              'Giỏ hàng trống',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: ThemeHelper.getTextColor(context),
+              ),
+            ),
             const SizedBox(height: 8),
-            Text('Thêm dịch vụ vào giỏ để đặt lịch', style: TextStyle(color: Colors.grey.shade600)),
-            const SizedBox(height: 18),
+            Text(
+              'Thêm dịch vụ vào giỏ để đặt lịch',
+              style: TextStyle(
+                fontSize: 14,
+                color: ThemeHelper.getSecondaryTextColor(context),
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 32),
             ElevatedButton.icon(
               onPressed: () => context.go(Routes.listService),
-              icon: const Icon(Icons.add),
-              label: const Text('Tìm dịch vụ'),
+              icon: const Icon(Icons.search_rounded, size: 20),
+              label: const Text(
+                'Tìm dịch vụ',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
               style: ElevatedButton.styleFrom(
-                backgroundColor: primaryBlue,
+                backgroundColor: ThemeHelper.getPrimaryColor(context),
                 foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 16,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                elevation: 2,
               ),
             ),
           ],

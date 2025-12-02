@@ -153,6 +153,32 @@ class ChatApi {
       },
     );
   }
+
+  // Xóa tất cả tin nhắn của người dùng trong conversation
+  Future<void> deleteAllMyMessages({
+    required String conversationId,
+    required String accountId,
+  }) async {
+    await _client.instance.delete(
+      '/api/messages/conversations/$conversationId/messages/me',
+      queryParameters: {
+        'accountId': accountId,
+      },
+    );
+  }
+
+  // Xóa một tin nhắn cụ thể
+  Future<void> deleteMessage({
+    required String messageId,
+    required String accountId,
+  }) async {
+    await _client.instance.delete(
+      '/api/messages/$messageId',
+      queryParameters: {
+        'accountId': accountId,
+      },
+    );
+  }
 }
 
 final chatApiProvider = Provider<ChatApi>((ref) {

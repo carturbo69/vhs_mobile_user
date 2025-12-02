@@ -49,15 +49,14 @@ class ConversationListItemModel {
     };
   }
 
-  // Helper method để parse DateTime và giữ nguyên UTC (sẽ convert sang VN time khi hiển thị)
+  // Helper method để parse DateTime và convert sang giờ Việt Nam (UTC+7) để lưu vào model
   static DateTime _parseDateTime(String dateTimeString) {
     try {
       // Parse DateTime từ string
       DateTime parsed = DateTime.parse(dateTimeString);
       
       // Backend trả về UTC time (thường có 'Z' ở cuối hoặc không có timezone)
-      // Nếu có 'Z' ở cuối hoặc có timezone offset, DateTime.parse sẽ tự động parse đúng
-      // Nếu không có timezone info, giả sử là UTC
+      // Convert sang UTC nếu chưa phải UTC
       if (!parsed.isUtc) {
         // Kiểm tra xem string có chứa timezone info không
         final hasTimezone = dateTimeString.contains('+') || 
@@ -83,12 +82,13 @@ class ConversationListItemModel {
         }
       }
       
-      // Đảm bảo trả về UTC DateTime
-      return parsed.isUtc ? parsed : parsed.toUtc();
+      // Convert UTC sang giờ Việt Nam (UTC+7) để lưu vào model
+      final vietnamTime = parsed.add(const Duration(hours: 7));
+      return vietnamTime;
     } catch (e) {
-      // Nếu parse lỗi, trả về thời gian hiện tại (UTC)
+      // Nếu parse lỗi, trả về thời gian hiện tại ở giờ Việt Nam
       print('Error parsing DateTime: $dateTimeString, error: $e');
-      return DateTime.now().toUtc();
+      return DateTime.now().toUtc().add(const Duration(hours: 7));
     }
   }
 }
@@ -176,15 +176,14 @@ class ConversationModel {
     };
   }
 
-  // Helper method để parse DateTime và giữ nguyên UTC (sẽ convert sang VN time khi hiển thị)
+  // Helper method để parse DateTime và convert sang giờ Việt Nam (UTC+7) để lưu vào model
   static DateTime _parseDateTime(String dateTimeString) {
     try {
       // Parse DateTime từ string
       DateTime parsed = DateTime.parse(dateTimeString);
       
       // Backend trả về UTC time (thường có 'Z' ở cuối hoặc không có timezone)
-      // Nếu có 'Z' ở cuối hoặc có timezone offset, DateTime.parse sẽ tự động parse đúng
-      // Nếu không có timezone info, giả sử là UTC
+      // Convert sang UTC nếu chưa phải UTC
       if (!parsed.isUtc) {
         // Kiểm tra xem string có chứa timezone info không
         final hasTimezone = dateTimeString.contains('+') || 
@@ -210,12 +209,13 @@ class ConversationModel {
         }
       }
       
-      // Đảm bảo trả về UTC DateTime
-      return parsed.isUtc ? parsed : parsed.toUtc();
+      // Convert UTC sang giờ Việt Nam (UTC+7) để lưu vào model
+      final vietnamTime = parsed.add(const Duration(hours: 7));
+      return vietnamTime;
     } catch (e) {
-      // Nếu parse lỗi, trả về thời gian hiện tại (UTC)
+      // Nếu parse lỗi, trả về thời gian hiện tại ở giờ Việt Nam
       print('Error parsing DateTime: $dateTimeString, error: $e');
-      return DateTime.now().toUtc();
+      return DateTime.now().toUtc().add(const Duration(hours: 7));
     }
   }
 }

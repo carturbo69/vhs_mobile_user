@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:vhs_mobile_user/data/dao/auth_dao.dart';
+import 'package:vhs_mobile_user/ui/auth/auth_viewmodel.dart';
 
 class DioClient {
   late final Dio _dio;
@@ -30,6 +31,25 @@ class DioClient {
           }
 
           return handler.next(options);
+        },
+        onError: (error, handler) async {
+          // Xử lý lỗi 401 - token hết hạn, tự động logout
+          if (error.response?.statusCode == 401) {
+            try {
+              final authDao = _ref.read(authDaoProvider);
+              await authDao.clearAuth();
+              await authDao.logout();
+              
+              // Refresh auth state để router tự động redirect
+              final authNotifier = _ref.read(authStateProvider.notifier);
+              await authNotifier.logout();
+              
+              print("🔒 Token expired, auto-logout performed");
+            } catch (e) {
+              print("⚠️ Error during auto-logout: $e");
+            }
+          }
+          return handler.next(error);
         },
       ),
     );

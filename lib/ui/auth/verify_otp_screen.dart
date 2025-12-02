@@ -251,10 +251,18 @@ class _VerifyOtpPageState extends ConsumerState<VerifyOtpPage> with SingleTicker
                                       fontSize: 24,
                                       letterSpacing: 8,
                                     ),
-                                    prefixIcon: Icon(
-                                      Icons.lock_outline,
-                                      color: primaryBlue,
-                                      size: 22,
+                                    prefixIcon: Container(
+                                      margin: const EdgeInsets.all(12),
+                                      padding: const EdgeInsets.all(8),
+                                      decoration: BoxDecoration(
+                                        color: primaryBlue.withOpacity(0.1),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Icon(
+                                        Icons.lock_outline_rounded,
+                                        color: primaryBlue,
+                                        size: 20,
+                                      ),
                                     ),
                                     filled: true,
                                     fillColor: Colors.white,
@@ -335,15 +343,26 @@ class _VerifyOtpPageState extends ConsumerState<VerifyOtpPage> with SingleTicker
                                         child: InkWell(
                                           onTap: () => _handleOTP(),
                                           borderRadius: BorderRadius.circular(16),
-                                          child: const Center(
-                                            child: Text(
-                                              "Xác nhận",
-                                              style: TextStyle(
-                                                fontSize: 18,
-                                                fontWeight: FontWeight.bold,
-                                                color: Colors.white,
-                                                letterSpacing: 1,
-                                              ),
+                                          child: Center(
+                                            child: Row(
+                                              mainAxisAlignment: MainAxisAlignment.center,
+                                              children: [
+                                                const Icon(
+                                                  Icons.check_circle_rounded,
+                                                  color: Colors.white,
+                                                  size: 20,
+                                                ),
+                                                const SizedBox(width: 8),
+                                                const Text(
+                                                  "Xác nhận",
+                                                  style: TextStyle(
+                                                    fontSize: 18,
+                                                    fontWeight: FontWeight.bold,
+                                                    color: Colors.white,
+                                                    letterSpacing: 1,
+                                                  ),
+                                                ),
+                                              ],
                                             ),
                                           ),
                                         ),
@@ -371,10 +390,17 @@ class _VerifyOtpPageState extends ConsumerState<VerifyOtpPage> with SingleTicker
                             children: [
                               Row(
                                 children: [
-                                  Icon(
-                                    Icons.info_outline,
-                                    color: primaryBlue,
-                                    size: 24,
+                                  Container(
+                                    padding: const EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      color: primaryBlue.withOpacity(0.1),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Icon(
+                                      Icons.info_outline_rounded,
+                                      color: primaryBlue,
+                                      size: 20,
+                                    ),
                                   ),
                                   const SizedBox(width: 12),
                                   Expanded(
@@ -457,13 +483,24 @@ class _VerifyOtpPageState extends ConsumerState<VerifyOtpPage> with SingleTicker
                                             );
                                           }
                                         },
-                                        child: Text(
-                                          "Gửi lại mã OTP",
-                                          style: TextStyle(
-                                            color: primaryBlue,
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.w600,
-                                          ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Icon(
+                                              Icons.refresh_rounded,
+                                              size: 16,
+                                              color: primaryBlue,
+                                            ),
+                                            const SizedBox(width: 6),
+                                            Text(
+                                              "Gửi lại mã OTP",
+                                              style: TextStyle(
+                                                color: primaryBlue,
+                                                fontSize: 14,
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                            ),
+                                          ],
                                         ),
                                       ),
                               ),
@@ -480,12 +517,19 @@ class _VerifyOtpPageState extends ConsumerState<VerifyOtpPage> with SingleTicker
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Icon(
-                                  Icons.arrow_back,
-                                  size: 16,
-                                  color: primaryBlue,
+                                Container(
+                                  padding: const EdgeInsets.all(4),
+                                  decoration: BoxDecoration(
+                                    color: primaryBlue.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Icon(
+                                    Icons.arrow_back_rounded,
+                                    size: 14,
+                                    color: primaryBlue,
+                                  ),
                                 ),
-                                const SizedBox(width: 4),
+                                const SizedBox(width: 6),
                                 Text(
                                   "Quay lại đăng nhập",
                                   style: TextStyle(

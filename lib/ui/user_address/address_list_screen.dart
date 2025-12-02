@@ -5,6 +5,7 @@ import 'package:vhs_mobile_user/data/models/user/user_address_model.dart';
 
 import 'package:vhs_mobile_user/routing/routes.dart';
 import 'package:vhs_mobile_user/ui/user_address/user_address_viewmodel.dart';
+import 'package:vhs_mobile_user/ui/core/theme_helper.dart';
 
 class AddressListPage extends ConsumerWidget {
   const AddressListPage({super.key});
@@ -15,22 +16,165 @@ class AddressListPage extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Địa chỉ của tôi"),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        shadowColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
+        flexibleSpace: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Colors.blue.shade400,
+                Colors.blue.shade600,
+              ],
+            ),
+          ),
+        ),
+        title: const Text(
+          "Địa chỉ của tôi",
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+            fontSize: 20,
+          ),
+        ),
+        iconTheme: const IconThemeData(color: Colors.white),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () => ref.read(userAddressProvider.notifier).refresh(),
-          )
+          Container(
+            margin: const EdgeInsets.only(right: 8),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
+              shape: BoxShape.circle,
+            ),
+            child: IconButton(
+              icon: const Icon(Icons.refresh_rounded),
+              onPressed: () => ref.read(userAddressProvider.notifier).refresh(),
+              tooltip: 'Làm mới',
+            ),
+          ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => context.push(Routes.addAddress),
-        icon: const Icon(Icons.add_location_alt),
-        label: const Text("Thêm địa chỉ"),
+      floatingActionButton: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.blue.shade600.withOpacity(0.4),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: FloatingActionButton.extended(
+          onPressed: () => context.push(Routes.addAddress),
+          icon: const Icon(Icons.add_location_alt_rounded, size: 22),
+          label: const Text(
+            "Thêm địa chỉ",
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          backgroundColor: ThemeHelper.getPrimaryColor(context),
+          foregroundColor: Colors.white,
+          elevation: 0,
+        ),
       ),
+      backgroundColor: ThemeHelper.getScaffoldBackgroundColor(context),
       body: asyncData.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, _) => Center(child: Text("Lỗi: $err")),
+        loading: () => Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(
+                  ThemeHelper.getPrimaryColor(context),
+                ),
+                strokeWidth: 3,
+              ),
+              const SizedBox(height: 24),
+              Text(
+                "Đang tải...",
+                style: TextStyle(
+                  color: ThemeHelper.getSecondaryTextColor(context),
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
+        error: (err, _) {
+          final isDark = ThemeHelper.isDarkMode(context);
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: isDark 
+                          ? Colors.red.shade900.withOpacity(0.3)
+                          : Colors.red.shade50,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.error_outline_rounded,
+                      size: 64,
+                      color: Colors.red.shade400,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  Text(
+                    'Đã xảy ra lỗi',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: ThemeHelper.getTextColor(context),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '$err',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: ThemeHelper.getSecondaryTextColor(context),
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 32),
+                  ElevatedButton.icon(
+                    onPressed: () => ref.read(userAddressProvider.notifier).refresh(),
+                    icon: const Icon(Icons.refresh_rounded, size: 20),
+                    label: const Text(
+                      'Thử lại',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: ThemeHelper.getPrimaryColor(context),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 16,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      elevation: 2,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
         data: (list) {
           if (list.isEmpty) {
             return _EmptyAddress();
@@ -52,34 +196,211 @@ class _AddressCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return Card(
+    return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      child: ListTile(
-        contentPadding: const EdgeInsets.all(16),
-        title: Text(
-          address.fullAddress,
-          style: const TextStyle(fontWeight: FontWeight.w600),
+      decoration: BoxDecoration(
+        color: ThemeHelper.getCardBackgroundColor(context),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: ThemeHelper.getBorderColor(context),
+          width: 1,
         ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (address.recipientName != null)
-              Text("Người nhận: ${address.recipientName!}"),
-            if (address.recipientPhone != null)
-              Text("SĐT: ${address.recipientPhone!}"),
-          ],
+        boxShadow: [
+          BoxShadow(
+            color: ThemeHelper.getShadowColor(context),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: InkWell(
+        onTap: () {
+          // Có thể thêm navigation hoặc action khi tap vào card
+        },
+        borderRadius: BorderRadius.circular(12),
+        child: ListTile(
+          contentPadding: const EdgeInsets.all(16),
+          leading: Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: ThemeHelper.getLightBlueBackgroundColor(context),
+              borderRadius: BorderRadius.circular(10),
+              boxShadow: [
+                BoxShadow(
+                  color: ThemeHelper.getPrimaryColor(context).withOpacity(0.1),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Icon(
+              Icons.location_on_rounded,
+              color: ThemeHelper.getPrimaryColor(context),
+              size: 24,
+            ),
+          ),
+          title: Text(
+            address.fullAddress,
+            style: TextStyle(
+              fontWeight: FontWeight.w600,
+              fontSize: 15,
+              color: ThemeHelper.getTextColor(context),
+            ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+        subtitle: Padding(
+          padding: const EdgeInsets.only(top: 8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (address.recipientName != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 6),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: ThemeHelper.getLightBackgroundColor(context),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Icon(
+                          Icons.person_outline_rounded,
+                          size: 14,
+                          color: ThemeHelper.getSecondaryIconColor(context),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          "Người nhận: ${address.recipientName!}",
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: ThemeHelper.getSecondaryTextColor(context),
+                            fontWeight: FontWeight.w500,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              if (address.recipientPhone != null)
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: ThemeHelper.getLightBackgroundColor(context),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Icon(
+                        Icons.phone_outlined,
+                        size: 14,
+                        color: ThemeHelper.getSecondaryIconColor(context),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        "SĐT: ${address.recipientPhone!}",
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: ThemeHelper.getSecondaryTextColor(context),
+                          fontWeight: FontWeight.w500,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+            ],
+          ),
         ),
         trailing: PopupMenuButton(
-          itemBuilder: (_) => [
-            const PopupMenuItem(
-              value: "edit",
-              child: Text("Sửa"),
+          icon: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: ThemeHelper.getLightBackgroundColor(context),
+              borderRadius: BorderRadius.circular(8),
             ),
-            const PopupMenuItem(
-              value: "delete",
-              child: Text("Xóa"),
+            child: Icon(
+              Icons.more_vert_rounded,
+              color: ThemeHelper.getSecondaryIconColor(context),
+              size: 20,
             ),
-          ],
+          ),
+          color: ThemeHelper.getPopupMenuBackgroundColor(context),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          elevation: 8,
+          itemBuilder: (_) {
+            final isDark = ThemeHelper.isDarkMode(context);
+            return [
+              PopupMenuItem(
+                value: "edit",
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: ThemeHelper.getLightBlueBackgroundColor(context),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Icon(
+                        Icons.edit_rounded,
+                        size: 18,
+                        color: ThemeHelper.getPrimaryColor(context),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      "Sửa",
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w500,
+                        color: ThemeHelper.getTextColor(context),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              PopupMenuItem(
+                value: "delete",
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: isDark 
+                            ? Colors.red.shade900.withOpacity(0.3)
+                            : Colors.red.shade50,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Icon(
+                        Icons.delete_outline_rounded,
+                        size: 18,
+                        color: Colors.red.shade400,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      "Xóa",
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.red.shade400,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ];
+          },
           onSelected: (value) async {
             if (value == "edit") {
               context.push(Routes.addAddress, extra: address);
@@ -90,6 +411,7 @@ class _AddressCard extends ConsumerWidget {
             }
           },
         ),
+        ),
       ),
     );
   }
@@ -99,29 +421,69 @@ class _EmptyAddress extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(Icons.location_off, size: 70, color: Colors.grey),
-          const SizedBox(height: 16),
-          const Text(
-            "Bạn chưa có địa chỉ nào",
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            "Hãy thêm một địa chỉ mới",
-            style: TextStyle(color: Colors.grey.shade600),
-          ),
-          const SizedBox(height: 20),
-          ElevatedButton.icon(
-            onPressed: () {
-              context.push(Routes.addAddress);
-            },
-            icon: const Icon(Icons.add_location_alt),
-            label: const Text("Thêm địa chỉ đầu tiên"),
-          )
-        ],
+      child: Padding(
+        padding: const EdgeInsets.all(28),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(32),
+              decoration: BoxDecoration(
+                color: ThemeHelper.getLightBlueBackgroundColor(context),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.location_off_rounded,
+                size: 80,
+                color: ThemeHelper.getPrimaryColor(context),
+              ),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              "Bạn chưa có địa chỉ nào",
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: ThemeHelper.getTextColor(context),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              "Hãy thêm một địa chỉ mới",
+              style: TextStyle(
+                fontSize: 14,
+                color: ThemeHelper.getSecondaryTextColor(context),
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 32),
+            ElevatedButton.icon(
+              onPressed: () {
+                context.push(Routes.addAddress);
+              },
+              icon: const Icon(Icons.add_location_alt_rounded, size: 20),
+              label: const Text(
+                "Thêm địa chỉ đầu tiên",
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: ThemeHelper.getPrimaryColor(context),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 16,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                elevation: 2,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

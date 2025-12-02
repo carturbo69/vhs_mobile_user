@@ -11,6 +11,11 @@ import 'package:vhs_mobile_user/data/services/signalr_chat_service.dart';
 import 'package:vhs_mobile_user/helper/jwt_helper.dart';
 import 'package:vhs_mobile_user/routing/routes.dart';
 import 'package:vhs_mobile_user/ui/chat/chat_detail_viewmodel.dart';
+import 'package:vhs_mobile_user/ui/chat/chat_list_viewmodel.dart';
+import 'package:vhs_mobile_user/ui/core/theme_helper.dart';
+
+// Màu xanh theo web - Sky blue palette
+const Color primaryBlue = Color(0xFF0284C7); // Sky-600
 
 class ChatDetailScreen extends ConsumerStatefulWidget {
   final String conversationId;
@@ -68,6 +73,10 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
         signalRService.listenToMessages(widget.conversationId).listen((message) {
           final notifier = ref.read(chatDetailProvider(widget.conversationId).notifier);
           notifier.addMessage(message);
+          // Refresh unread total if message is from other user
+          if (!message.isMine) {
+            ref.invalidate(unreadTotalProvider);
+          }
           // Scroll đến cuối khi có tin nhắn mới
           WidgetsBinding.instance.addPostFrameCallback((_) {
             _scrollToBottom();
@@ -123,6 +132,9 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
         );
 
     if (success) {
+      // Refresh ngầm conversation và chat list để cập nhật tin nhắn mới
+      await notifier.silentRefresh();
+      ref.read(chatListProvider.notifier).silentRefresh();
       _scrollToBottom();
     } else {
       // Nếu gửi thất bại, khôi phục lại text
@@ -179,6 +191,9 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
         if (!mounted) return;
 
         if (success) {
+          // Refresh ngầm conversation và chat list để cập nhật tin nhắn mới
+          await notifier.silentRefresh();
+          ref.read(chatListProvider.notifier).silentRefresh();
           _scrollToBottom();
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -207,6 +222,21 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
 
     return Scaffold(
       appBar: AppBar(
+        elevation: 0,
+        flexibleSpace: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Colors.blue.shade400,
+                Colors.blue.shade600,
+              ],
+            ),
+          ),
+        ),
+        backgroundColor: Colors.transparent,
+        iconTheme: const IconThemeData(color: Colors.white),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
@@ -220,15 +250,96 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
         ),
         title: conversationAsync.when(
           data: (conversation) => _AppBarTitleWidget(conversation: conversation),
-          loading: () => const Text('Đang tải...'),
-          error: (_, __) => const Text('Chat'),
+          loading: () => const Text(
+            'Đang tải...',
+            style: TextStyle(color: Colors.white),
+          ),
+          error: (_, __) => const Text(
+            'Chat',
+            style: TextStyle(color: Colors.white),
+          ),
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () {
-              ref.read(chatDetailProvider(widget.conversationId).notifier).refresh();
+          Container(
+            margin: const EdgeInsets.only(right: 8),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
+              shape: BoxShape.circle,
+            ),
+            child: IconButton(
+              icon: const Icon(Icons.refresh),
+              onPressed: () {
+                ref.read(chatDetailProvider(widget.conversationId).notifier).refresh();
+              },
+              tooltip: 'Làm mới',
+            ),
+          ),
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.more_vert),
+            color: Colors.white,
+            onSelected: (value) async {
+              if (value == 'delete') {
+                // Hiển thị dialog xác nhận xóa
+                final confirm = await showDialog<bool>(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: const Text('Xóa cuộc trò chuyện'),
+                    content: const Text('Bạn có chắc chắn muốn xóa cuộc trò chuyện này?'),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context, false),
+                        child: const Text('Hủy'),
+                      ),
+                      TextButton(
+                        onPressed: () => Navigator.pop(context, true),
+                        style: TextButton.styleFrom(
+                          foregroundColor: Colors.red,
+                        ),
+                        child: const Text('Xóa'),
+                      ),
+                    ],
+                  ),
+                );
+
+                if (confirm == true && mounted) {
+                  // Xóa conversation
+                  final notifier = ref.read(chatDetailProvider(widget.conversationId).notifier);
+                  final success = await notifier.deleteConversation();
+
+                  if (mounted) {
+                    if (success) {
+                      // Refresh chat list để cập nhật danh sách
+                      ref.read(chatListProvider.notifier).refresh();
+                      // Quay về chat list
+                      if (context.canPop()) {
+                        context.pop();
+                      } else {
+                        context.go(Routes.chatList);
+                      }
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Không thể xóa cuộc trò chuyện'),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                    }
+                  }
+                }
+              }
             },
+            itemBuilder: (context) => [
+              const PopupMenuItem<String>(
+                value: 'delete',
+                child: Row(
+                  children: [
+                    Icon(Icons.delete, color: Colors.red),
+                    SizedBox(width: 8),
+                    Text('Xóa cuộc trò chuyện'),
+                  ],
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -294,16 +405,15 @@ class _ReplyToBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(8),
-      color: Colors.grey.shade200,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.blue.shade50,
+        border: Border(
+          left: BorderSide(color: Colors.blue, width: 4),
+        ),
+      ),
       child: Row(
         children: [
-          Container(
-            width: 4,
-            height: 40,
-            color: Colors.blue,
-          ),
-          const SizedBox(width: 8),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -311,23 +421,30 @@ class _ReplyToBanner extends StatelessWidget {
               children: [
                 Text(
                   'Trả lời ${message.sender.accountName}',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontWeight: FontWeight.bold,
-                    fontSize: 12,
+                    fontSize: 13,
+                    color: Colors.blue.shade700,
                   ),
                 ),
+                const SizedBox(height: 2),
                 Text(
                   message.body ?? '[Ảnh]',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey.shade700,
+                  ),
                 ),
               ],
             ),
           ),
           IconButton(
-            icon: const Icon(Icons.close, size: 20),
+            icon: Icon(Icons.close, size: 20, color: Colors.grey.shade600),
             onPressed: onCancel,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
           ),
         ],
       ),
@@ -349,8 +466,41 @@ class _MessageList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (conversation.messages.isEmpty) {
-      return const Center(
-        child: Text('Chưa có tin nhắn nào'),
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: Colors.blue.shade50,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.chat_bubble_outline,
+                size: 64,
+                color: Colors.blue.shade300,
+              ),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              'Chưa có tin nhắn nào',
+              style: TextStyle(
+                color: Colors.grey.shade700,
+                fontSize: 18,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Bắt đầu cuộc trò chuyện',
+              style: TextStyle(
+                color: Colors.grey.shade500,
+                fontSize: 14,
+              ),
+            ),
+          ],
+        ),
       );
     }
 
@@ -419,23 +569,32 @@ class _MessageBubble extends StatelessWidget {
             if (message.replyTo != null)
               Container(
                 margin: EdgeInsets.only(
-                  bottom: 4,
+                  bottom: 6,
                   left: isMe ? 0 : 8,
                   right: isMe ? 8 : 0,
                 ),
-                padding: const EdgeInsets.all(8),
+                padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: Colors.grey.shade300,
+                  color: isMe 
+                      ? Colors.white.withOpacity(0.2)
+                      : Colors.grey.shade300,
                   borderRadius: BorderRadius.circular(8),
+                  border: Border(
+                    left: BorderSide(
+                      color: isMe ? Colors.white70 : Colors.blue,
+                      width: 3,
+                    ),
+                  ),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       message.replyTo!.sender.accountName,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.bold,
+                        color: isMe ? Colors.white : Colors.blue.shade700,
                       ),
                     ),
                     const SizedBox(height: 2),
@@ -443,7 +602,10 @@ class _MessageBubble extends StatelessWidget {
                       message.replyTo!.body ?? '[Ảnh]',
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontSize: 11),
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: isMe ? Colors.white70 : Colors.grey.shade700,
+                      ),
                     ),
                   ],
                 ),
@@ -452,12 +614,25 @@ class _MessageBubble extends StatelessWidget {
               onLongPress: onReply,
               child: Container(
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 8,
+                  horizontal: 16,
+                  vertical: 12,
                 ),
                 decoration: BoxDecoration(
-                  color: isMe ? Colors.blue : Colors.grey.shade300,
-                  borderRadius: BorderRadius.circular(16),
+                  color: isMe ? Colors.blue.shade600 : Colors.grey.shade100,
+                  borderRadius: BorderRadius.only(
+                    topLeft: const Radius.circular(20),
+                    topRight: const Radius.circular(20),
+                    bottomLeft: Radius.circular(isMe ? 20 : 4),
+                    bottomRight: Radius.circular(isMe ? 4 : 20),
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: (isMe ? Colors.blue : Colors.grey).withOpacity(0.3),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                      spreadRadius: 0,
+                    ),
+                  ],
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -587,49 +762,44 @@ class _MessageBubble extends StatelessWidget {
   }
 
   String _formatTime(DateTime time) {
-    // Convert UTC sang timezone Việt Nam (UTC+7)
+    // Convert từ UTC sang giờ Việt Nam (UTC+7) - giống logic FE
     // Đảm bảo time là UTC trước khi convert
-    DateTime utcTime;
-    if (time.isUtc) {
-      utcTime = time;
-    } else {
-      // Nếu không phải UTC, convert sang UTC
-      // Sử dụng toUtc() để đảm bảo convert đúng
-      utcTime = time.toUtc();
-    }
-    
-    // Debug: In ra để kiểm tra
-    print('FormatTime - Input: $time (isUtc: ${time.isUtc}), UTC: $utcTime');
-    
-    // Thêm 7 giờ để có giờ Việt Nam
+    final utcTime = time.isUtc ? time : time.toUtc();
     final vietnamTime = utcTime.add(const Duration(hours: 7));
     
-    print('FormatTime - Vietnam time: $vietnamTime (hour: ${vietnamTime.hour}, minute: ${vietnamTime.minute})');
-    
-    // Lấy thời gian hiện tại ở VN (UTC+7)
+    // Lấy thời gian hiện tại ở giờ Việt Nam để so sánh
     final nowUtc = DateTime.now().toUtc();
     final nowVietnam = nowUtc.add(const Duration(hours: 7));
-    final difference = nowVietnam.difference(vietnamTime);
+    
+    // So sánh ngày tháng (chỉ lấy phần date, bỏ qua time)
+    final timeDate = DateTime(vietnamTime.year, vietnamTime.month, vietnamTime.day);
+    final nowDate = DateTime(nowVietnam.year, nowVietnam.month, nowVietnam.day);
+    final daysDiff = nowDate.difference(timeDate).inDays;
 
-    // Nếu thời gian trong tương lai (do timezone conversion sai), chỉ hiển thị giờ:phút
-    if (difference.isNegative) {
+    // Cùng ngày: chỉ hiển thị giờ:phút
+    if (daysDiff == 0) {
       return '${vietnamTime.hour.toString().padLeft(2, '0')}:${vietnamTime.minute.toString().padLeft(2, '0')}';
     }
 
-    if (difference.inDays == 0) {
-      // Hôm nay: chỉ hiển thị giờ:phút
-      return '${vietnamTime.hour.toString().padLeft(2, '0')}:${vietnamTime.minute.toString().padLeft(2, '0')}';
-    } else if (difference.inDays == 1) {
       // Hôm qua
+    if (daysDiff == 1) {
       return 'Hôm qua ${vietnamTime.hour.toString().padLeft(2, '0')}:${vietnamTime.minute.toString().padLeft(2, '0')}';
-    } else if (difference.inDays < 7) {
-      // Trong tuần: hiển thị thứ
-      final weekdays = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
-      return '${weekdays[vietnamTime.weekday % 7]} ${vietnamTime.hour.toString().padLeft(2, '0')}:${vietnamTime.minute.toString().padLeft(2, '0')}';
-    } else {
-      // Quá 1 tuần: hiển thị ngày/tháng
-      return '${vietnamTime.day}/${vietnamTime.month} ${vietnamTime.hour.toString().padLeft(2, '0')}:${vietnamTime.minute.toString().padLeft(2, '0')}';
     }
+    
+    // Trong 7 ngày: hiển thị thứ và giờ (giống FE: Thứ 2-7, CN)
+    if (daysDiff < 7) {
+      final dayOfWeek = vietnamTime.weekday; // 1=Monday, 7=Sunday
+      final weekdays = ['', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7', 'CN'];
+      return '${weekdays[dayOfWeek]} ${vietnamTime.hour.toString().padLeft(2, '0')}:${vietnamTime.minute.toString().padLeft(2, '0')}';
+    }
+    
+    // Trong cùng năm: hiển thị ngày/tháng và giờ
+    if (vietnamTime.year == nowVietnam.year) {
+      return '${vietnamTime.day.toString().padLeft(2, '0')}/${vietnamTime.month.toString().padLeft(2, '0')} ${vietnamTime.hour.toString().padLeft(2, '0')}:${vietnamTime.minute.toString().padLeft(2, '0')}';
+    }
+    
+    // Khác năm: hiển thị đầy đủ
+    return '${vietnamTime.day.toString().padLeft(2, '0')}/${vietnamTime.month.toString().padLeft(2, '0')}/${vietnamTime.year} ${vietnamTime.hour.toString().padLeft(2, '0')}:${vietnamTime.minute.toString().padLeft(2, '0')}';
   }
 }
 
@@ -647,47 +817,89 @@ class _MessageInput extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       decoration: BoxDecoration(
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.shade300,
-            blurRadius: 4,
+            color: Colors.grey.shade300.withOpacity(0.5),
+            blurRadius: 12,
             offset: const Offset(0, -2),
+            spreadRadius: 0,
           ),
         ],
       ),
-      child: Row(
-        children: [
-          IconButton(
-            icon: const Icon(Icons.image),
-            onPressed: onPickImage,
-          ),
-          Expanded(
-            child: TextField(
-              controller: controller,
-              decoration: InputDecoration(
-                hintText: 'Nhập tin nhắn...',
-                border: OutlineInputBorder(
+      child: SafeArea(
+        child: Row(
+          children: [
+            Container(
+              margin: const EdgeInsets.only(right: 8),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade100,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.grey.shade300,
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: IconButton(
+                icon: Icon(Icons.image_outlined, color: Colors.grey.shade700),
+                onPressed: onPickImage,
+                tooltip: 'Gửi ảnh',
+              ),
+            ),
+            Expanded(
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade50,
                   borderRadius: BorderRadius.circular(24),
+                  border: Border.all(
+                    color: Colors.grey.shade200,
+                    width: 1,
+                  ),
                 ),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
+                child: TextField(
+                  controller: controller,
+                  decoration: InputDecoration(
+                    hintText: 'Nhập tin nhắn...',
+                    hintStyle: TextStyle(color: Colors.grey.shade500),
+                    border: InputBorder.none,
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 12,
+                    ),
+                  ),
+                  maxLines: null,
+                  textCapitalization: TextCapitalization.sentences,
+                  onSubmitted: (_) => onSend(),
                 ),
               ),
-              maxLines: null,
-              textCapitalization: TextCapitalization.sentences,
-              onSubmitted: (_) => onSend(),
             ),
-          ),
-          IconButton(
-            icon: const Icon(Icons.send),
-            onPressed: onSend,
-            color: Colors.blue,
-          ),
-        ],
+            const SizedBox(width: 8),
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.blue.shade600,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.blue.withOpacity(0.4),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                    spreadRadius: 0,
+                  ),
+                ],
+              ),
+              child: IconButton(
+                icon: const Icon(Icons.send_rounded, color: Colors.white),
+                onPressed: onSend,
+                tooltip: 'Gửi',
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -724,17 +936,14 @@ class _AppBarTitleWidget extends ConsumerWidget {
         final baseUrl = 'http://apivhs.cuahangkinhdoanh.com';
         String? avatarUrl;
         
-        // Ưu tiên dùng avatarUrl từ conversation (đã được backend xử lý)
-        // Nếu không có thì dùng từ participant
-        final conversationAvatar = conversation.avatarUrl;
-        final participantAvatar = otherParticipant.avatarUrl;
-        
-        // Chọn avatarUrl từ conversation hoặc participant
-        String? rawAvatarUrl = conversationAvatar;
+        // Ưu tiên dùng avatarUrl từ conversation (giống như trong list)
+        // Nếu không có thì mới dùng từ participant
+        String? rawAvatarUrl = conversation.avatarUrl;
         if (rawAvatarUrl == null || rawAvatarUrl.trim().isEmpty) {
-          rawAvatarUrl = participantAvatar;
+          rawAvatarUrl = otherParticipant.avatarUrl;
         }
         
+        // Xử lý avatarUrl giống như trong chat_list_screen
         if (rawAvatarUrl != null && rawAvatarUrl.trim().isNotEmpty) {
           final trimmed = rawAvatarUrl.trim();
           // Nếu đã là absolute URL (backend đã xử lý), dùng trực tiếp
@@ -749,27 +958,63 @@ class _AppBarTitleWidget extends ConsumerWidget {
 
         return Row(
           children: [
-            avatarUrl != null && avatarUrl.isNotEmpty
+            Container(
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.grey.shade300,
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: avatarUrl != null && avatarUrl.isNotEmpty
                 ? ClipOval(
                     child: CachedNetworkImage(
                       imageUrl: avatarUrl,
-                      width: 32,
-                      height: 32,
+                        width: 40,
+                        height: 40,
                       fit: BoxFit.cover,
-                      placeholder: (context, url) => const SizedBox(
-                        width: 32,
-                        height: 32,
+                        placeholder: (context, url) => Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade200,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Center(
                         child: CircularProgressIndicator(strokeWidth: 2),
                       ),
-                      errorWidget: (context, url, error) => const CircleAvatar(
-                        radius: 16,
-                        child: Icon(Icons.person, size: 16),
+                        ),
+                        errorWidget: (context, url, error) => Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade200,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            Icons.person,
+                            size: 20,
+                            color: Colors.grey.shade400,
+                          ),
                       ),
                     ),
                   )
-                : const CircleAvatar(
-                    radius: 16,
-                    child: Icon(Icons.person, size: 16),
+                  : Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade200,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.person,
+                        size: 20,
+                        color: Colors.grey.shade400,
+                      ),
+                    ),
                   ),
             const SizedBox(width: 12),
             Expanded(
@@ -779,13 +1024,34 @@ class _AppBarTitleWidget extends ConsumerWidget {
                 children: [
                   Text(
                     otherParticipant.accountName,
-                    style: const TextStyle(fontSize: 16),
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
                     overflow: TextOverflow.ellipsis,
                   ),
                   if (conversation.isOnline)
+                    Row(
+                      children: [
+                        Container(
+                          width: 8,
+                          height: 8,
+                          decoration: BoxDecoration(
+                            color: Colors.green,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
                     const Text(
                       'Đang hoạt động',
-                      style: TextStyle(fontSize: 12, color: Colors.green),
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.green,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
                     ),
                 ],
               ),

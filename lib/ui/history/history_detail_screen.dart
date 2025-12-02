@@ -2,133 +2,352 @@
   import 'package:flutter_riverpod/flutter_riverpod.dart';
   import 'package:intl/intl.dart';
   import 'package:cached_network_image/cached_network_image.dart';
-  import 'package:vhs_mobile_user/data/models/booking/booking_history_detail_model.dart';
-  import 'package:vhs_mobile_user/ui/history/history_detail_viewmodel.dart';
-  import 'package:vhs_mobile_user/ui/payment/payment_viewmodel.dart';
+import 'package:vhs_mobile_user/data/models/booking/booking_history_detail_model.dart';
+import 'package:vhs_mobile_user/ui/history/history_detail_viewmodel.dart';
+import 'package:vhs_mobile_user/ui/payment/payment_viewmodel.dart';
+import 'package:vhs_mobile_user/ui/review/review_screen.dart';
+import 'package:vhs_mobile_user/ui/report/report_screen.dart';
+import 'package:vhs_mobile_user/ui/report/report_viewmodel.dart';
+import 'package:vhs_mobile_user/routing/routes.dart';
+import 'package:go_router/go_router.dart';
+import 'package:vhs_mobile_user/ui/core/theme_helper.dart';
 
   class HistoryDetailScreen extends ConsumerWidget {
     final String bookingId;
 
     const HistoryDetailScreen({super.key, required this.bookingId});
 
-    @override
-    Widget build(BuildContext context, WidgetRef ref) {
-      final asyncDetail = ref.watch(historyDetailProvider(bookingId));
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final asyncDetail = ref.watch(historyDetailProvider(bookingId));
 
-      return Scaffold(
-        appBar: AppBar(title: const Text("Chi tiết đơn hàng")),
-        body: asyncDetail.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, st) => Center(child: Text("Lỗi: $e")),
-          data: (detail) => _DetailBody(detail: detail),
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        shadowColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
+        flexibleSpace: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Colors.blue.shade400,
+                Colors.blue.shade600,
+              ],
+            ),
+          ),
         ),
-      );
+        title: const Text(
+          "Chi tiết đơn hàng",
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+            fontSize: 20,
+          ),
+        ),
+        iconTheme: const IconThemeData(color: Colors.white),
+        actions: [
+          Container(
+            margin: const EdgeInsets.only(right: 8),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
+              shape: BoxShape.circle,
+            ),
+            child: IconButton(
+              icon: const Icon(Icons.refresh_rounded),
+              onPressed: () {
+                ref.invalidate(historyDetailProvider(bookingId));
+              },
+              tooltip: "Làm mới",
+            ),
+          ),
+        ],
+      ),
+      backgroundColor: ThemeHelper.getScaffoldBackgroundColor(context),
+      body: RefreshIndicator(
+        onRefresh: () async {
+          // Invalidate provider để force refresh
+          ref.invalidate(historyDetailProvider(bookingId));
+          // Đợi một chút để data được fetch lại
+          await Future.delayed(const Duration(milliseconds: 300));
+        },
+        color: ThemeHelper.getPrimaryColor(context),
+        child: asyncDetail.when(
+          loading: () => Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    ThemeHelper.getPrimaryColor(context),
+                  ),
+                  strokeWidth: 3,
+                ),
+                const SizedBox(height: 24),
+                Text(
+                  "Đang tải...",
+                  style: TextStyle(
+                    color: ThemeHelper.getSecondaryTextColor(context),
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          error: (e, st) {
+            final isDark = ThemeHelper.isDarkMode(context);
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                        color: isDark 
+                            ? Colors.red.shade900.withOpacity(0.3)
+                            : Colors.red.shade50,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.error_outline_rounded,
+                        size: 64,
+                        color: Colors.red.shade400,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    Text(
+                      "Đã xảy ra lỗi",
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: ThemeHelper.getTextColor(context),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      "$e",
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: ThemeHelper.getSecondaryTextColor(context),
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+          data: (detail) => _DetailBody(
+            detail: detail,
+            bookingId: bookingId,
+            ref: ref,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _DetailBody extends StatefulWidget {
+  final HistoryBookingDetail detail;
+  final String bookingId;
+  final WidgetRef ref;
+
+  const _DetailBody({
+    required this.detail,
+    required this.bookingId,
+    required this.ref,
+  });
+
+  @override
+  State<_DetailBody> createState() => _DetailBodyState();
+}
+
+class _DetailBodyState extends State<_DetailBody> with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    // Auto refresh khi màn hình được hiển thị lại
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _refreshData();
+    });
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Refresh khi app quay lại foreground
+    if (state == AppLifecycleState.resumed) {
+      _refreshData();
     }
   }
 
-  class _DetailBody extends StatelessWidget {
-    final HistoryBookingDetail detail;
+  void _refreshData() {
+    // Invalidate provider để refresh data
+    widget.ref.invalidate(historyDetailProvider(widget.bookingId));
+  }
 
-    const _DetailBody({required this.detail});
+  @override
+  Widget build(BuildContext context) {
+    // Watch lại để cập nhật khi data thay đổi
+    final asyncDetail = widget.ref.watch(historyDetailProvider(widget.bookingId));
+    
+    return asyncDetail.when(
+      loading: () => _buildContent(widget.detail), // Hiển thị data cũ khi đang load
+      error: (e, st) => _buildContent(widget.detail), // Hiển thị data cũ khi có lỗi
+      data: (detail) => _buildContent(detail),
+    );
+  }
 
-    @override
-    Widget build(BuildContext context) {
-      return ListView(
-        padding: const EdgeInsets.all(14),
-        children: [
-          _statusHeader(),
+  Widget _buildContent(HistoryBookingDetail detail) {
+    return ListView(
+      padding: const EdgeInsets.all(14),
+      children: [
+        _serviceCard(detail),
+        const SizedBox(height: 16),
+        _providerCard(detail),
+        if (detail.staffName != null) ...[
           const SizedBox(height: 16),
-          _serviceCard(),
-          const SizedBox(height: 16),
-          _providerCard(),
-          if (detail.staffName != null) ...[
-            const SizedBox(height: 16),
-            _staffCard(),
-          ],
-          const SizedBox(height: 20),
-          _timelineCard(),
-          const SizedBox(height: 20),
-          _paymentCard(),
-          if (detail.cancelReason != null) ...[
-            const SizedBox(height: 20),
-            _refundCard(),
-          ],
-          const SizedBox(height: 30),
-          _actionButtons(context),
-          const SizedBox(height: 60),
+          _staffCard(detail),
         ],
-      );
-    }
+        const SizedBox(height: 20),
+        _timelineCard(detail),
+        const SizedBox(height: 20),
+        _paymentCard(detail),
+        if (detail.cancelReason != null) ...[
+          const SizedBox(height: 20),
+          _refundCard(detail),
+        ],
+        const SizedBox(height: 30),
+        _actionButtons(context, detail),
+        const SizedBox(height: 60),
+      ],
+    );
+  }
 
-    // ========================================
-    // STATUS HEADER
-    // ========================================
-    Widget _statusHeader() {
-      return Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: _statusColor(detail.status).withOpacity(0.15),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Row(
-          children: [
-            Icon(Icons.info, size: 28, color: _statusColor(detail.status)),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                _statusVi(detail.status),
-                style: TextStyle(
-                  color: _statusColor(detail.status),
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
+  // ========================================
+  // STATUS HEADER
+  // ========================================
+  Widget _statusHeader(HistoryBookingDetail detail) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: _statusColor(detail.status).withOpacity(0.15),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.info, size: 28, color: _statusColor(detail.status)),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              _statusVi(detail.status),
+              style: TextStyle(
+                color: _statusColor(detail.status),
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
               ),
             ),
-          ],
-        ),
-      );
-    }
+          ),
+        ],
+      ),
+    );
+  }
 
-    String _statusVi(String status) {
-      final s = status.toLowerCase();
-      if (s.contains("pending")) return "Chờ xác nhận";
-      if (s.contains("confirmed")) return "Đã xác nhận";
-      if (s.contains("progress")) return "Đang thực hiện";
-      if (s.contains("completed")) return "Hoàn thành";
-      if (s.contains("cancel")) return "Đã hủy";
-      return status;
-    }
+  String _statusVi(String status) {
+    final s = status.toLowerCase();
+    if (s.contains("pending")) return "Chờ xác nhận";
+    if (s.contains("confirmed")) return "Đã xác nhận";
+    if (s.contains("progress")) return "Bắt đầu làm việc";
+    if (s.contains("completed")) return "Hoàn thành";
+    if (s.contains("cancel")) return "Đã hủy";
+    return status;
+  }
 
     // ========================================
     // SERVICE CARD
     // ========================================
-    Widget _serviceCard() {
+    Widget _serviceCard(HistoryBookingDetail detail) {
       final img = detail.serviceImages.isNotEmpty
           ? detail.serviceImages.first
           : null;
 
-      return Card(
-        elevation: 2,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      return Container(
+        decoration: BoxDecoration(
+          color: ThemeHelper.getCardBackgroundColor(context),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: ThemeHelper.getBorderColor(context),
+            width: 1,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: ThemeHelper.getShadowColor(context),
+              blurRadius: 10,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
         child: Padding(
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.all(16),
           child: Row(
             children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: img != null
-                    ? CachedNetworkImage(
-                        imageUrl: img,
-                        width: 95,
-                        height: 95,
-                        fit: BoxFit.cover,
-                      )
-                    : Container(
-                        width: 95,
-                        height: 95,
-                        color: Colors.grey.shade200,
-                        child: const Icon(Icons.image),
-                      ),
+              Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: ThemeHelper.getBorderColor(context),
+                    width: 1,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: ThemeHelper.getShadowColor(context),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: img != null
+                      ? CachedNetworkImage(
+                          imageUrl: img,
+                          width: 95,
+                          height: 95,
+                          fit: BoxFit.cover,
+                          errorWidget: (context, url, error) => Container(
+                            width: 95,
+                            height: 95,
+                            color: ThemeHelper.getLightBackgroundColor(context),
+                            child: Icon(
+                              Icons.image_rounded,
+                              size: 32,
+                              color: ThemeHelper.getSecondaryIconColor(context),
+                            ),
+                          ),
+                        )
+                      : Container(
+                          width: 95,
+                          height: 95,
+                          color: ThemeHelper.getLightBackgroundColor(context),
+                          child: Icon(
+                            Icons.image_rounded,
+                            size: 32,
+                            color: ThemeHelper.getSecondaryIconColor(context),
+                          ),
+                        ),
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -137,23 +356,28 @@
                   children: [
                     Text(
                       detail.service.title,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
+                        color: ThemeHelper.getTextColor(context),
                       ),
                       maxLines: 2,
                     ),
                     const SizedBox(height: 6),
                     Text(
                       detail.addressLine,
-                      style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: ThemeHelper.getTertiaryTextColor(context),
+                      ),
                     ),
                     const SizedBox(height: 6),
                     Text(
                       "${NumberFormat('#,###').format(detail.service.unitPrice)} ₫",
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontWeight: FontWeight.bold,
-                        color: Colors.red,
+                        fontSize: 16,
+                        color: Colors.red.shade600,
                       ),
                     ),
                   ],
@@ -168,27 +392,68 @@
     // ========================================
     // PROVIDER CARD
     // ========================================
-    Widget _providerCard() {
+    Widget _providerCard(HistoryBookingDetail detail) {
       final provider = detail.provider;
       final avatar = provider.providerImages.isNotEmpty
           ? provider.providerImages.first
           : null;
 
-      return Card(
-        elevation: 1,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      return Container(
+        decoration: BoxDecoration(
+          color: ThemeHelper.getCardBackgroundColor(context),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: ThemeHelper.getBorderColor(context),
+            width: 1,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: ThemeHelper.getShadowColor(context),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
         child: ListTile(
-          leading: CircleAvatar(
-            backgroundImage: avatar != null
-                ? CachedNetworkImageProvider(avatar)
-                : null,
-            child: avatar == null ? const Icon(Icons.store) : null,
+          contentPadding: const EdgeInsets.all(16),
+          leading: Container(
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: ThemeHelper.getBorderColor(context),
+                width: 1,
+              ),
+            ),
+            child: CircleAvatar(
+              backgroundImage: avatar != null
+                  ? CachedNetworkImageProvider(avatar)
+                  : null,
+              child: avatar == null
+                  ? Icon(
+                      Icons.store_rounded,
+                      color: ThemeHelper.getSecondaryIconColor(context),
+                    )
+                  : null,
+            ),
           ),
           title: Text(
             provider.providerName,
-            style: const TextStyle(fontWeight: FontWeight.w600),
+            style: TextStyle(
+              fontWeight: FontWeight.w600,
+              fontSize: 16,
+              color: ThemeHelper.getTextColor(context),
+            ),
           ),
-          subtitle: Text("Mã đơn: ${detail.bookingCode}"),
+          subtitle: Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Text(
+              "Mã đơn: ${detail.bookingCode}",
+              style: TextStyle(
+                fontSize: 13,
+                color: ThemeHelper.getSecondaryTextColor(context),
+              ),
+            ),
+          ),
         ),
       );
     }
@@ -196,18 +461,63 @@
     // ========================================
     // STAFF CARD
     // ========================================
-    Widget _staffCard() {
-      return Card(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        child: ListTile(
-          leading: CircleAvatar(
-            backgroundImage: detail.staffImage != null
-                ? CachedNetworkImageProvider(detail.staffImage!)
-                : null,
-            child: detail.staffImage == null ? const Icon(Icons.person) : null,
+    Widget _staffCard(HistoryBookingDetail detail) {
+      return Container(
+        decoration: BoxDecoration(
+          color: ThemeHelper.getCardBackgroundColor(context),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: ThemeHelper.getBorderColor(context),
+            width: 1,
           ),
-          title: Text(detail.staffName!),
-          subtitle: Text("SĐT: ${detail.staffPhone ?? "Không có"}"),
+          boxShadow: [
+            BoxShadow(
+              color: ThemeHelper.getShadowColor(context),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: ListTile(
+          contentPadding: const EdgeInsets.all(16),
+          leading: Container(
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: ThemeHelper.getBorderColor(context),
+                width: 1,
+              ),
+            ),
+            child: CircleAvatar(
+              backgroundImage: detail.staffImage != null
+                  ? CachedNetworkImageProvider(detail.staffImage!)
+                  : null,
+              child: detail.staffImage == null
+                  ? Icon(
+                      Icons.person_rounded,
+                      color: ThemeHelper.getSecondaryIconColor(context),
+                    )
+                  : null,
+            ),
+          ),
+          title: Text(
+            detail.staffName!,
+            style: TextStyle(
+              fontWeight: FontWeight.w600,
+              fontSize: 16,
+              color: ThemeHelper.getTextColor(context),
+            ),
+          ),
+          subtitle: Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Text(
+              "SĐT: ${detail.staffPhone ?? "Không có"}",
+              style: TextStyle(
+                fontSize: 13,
+                color: ThemeHelper.getSecondaryTextColor(context),
+              ),
+            ),
+          ),
         ),
       );
     }
@@ -215,23 +525,70 @@
     // ========================================
     // TIMELINE CARD
     // ========================================
-    Widget _timelineCard() {
-      return Card(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        elevation: 2,
+    Widget _timelineCard(HistoryBookingDetail detail) {
+      return Container(
+        decoration: BoxDecoration(
+          color: ThemeHelper.getCardBackgroundColor(context),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: ThemeHelper.getBorderColor(context),
+            width: 1,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: ThemeHelper.getShadowColor(context),
+              blurRadius: 10,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
         child: Padding(
-          padding: const EdgeInsets.all(14),
+          padding: const EdgeInsets.all(20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                "Tiến trình đơn hàng",
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: ThemeHelper.getLightBlueBackgroundColor(context),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(
+                      Icons.timeline_rounded,
+                      color: ThemeHelper.getPrimaryColor(context),
+                      size: 20,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    "Tiến trình đơn hàng",
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: ThemeHelper.getTextColor(context),
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 12),
 
-              ...detail.timeline.map((e) {
+              ...detail.timeline.asMap().entries.map((entry) {
+                final index = entry.key;
+                final e = entry.value;
                 final time = e.time?.toLocal();
+                final isLast = index == detail.timeline.length - 1;
+                
+                // Xác định các code cần hiển thị proofs (giống web frontend)
+                final codeUpper = e.code.toUpperCase();
+                final shouldShowProofs = codeUpper == "CONFIRMED" ||
+                    codeUpper == "INPROGRESS" ||
+                    codeUpper == "IN PROGRESS" ||
+                    codeUpper == "COMPLETED" ||
+                    codeUpper == "CHECK IN" ||
+                    codeUpper == "CHECK OUT";
+                
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 10),
                   child: Row(
@@ -239,16 +596,26 @@
                     children: [
                       Column(
                         children: [
-                          Icon(
-                            Icons.check_circle,
-                            size: 18,
-                            color: Colors.green.shade600,
-                          ),
                           Container(
-                            width: 2,
-                            height: 35,
-                            color: Colors.grey.shade300,
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              color: ThemeHelper.isDarkMode(context)
+                                  ? Colors.green.shade900.withOpacity(0.3)
+                                  : Colors.green.shade50,
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              Icons.check_circle_rounded,
+                              size: 18,
+                              color: Colors.green.shade400,
+                            ),
                           ),
+                          if (!isLast)
+                            Container(
+                              width: 2,
+                              height: 35,
+                              color: ThemeHelper.getDividerColor(context),
+                            ),
                         ],
                       ),
                       const SizedBox(width: 12),
@@ -258,17 +625,21 @@
                           children: [
                             Text(
                               e.title,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w600,
+                                color: ThemeHelper.getTextColor(context),
                               ),
                             ),
                             if (e.description != null)
-                              Text(
-                                e.description!,
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.grey.shade700,
+                              Padding(
+                                padding: const EdgeInsets.only(top: 4),
+                                child: Text(
+                                  e.description!,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: ThemeHelper.getSecondaryTextColor(context),
+                                  ),
                                 ),
                               ),
                             Text(
@@ -277,9 +648,106 @@
                                   : "Chưa cập nhật",
                               style: TextStyle(
                                 fontSize: 12,
-                                color: Colors.grey.shade500,
+                                color: ThemeHelper.getTertiaryTextColor(context),
                               ),
                             ),
+                            // Hiển thị proofs (ảnh check-in/check-out)
+                            if (shouldShowProofs && e.proofs.isNotEmpty) ...[
+                              const SizedBox(height: 8),
+                              Wrap(
+                                spacing: 8,
+                                runSpacing: 8,
+                                children: e.proofs.map((proof) {
+                                  if (proof.mediaType.toLowerCase() == "image") {
+                                    return GestureDetector(
+                                      onTap: () {
+                                        // Mở ảnh fullscreen
+                                        showDialog(
+                                          context: context,
+                                          builder: (context) => Dialog(
+                                            backgroundColor: Colors.transparent,
+                                            child: Stack(
+                                              children: [
+                                                Center(
+                                                  child: InteractiveViewer(
+                                                    child: CachedNetworkImage(
+                                                      imageUrl: proof.url,
+                                                      fit: BoxFit.contain,
+                                                      errorWidget: (context, url, error) =>
+                                                          const Icon(Icons.error, color: Colors.white),
+                                                    ),
+                                                  ),
+                                                ),
+                                                Positioned(
+                                                  top: 8,
+                                                  right: 8,
+                                                  child: IconButton(
+                                                    icon: const Icon(Icons.close, color: Colors.white),
+                                                    onPressed: () => Navigator.of(context).pop(),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                      child: ClipRRect(
+                                        borderRadius: BorderRadius.circular(8),
+                                        child: CachedNetworkImage(
+                                          imageUrl: proof.url,
+                                          width: 80,
+                                          height: 80,
+                                          fit: BoxFit.cover,
+                                          placeholder: (context, url) => Container(
+                                            width: 80,
+                                            height: 80,
+                                            color: ThemeHelper.getLightBackgroundColor(context),
+                                            child: Center(
+                                              child: CircularProgressIndicator(
+                                                strokeWidth: 2,
+                                                color: ThemeHelper.getPrimaryColor(context),
+                                              ),
+                                            ),
+                                          ),
+                                          errorWidget: (context, url, error) => Container(
+                                            width: 80,
+                                            height: 80,
+                                            color: ThemeHelper.getLightBackgroundColor(context),
+                                            child: Icon(
+                                              Icons.error,
+                                              color: ThemeHelper.getSecondaryIconColor(context),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                  } else {
+                                    // Video - hiển thị icon play
+                                    return GestureDetector(
+                                      onTap: () {
+                                        // TODO: Mở video player
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          const SnackBar(content: Text("Video player chưa được implement")),
+                                        );
+                                      },
+                                      child: Container(
+                                        width: 80,
+                                        height: 80,
+                                        decoration: BoxDecoration(
+                                          color: ThemeHelper.getLightBackgroundColor(context),
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        child: Icon(
+                                          Icons.play_circle_outline,
+                                          size: 40,
+                                          color: ThemeHelper.getSecondaryIconColor(context),
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                }).toList(),
+                              ),
+                            ],
                           ],
                         ),
                       ),
@@ -296,7 +764,7 @@
     // ========================================
     // PAYMENT CARD
     // ========================================
-    Widget _paymentCard() {
+    Widget _paymentCard(HistoryBookingDetail detail) {
     print("🔥 lineTotal runtimeType = ${detail.service.lineTotal.runtimeType}");
 print("🔥 discount runtimeType = ${detail.voucherDiscount.runtimeType}");
 print("🔥 lineTotal = ${detail.service.lineTotal}");
@@ -306,17 +774,50 @@ print("🔥 TOTAL = ${detail.service.lineTotal - detail.voucherDiscount}");
       final discount = detail.voucherDiscount;
       final total = price - discount;
 
-      return Card(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        elevation: 2,
+      return Container(
+        decoration: BoxDecoration(
+          color: ThemeHelper.getCardBackgroundColor(context),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: ThemeHelper.getBorderColor(context),
+            width: 1,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: ThemeHelper.getShadowColor(context),
+              blurRadius: 10,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                "Thông tin thanh toán",
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: ThemeHelper.getLightBlueBackgroundColor(context),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(
+                      Icons.payment_rounded,
+                      color: ThemeHelper.getPrimaryColor(context),
+                      size: 20,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  const Text(
+                    "Thông tin thanh toán",
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 12),
               _priceRow(
@@ -333,13 +834,135 @@ print("🔥 TOTAL = ${detail.service.lineTotal - detail.voucherDiscount}");
                 "${NumberFormat('#,###').format(total)} ₫",
                 isTotal: true,
               ),
-              const SizedBox(height: 10),
-              Text("Phương thức: ${detail.paymentMethod ?? "Chưa thanh toán"}"),
-              Text("Trạng thái: ${detail.paymentStatus ?? "Chưa thanh toán"}"),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: ThemeHelper.getInputBackgroundColor(context),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: ThemeHelper.getBorderColor(context),
+                    width: 1,
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.payment_rounded,
+                          size: 16,
+                          color: ThemeHelper.getSecondaryIconColor(context),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          "Phương thức: ",
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: ThemeHelper.getSecondaryTextColor(context),
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        Text(
+                          detail.paymentMethod ?? "Chưa thanh toán",
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: ThemeHelper.getTextColor(context),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.info_outline_rounded,
+                          size: 16,
+                          color: ThemeHelper.getSecondaryIconColor(context),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          "Trạng thái: ",
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: ThemeHelper.getSecondaryTextColor(context),
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: _getPaymentStatusColor(detail.paymentStatus)
+                                .withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(
+                              color: _getPaymentStatusColor(detail.paymentStatus),
+                              width: 1,
+                            ),
+                          ),
+                          child: Text(
+                            _getPaymentStatusText(detail.paymentStatus),
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: _getPaymentStatusColor(detail.paymentStatus),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
             ],
           ),
         ),
       );
+    }
+
+    String _getPaymentStatusText(String? status) {
+      if (status == null || status.isEmpty) {
+        return "Chưa thanh toán";
+      }
+      final s = status.toLowerCase();
+      if (s.contains("paid") || s.contains("đã thanh toán") || s.contains("thành công")) {
+        return "Đã thanh toán";
+      }
+      if (s.contains("pending") || s.contains("chờ")) {
+        return "Chờ thanh toán";
+      }
+      if (s.contains("failed") || s.contains("thất bại")) {
+        return "Thanh toán thất bại";
+      }
+      if (s.contains("refund") || s.contains("hoàn")) {
+        return "Đã hoàn tiền";
+      }
+      return status;
+    }
+
+    Color _getPaymentStatusColor(String? status) {
+      if (status == null || status.isEmpty) {
+        return Colors.orange;
+      }
+      final s = status.toLowerCase();
+      if (s.contains("paid") || s.contains("đã thanh toán") || s.contains("thành công")) {
+        return Colors.green;
+      }
+      if (s.contains("pending") || s.contains("chờ")) {
+        return Colors.orange;
+      }
+      if (s.contains("failed") || s.contains("thất bại")) {
+        return Colors.red;
+      }
+      if (s.contains("refund") || s.contains("hoàn")) {
+        return Colors.blue;
+      }
+      return ThemeHelper.getSecondaryTextColor(context); // Use theme color for default
     }
 
     Widget _priceRow(String title, String value, {bool isTotal = false}) {
@@ -351,14 +974,17 @@ print("🔥 TOTAL = ${detail.service.lineTotal - detail.voucherDiscount}");
             style: TextStyle(
               fontWeight: isTotal ? FontWeight.bold : FontWeight.normal,
               fontSize: isTotal ? 15 : 13,
+              color: ThemeHelper.getTextColor(context),
             ),
           ),
           Text(
             value,
             style: TextStyle(
-              color: isTotal ? Colors.blue : Colors.black,
+              color: isTotal
+                  ? ThemeHelper.getPrimaryColor(context)
+                  : ThemeHelper.getTextColor(context),
               fontWeight: FontWeight.bold,
-              fontSize: isTotal ? 17 : 13,
+              fontSize: isTotal ? 18 : 14,
             ),
           ),
         ],
@@ -368,26 +994,89 @@ print("🔥 TOTAL = ${detail.service.lineTotal - detail.voucherDiscount}");
     // ========================================
     // REFUND CARD (if canceled)
     // ========================================
-    Widget _refundCard() {
-      return Card(
-        color: Colors.red.shade50,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        elevation: 0,
+    Widget _refundCard(HistoryBookingDetail detail) {
+      final isDark = ThemeHelper.isDarkMode(context);
+      return Container(
+        decoration: BoxDecoration(
+          color: isDark
+              ? Colors.red.shade900.withOpacity(0.3)
+              : Colors.red.shade50,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: Colors.red.shade400,
+            width: 1.5,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.red.withOpacity(0.1),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                "Thông báo hoàn tiền",
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: isDark
+                          ? Colors.red.shade900.withOpacity(0.5)
+                          : Colors.red.shade100,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(
+                      Icons.info_outline_rounded,
+                      color: Colors.red.shade400,
+                      size: 20,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    "Thông báo hoàn tiền",
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: ThemeHelper.getTextColor(context),
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 8),
-              Text("Lý do: ${detail.cancelReason}"),
-              if (detail.refundStatus != null)
-                Text("Trạng thái: ${detail.refundStatus}"),
-              if (detail.resolutionNote != null)
-                Text("Ghi chú: ${detail.resolutionNote}"),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: ThemeHelper.getCardBackgroundColor(context),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "Lý do: ${detail.cancelReason}",
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: ThemeHelper.getTextColor(context),
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    if (detail.resolutionNote != null) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        "Ghi chú: ${detail.resolutionNote}",
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: ThemeHelper.getSecondaryTextColor(context),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
             ],
           ),
         ),
@@ -397,7 +1086,16 @@ print("🔥 TOTAL = ${detail.service.lineTotal - detail.voucherDiscount}");
     // ========================================
     // ACTION BUTTONS
     // ========================================
-  Widget _actionButtons(BuildContext context) {
+  Widget _actionButtons(BuildContext context, HistoryBookingDetail detail) {
+    final statusLower = detail.status.toLowerCase().trim();
+    final isCompleted = statusLower == "completed";
+    final isServiceCompleted = statusLower == "service completed" || 
+                               statusLower == "servicecompleted";
+    final isCompletedOrServiceCompleted = isCompleted || isServiceCompleted;
+    
+    // Chỉ đơn Hoàn thành thật sự (không phải ServiceCompleted) mới được phép đánh giá
+    final canReview = isCompleted && !detail.hasReview;
+    
     return Column(
       children: [
         // ==== ⭐ NÚT THANH TOÁN VNPay ====
@@ -426,9 +1124,14 @@ print("🔥 TOTAL = ${detail.service.lineTotal - detail.voucherDiscount}");
                         },
                   style: ElevatedButton.styleFrom(
                     minimumSize: const Size.fromHeight(48),
-                    backgroundColor: Colors.blue,
+                    backgroundColor: ThemeHelper.getPrimaryColor(context),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    elevation: 2,
                   ),
-                  icon: const Icon(Icons.payment),
+                  icon: const Icon(Icons.payment_rounded),
                   label: isLoading
                       ? const SizedBox(
                           height: 18,
@@ -436,7 +1139,13 @@ print("🔥 TOTAL = ${detail.service.lineTotal - detail.voucherDiscount}");
                           child: CircularProgressIndicator(
                               strokeWidth: 2, color: Colors.white),
                         )
-                      : const Text("Thanh toán ngay"),
+                      : const Text(
+                          "Thanh toán ngay",
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                 ),
                 const SizedBox(height: 16),
               ],
@@ -444,29 +1153,185 @@ print("🔥 TOTAL = ${detail.service.lineTotal - detail.voucherDiscount}");
           }),
 
         // ==== ⭐ NÚT ĐÁNH GIÁ ====
-        if (detail.status.toLowerCase().contains("completed"))
-          ElevatedButton(
-            onPressed: () {},
-            child: const Text("Đánh giá dịch vụ"),
-            style: ElevatedButton.styleFrom(
-              minimumSize: const Size.fromHeight(48),
-            ),
+        // Chỉ hiển thị khi Completed (không phải Service Completed) và chưa đánh giá
+        if (canReview)
+          Column(
+            children: [
+              ElevatedButton.icon(
+                onPressed: () async {
+                  // Navigate to review screen
+                  final result = await context.push<bool>(
+                    Routes.review,
+                    extra: detail,
+                  );
+                  // Refresh nếu review thành công
+                  if (result == true && mounted) {
+                    widget.ref.invalidate(historyDetailProvider(widget.bookingId));
+                  }
+                },
+                icon: const Icon(Icons.star_rounded),
+                label: const Text(
+                  "Đánh giá dịch vụ",
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                style: ElevatedButton.styleFrom(
+                  minimumSize: const Size.fromHeight(48),
+                  backgroundColor: Colors.orange.shade600,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  elevation: 2,
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
+          ),
+
+        // ==== ⭐ NÚT BÁO CÁO ====
+        // Hiển thị khi Completed hoặc Service Completed
+        if (isCompletedOrServiceCompleted)
+          _ReportButton(
+            bookingId: detail.bookingId,
+            detail: detail,
+            parentRef: widget.ref,
           ),
       ],
     );
   }
 
 
-    // ========================================
-    // COLOR HELPERS
-    // ========================================
-    Color _statusColor(String s) {
+  // ========================================
+  // COLOR HELPERS
+  // ========================================
+  Color _statusColor(String s) {
       final st = s.toLowerCase();
       if (st.contains("pending")) return Colors.orange;
       if (st.contains("confirmed")) return Colors.blue;
       if (st.contains("progress")) return Colors.purple;
       if (st.contains("completed")) return Colors.green;
       if (st.contains("cancel")) return Colors.red;
-      return Colors.grey;
+      return ThemeHelper.getSecondaryTextColor(context); // Use theme color for default
+    }
+  }
+
+  // ========================================
+  // REPORT BUTTON WIDGET
+  // ========================================
+  class _ReportButton extends ConsumerWidget {
+    final String bookingId;
+    final HistoryBookingDetail detail;
+    final WidgetRef parentRef;
+
+    const _ReportButton({
+      required this.bookingId,
+      required this.detail,
+      required this.parentRef,
+    });
+
+    @override
+    Widget build(BuildContext context, WidgetRef ref) {
+      final asyncReport = ref.watch(reportByBookingIdProvider(bookingId));
+
+      return asyncReport.when(
+        loading: () => const SizedBox.shrink(),
+        error: (e, st) => ElevatedButton.icon(
+          onPressed: () async {
+            // Navigate to report screen
+            final result = await context.push<bool>(
+              Routes.report,
+              extra: detail,
+            );
+            // Refresh nếu report thành công
+            if (result == true && context.mounted) {
+              ref.invalidate(reportByBookingIdProvider(bookingId));
+              parentRef.invalidate(historyDetailProvider(bookingId));
+            }
+          },
+          icon: const Icon(Icons.report_problem_rounded),
+          label: const Text(
+            "Báo cáo",
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          style: ElevatedButton.styleFrom(
+            minimumSize: const Size.fromHeight(48),
+            backgroundColor: Colors.red.shade600,
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            elevation: 2,
+          ),
+        ),
+        data: (report) {
+          if (report == null) {
+            // Chưa có report - hiển thị nút "Báo cáo"
+            return ElevatedButton.icon(
+              onPressed: () async {
+                // Navigate to report screen
+                final result = await context.push<bool>(
+                  Routes.report,
+                  extra: detail,
+                );
+                // Refresh nếu report thành công
+                if (result == true && context.mounted) {
+                  ref.invalidate(reportByBookingIdProvider(bookingId));
+                  parentRef.invalidate(historyDetailProvider(bookingId));
+                }
+              },
+              icon: const Icon(Icons.report_problem_rounded),
+              label: const Text(
+                "Báo cáo",
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              style: ElevatedButton.styleFrom(
+                minimumSize: const Size.fromHeight(48),
+                backgroundColor: Colors.red.shade600,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                elevation: 2,
+              ),
+            );
+          } else {
+            // Đã có report - hiển thị nút "Xem báo cáo"
+            return ElevatedButton.icon(
+              onPressed: () {
+                // Navigate to report detail screen
+                context.push(
+                  Routes.reportDetailPath(report.complaintId),
+                );
+              },
+              icon: const Icon(Icons.visibility_rounded),
+              label: const Text(
+                "Xem báo cáo",
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              style: ElevatedButton.styleFrom(
+                minimumSize: const Size.fromHeight(48),
+                backgroundColor: Colors.blue.shade600,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                elevation: 2,
+              ),
+            );
+          }
+        },
+      );
     }
   }

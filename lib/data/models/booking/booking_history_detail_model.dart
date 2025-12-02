@@ -137,7 +137,7 @@ class TimelineEvent {
   final String title;
   final String? description;
   final DateTime? time;
-  final List<String> proofs;
+  final List<MediaProof> proofs;
 
   TimelineEvent({
     required this.code,
@@ -153,7 +153,34 @@ class TimelineEvent {
       title: json["title"] ?? "",
       description: json["description"],
       time: json["time"] != null ? DateTime.parse(json["time"]) : null,
-      proofs: (json["proofs"] ?? []).map<String>((e) => e.toString()).toList(),
+      proofs: (json["proofs"] ?? [])
+          .map<MediaProof>((e) {
+            if (e is Map) {
+              return MediaProof.fromJson(Map<String, dynamic>.from(e));
+            }
+            return MediaProof.fromJson({});
+          })
+          .toList(),
+    );
+  }
+}
+
+class MediaProof {
+  final String mediaType; // "image" hoặc "video"
+  final String url;
+  final String? caption;
+
+  MediaProof({
+    required this.mediaType,
+    required this.url,
+    this.caption,
+  });
+
+  factory MediaProof.fromJson(Map<String, dynamic> json) {
+    return MediaProof(
+      mediaType: json["mediaType"] ?? json["MediaType"] ?? "image",
+      url: json["url"] ?? json["Url"] ?? "",
+      caption: json["caption"] ?? json["Caption"],
     );
   }
 }

@@ -6,6 +6,7 @@ import 'package:vhs_mobile_user/data/models/chat/message_model.dart';
 import 'package:vhs_mobile_user/data/repositories/chat_repository.dart';
 import 'package:vhs_mobile_user/data/services/signalr_chat_service.dart';
 import 'package:vhs_mobile_user/helper/jwt_helper.dart';
+import 'package:vhs_mobile_user/ui/chat/chat_list_viewmodel.dart';
 
 final chatDetailProvider = AsyncNotifierProvider.family<
     ChatDetailNotifier, ConversationModel, String>(
@@ -49,10 +50,33 @@ class ChatDetailNotifier extends AsyncNotifier<ConversationModel> {
     }
 
     _accountId = accountId;
-    return await _repo.getConversationDetail(
+    final conversation = await _repo.getConversationDetail(
       conversationId: _conversationId,
       accountId: accountId,
     );
+    
+    // Nếu conversation không có avatarUrl, lấy từ list item
+    if (conversation.avatarUrl == null || conversation.avatarUrl!.trim().isEmpty) {
+      try {
+        final listAsync = ref.read(chatListProvider);
+        if (listAsync.hasValue) {
+          final listItems = listAsync.value!;
+          final listItem = listItems.firstWhere(
+            (item) => item.conversationId == _conversationId,
+            orElse: () => throw Exception('Not found'),
+          );
+          
+          // Nếu list item có avatarUrl, dùng nó
+          if (listItem.avatarUrl != null && listItem.avatarUrl!.trim().isNotEmpty) {
+            return conversation.copyWith(avatarUrl: listItem.avatarUrl);
+          }
+        }
+      } catch (e) {
+        // Nếu không tìm thấy trong list, giữ nguyên conversation
+      }
+    }
+    
+    return conversation;
   }
 
   Future<void> refresh() async {
@@ -65,6 +89,47 @@ class ChatDetailNotifier extends AsyncNotifier<ConversationModel> {
       conversationId: _conversationId,
       accountId: accountId,
     ));
+  }
+
+  // Refresh ngầm không hiển thị loading state
+  Future<void> silentRefresh() async {
+    final accountId = await _getAccountId();
+    if (accountId == null || accountId.isEmpty) return;
+
+    _accountId = accountId;
+    try {
+      final conversation = await _repo.getConversationDetail(
+        conversationId: _conversationId,
+        accountId: accountId,
+      );
+      
+      // Nếu conversation không có avatarUrl, lấy từ list item
+      if (conversation.avatarUrl == null || conversation.avatarUrl!.trim().isEmpty) {
+        try {
+          final listAsync = ref.read(chatListProvider);
+          if (listAsync.hasValue) {
+            final listItems = listAsync.value!;
+            final listItem = listItems.firstWhere(
+              (item) => item.conversationId == _conversationId,
+              orElse: () => throw Exception('Not found'),
+            );
+            
+            if (listItem.avatarUrl != null && listItem.avatarUrl!.trim().isNotEmpty) {
+              state = AsyncValue.data(conversation.copyWith(avatarUrl: listItem.avatarUrl));
+              return;
+            }
+          }
+        } catch (e) {
+          // Ignore
+        }
+      }
+      
+      // Update state trực tiếp không qua AsyncLoading
+      state = AsyncValue.data(conversation);
+    } catch (e, st) {
+      // Nếu có lỗi, không update state để giữ nguyên data cũ
+      print('Silent refresh error: $e');
+    }
   }
 
   Future<bool> sendMessage({
@@ -169,6 +234,8 @@ class ChatDetailNotifier extends AsyncNotifier<ConversationModel> {
         viewerAccountId: accountId,
       );
       await refresh();
+      // Refresh unread total when marking as read
+      ref.invalidate(unreadTotalProvider);
     } catch (e) {
       // Ignore errors
     }
@@ -228,6 +295,56 @@ class ChatDetailNotifier extends AsyncNotifier<ConversationModel> {
   Stream<MessageModel> listenToMessages() {
     final signalRService = ref.read(signalRChatServiceProvider);
     return signalRService.listenToMessages(_conversationId);
+  }
+
+  // Xóa cuộc trò chuyện (xóa tất cả tin nhắn của người dùng trước)
+  Future<bool> deleteConversation() async {
+    final accountId = await _getAccountId();
+    if (accountId == null || accountId.isEmpty) return false;
+
+    _accountId = accountId;
+    try {
+      // Bước 1: Xóa tất cả tin nhắn của người dùng trong conversation
+      try {
+        await _repo.deleteAllMyMessages(
+          conversationId: _conversationId,
+          accountId: accountId,
+        );
+      } catch (e) {
+        // Nếu API xóa tất cả tin nhắn không tồn tại, thử xóa từng tin nhắn
+        print('Warning: Could not delete all messages at once, trying individual deletion: $e');
+        final current = state.value;
+        if (current != null) {
+          // Xóa từng tin nhắn của người dùng
+          for (final message in current.messages) {
+            if (message.isMine && message.senderAccountId == accountId) {
+              try {
+                await _repo.deleteMessage(
+                  messageId: message.messageId,
+                  accountId: accountId,
+                );
+              } catch (e) {
+                print('Warning: Could not delete message ${message.messageId}: $e');
+                // Tiếp tục xóa các tin nhắn khác
+              }
+            }
+          }
+        }
+      }
+
+      // Bước 2: Xóa/ẩn conversation
+      await _repo.clearConversation(
+        conversationId: _conversationId,
+        accountId: accountId,
+        hide: true, // Xóa hoàn toàn (ẩn khỏi danh sách)
+      );
+      // Refresh unread total when deleting conversation
+      ref.invalidate(unreadTotalProvider);
+      return true;
+    } catch (e) {
+      print('Error deleting conversation: $e');
+      return false;
+    }
   }
 }
 

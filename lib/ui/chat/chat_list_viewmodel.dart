@@ -10,6 +10,12 @@ final chatListProvider =
   ChatListNotifier.new,
 );
 
+// Provider cho tổng số tin nhắn chưa đọc
+final unreadTotalProvider = FutureProvider<int>((ref) async {
+  final notifier = ref.read(chatListProvider.notifier);
+  return await notifier.getUnreadTotal();
+});
+
 class ChatListNotifier extends AsyncNotifier<List<ConversationListItemModel>> {
   late ChatRepository _repo;
   String? _accountId;
@@ -57,6 +63,24 @@ class ChatListNotifier extends AsyncNotifier<List<ConversationListItemModel>> {
     _accountId = accountId;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() => _repo.getConversations(accountId));
+  }
+
+  // Refresh ngầm không hiển thị loading state
+  Future<void> silentRefresh() async {
+    final accountId = await _getAccountId();
+    if (accountId == null || accountId.isEmpty) {
+      return;
+    }
+
+    _accountId = accountId;
+    try {
+      final conversations = await _repo.getConversations(accountId);
+      // Update state trực tiếp không qua AsyncLoading
+      state = AsyncValue.data(conversations);
+    } catch (e) {
+      // Nếu có lỗi, không update state để giữ nguyên data cũ
+      print('Silent refresh error: $e');
+    }
   }
 
   Future<String?> startConversationWithProvider(String providerId) async {

@@ -9,6 +9,7 @@ abstract final class Routes {
   static const verifyOtp = "/verify-otp";
   static const resetPassword = "/reset-password";
   static const profile = "/profile";
+  static const profileDetail = "/profile/detail";
   static const history = "/history";
   static const bookingDetail ="/history/detail";
   static const editProfile = "/profile/edit";
@@ -26,6 +27,23 @@ abstract final class Routes {
   static const addAddress = '/address/add';
   static const editAddress = '/address/edit';
   static const locationPicker = '/address/location-picker';
+  
+  // Payment
+  static const paymentWebView = '/payment/webview';
+  static const paymentSuccess = '/payment/success';
+
+  // Review
+  static const review = '/review';
+  static const reviewList = '/my-reviews';
+
+  // Report
+  static const report = '/report';
+  static const reportDetail = '/report/:id';
+  static String reportDetailPath(String id) => '/report/$id';
+
+  // Service Shop
+  static const serviceShop = '/service-shop/:providerId';
+  static String serviceShopPath(String providerId) => '/service-shop/$providerId';
 
 }
   // Add other routes here
