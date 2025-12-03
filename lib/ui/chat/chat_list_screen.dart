@@ -33,25 +33,25 @@ class _ChatListScreenState extends ConsumerState<ChatListScreen> {
       final authDao = ref.read(authDaoProvider);
       final auth = await authDao.getSavedAuth();
       String? accountId = auth?['accountId'] as String?;
-      
+
       if (accountId == null || accountId.isEmpty) {
         final token = await authDao.getToken();
         if (token != null) {
           accountId = JwtHelper.getAccountIdFromToken(token);
         }
       }
-      
+
       if (accountId != null && accountId.isNotEmpty) {
         final signalRService = ref.read(signalRChatServiceProvider);
-        if (!signalRService.isConnected) {
-          await signalRService.connect(accountId);
-        }
-        
-        // Listen to conversation list updates
+        await signalRService.connect(accountId);
+
+        // Lắng nghe update realtime
         signalRService.listenToConversations().listen((updatedItem) {
-          ref.read(chatListProvider.notifier).updateConversationListItem(updatedItem);
-          // Refresh unread total when conversation is updated
-          ref.invalidate(unreadTotalProvider);
+          if (!mounted) return;
+          ref.read(chatListProvider.notifier).handleRealtimeUpdate(updatedItem);
+
+          // Khi có tin nhắn mới, làm mới lại số lượng tin chưa đọc
+          ref.refresh(unreadTotalProvider);
         });
       }
     } catch (e) {
@@ -484,44 +484,29 @@ class _ConversationListItem extends StatelessWidget {
   }
 
   String _formatTime(DateTime time) {
-    // Convert từ UTC sang giờ Việt Nam (UTC+7) - giống logic FE
-    // Đảm bảo time là UTC trước khi convert
-    final utcTime = time.isUtc ? time : time.toUtc();
-    final vietnamTime = utcTime.add(const Duration(hours: 7));
-    
-    // Lấy thời gian hiện tại ở giờ Việt Nam để so sánh
-    final nowUtc = DateTime.now().toUtc();
-    final nowVietnam = nowUtc.add(const Duration(hours: 7));
-    
-    // So sánh ngày tháng (chỉ lấy phần date, bỏ qua time)
-    final timeDate = DateTime(vietnamTime.year, vietnamTime.month, vietnamTime.day);
-    final nowDate = DateTime(nowVietnam.year, nowVietnam.month, nowVietnam.day);
-    final daysDiff = nowDate.difference(timeDate).inDays;
+    // Normalize input to UTC (MessageModel._parseDateTime should already return UTC).
+    final vnTime = time.toUtc().add(const Duration(hours: 7));
+    final nowVn = DateTime.now().toUtc().add(const Duration(hours: 7));
 
-    // Cùng ngày: chỉ hiển thị giờ:phút
-    if (daysDiff == 0) {
-      return '${vietnamTime.hour.toString().padLeft(2, '0')}:${vietnamTime.minute.toString().padLeft(2, '0')}';
+    // Same-day check
+    if (vnTime.year == nowVn.year && vnTime.month == nowVn.month && vnTime.day == nowVn.day) {
+      return '${vnTime.hour.toString().padLeft(2, '0')}:${vnTime.minute.toString().padLeft(2, '0')}';
     }
-    
-    // Hôm qua
-    if (daysDiff == 1) {
-      return 'Hôm qua ${vietnamTime.hour.toString().padLeft(2, '0')}:${vietnamTime.minute.toString().padLeft(2, '0')}';
+
+    // Yesterday
+    final yesterdayVn = nowVn.subtract(const Duration(days: 1));
+    if (vnTime.year == yesterdayVn.year && vnTime.month == yesterdayVn.month && vnTime.day == yesterdayVn.day) {
+      return 'Hôm qua';
     }
-    
-    // Trong 7 ngày: hiển thị thứ và giờ (giống FE: Thứ 2-7, CN)
-    if (daysDiff < 7) {
-      final dayOfWeek = vietnamTime.weekday; // 1=Monday, 7=Sunday
-      final weekdays = ['', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7', 'CN'];
-      return '${weekdays[dayOfWeek]} ${vietnamTime.hour.toString().padLeft(2, '0')}:${vietnamTime.minute.toString().padLeft(2, '0')}';
+
+    final diff = nowVn.difference(vnTime);
+    if (diff.inDays < 7) {
+      return '${diff.inDays} ngày trước';
     }
-    
-    // Trong cùng năm: hiển thị ngày/tháng và giờ
-    if (vietnamTime.year == nowVietnam.year) {
-      return '${vietnamTime.day.toString().padLeft(2, '0')}/${vietnamTime.month.toString().padLeft(2, '0')} ${vietnamTime.hour.toString().padLeft(2, '0')}:${vietnamTime.minute.toString().padLeft(2, '0')}';
-    }
-    
-    // Khác năm: hiển thị đầy đủ
-    return '${vietnamTime.day.toString().padLeft(2, '0')}/${vietnamTime.month.toString().padLeft(2, '0')}/${vietnamTime.year} ${vietnamTime.hour.toString().padLeft(2, '0')}:${vietnamTime.minute.toString().padLeft(2, '0')}';
+
+    // Older: show full date
+    return '${vnTime.day}/${vnTime.month}/${vnTime.year}';
+
   }
 }
 

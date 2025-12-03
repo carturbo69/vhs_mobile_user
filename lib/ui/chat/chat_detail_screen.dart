@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -34,6 +35,9 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
   final _scrollController = ScrollController();
   MessageModel? _replyToMessage;
 
+  StreamSubscription? _signalRSubscription;
+  StreamSubscription? _statusSubscription;
+
   @override
   void initState() {
     super.initState();
@@ -47,6 +51,8 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
   void dispose() {
     _messageController.dispose();
     _scrollController.dispose();
+    _signalRSubscription?.cancel();
+    _statusSubscription?.cancel();
     super.dispose();
   }
 
@@ -55,32 +61,90 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
       final authDao = ref.read(authDaoProvider);
       final auth = await authDao.getSavedAuth();
       String? accountId = auth?['accountId'] as String?;
-      
+
       if (accountId == null || accountId.isEmpty) {
         final token = await authDao.getToken();
         if (token != null) {
           accountId = JwtHelper.getAccountIdFromToken(token);
         }
       }
-      
+
+      // Gọi markAsRead nhưng KHÔNG refresh lại list để tránh mất tin nhắn mới đến
+      ref.read(chatDetailProvider(widget.conversationId).notifier).markAsRead(skipRefresh: true);
+
       if (accountId != null && accountId.isNotEmpty) {
         final signalRService = ref.read(signalRChatServiceProvider);
-        if (!signalRService.isConnected) {
-          await signalRService.connect(accountId);
-        }
-        
-        // Listen to new messages
-        signalRService.listenToMessages(widget.conversationId).listen((message) {
+        await signalRService.connect(accountId);
+
+        // --- LẮNG NGHE TIN NHẮN MỚI ---
+        _signalRSubscription = signalRService.listenToMessages(widget.conversationId).listen((message) {
+          if (!mounted) return;
+
+          print("UI nhận tin nhắn: ${message.body}");
+
           final notifier = ref.read(chatDetailProvider(widget.conversationId).notifier);
+
+          // 1. Thêm tin nhắn vào UI ngay lập tức
           notifier.addMessage(message);
-          // Refresh unread total if message is from other user
+
+          // 2. Nếu là tin người khác gửi -> Báo server là "Đã xem"
           if (!message.isMine) {
-            ref.invalidate(unreadTotalProvider);
+            // 🔥 FIX: Thêm độ trễ để đảm bảo Server đã lưu tin nhắn vào DB xong
+            Future.delayed(const Duration(milliseconds: 500), () {
+              // Kiểm tra mounted để tránh lỗi nếu người dùng đã thoát màn hình
+              if (mounted) {
+                // Gọi API báo đã đọc
+                notifier.markAsRead(skipRefresh: true);
+              }
+            });
           }
-          // Scroll đến cuối khi có tin nhắn mới
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            _scrollToBottom();
-          });
+          // 3. Cuộn xuống cuối
+          _scrollToBottom();
+        });
+
+        // --- LẮNG NGHE TRẠNG THÁI (ĐÃ NHẬN / ĐÃ XEM) ---
+        _statusSubscription = signalRService.listenToMessageStatus(widget.conversationId).listen((data) {
+          if (!mounted) return;
+          final notifier = ref.read(chatDetailProvider(widget.conversationId).notifier);
+
+          // Trường hợp A: Cập nhật "Đã xem" cho TOÀN BỘ tin nhắn trước mốc thời gian
+          // (Backend trả về lastReadAt)
+          if (data.containsKey('lastReadAt') || data.containsKey('LastReadAt')) {
+            final dateStr = (data['lastReadAt'] ?? data['LastReadAt']).toString();
+            try {
+              DateTime date;
+              // Xử lý parse ngày tháng an toàn (UTC)
+              if (dateStr.endsWith('Z') || dateStr.contains('+')) {
+                date = DateTime.parse(dateStr).toUtc();
+              } else {
+                date = DateTime.parse(dateStr + 'Z').toUtc();
+              }
+
+              print("UI Update: Mark Seen Until $date");
+              notifier.markMessagesAsSeenUntil(date);
+            } catch(e) {
+              print("Date parse error: $e");
+            }
+          }
+
+          // Trường hợp B: Cập nhật status cho 1 tin nhắn cụ thể (nếu có)
+          if (data.containsKey('status') || data.containsKey('Status')) {
+            final msgId = (data['messageId'] ?? data['MessageId'])?.toString();
+            // Backend trả về Int (1,2,3), cần convert sang String cho ViewModel
+            var statusRaw = data['status'] ?? data['Status'];
+            String statusStr = 'Sent';
+
+            if (statusRaw is int) {
+              if (statusRaw == 2) statusStr = 'Delivered';
+              if (statusRaw == 3) statusStr = 'Seen';
+            } else {
+              statusStr = statusRaw.toString();
+            }
+
+            if (msgId != null) {
+              notifier.updateMessageStatus(msgId, statusStr);
+            }
+          }
         });
       }
     } catch (e) {
@@ -127,14 +191,11 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
 
     final notifier = ref.read(chatDetailProvider(widget.conversationId).notifier);
     final success = await notifier.sendMessage(
-          body: messageText.isEmpty ? null : messageText,
-          replyToMessageId: replyToId,
-        );
+      body: messageText.isEmpty ? null : messageText,
+      replyToMessageId: replyToId,
+    );
 
     if (success) {
-      // Refresh ngầm conversation và chat list để cập nhật tin nhắn mới
-      await notifier.silentRefresh();
-      ref.read(chatListProvider.notifier).silentRefresh();
       _scrollToBottom();
     } else {
       // Nếu gửi thất bại, khôi phục lại text
@@ -191,9 +252,6 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
         if (!mounted) return;
 
         if (success) {
-          // Refresh ngầm conversation và chat list để cập nhật tin nhắn mới
-          await notifier.silentRefresh();
-          ref.read(chatListProvider.notifier).silentRefresh();
           _scrollToBottom();
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -379,12 +437,12 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
                   onReply: (message) => setState(() => _replyToMessage = message),
                 ),
               ),
-            _MessageInput(
-              controller: _messageController,
-              onSend: _sendMessage,
-              onPickImage: _pickAndSendImage,
-            ),
-          ],
+              _MessageInput(
+                controller: _messageController,
+                onSend: _sendMessage,
+                onPickImage: _pickAndSendImage,
+              ),
+            ],
           );
         },
       ),
@@ -512,7 +570,7 @@ class _MessageList extends StatelessWidget {
       // So sánh theo millisecondSinceEpoch để đảm bảo chính xác
       return a.createdAt.millisecondsSinceEpoch.compareTo(b.createdAt.millisecondsSinceEpoch);
     });
-    
+
     return ListView.builder(
       controller: scrollController,
       reverse: false, // KHÔNG reverse - mới nhất (ở cuối list) sẽ tự động ở dưới cùng
@@ -529,6 +587,7 @@ class _MessageList extends StatelessWidget {
   }
 }
 
+// --- MODIFIED: _MessageBubble ---
 class _MessageBubble extends StatelessWidget {
   final MessageModel message;
   final VoidCallback onReply;
@@ -543,16 +602,146 @@ class _MessageBubble extends StatelessWidget {
     final isMe = message.isMine;
     final baseUrl = 'http://apivhs.cuahangkinhdoanh.com';
 
+    Widget messageContent = Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: 16,
+        vertical: 12,
+      ),
+      decoration: BoxDecoration(
+        color: isMe ? Colors.blue.shade600 : Colors.grey.shade100,
+        borderRadius: BorderRadius.only(
+          topLeft: const Radius.circular(20),
+          topRight: const Radius.circular(20),
+          bottomLeft: Radius.circular(isMe ? 20 : 4),
+          bottomRight: Radius.circular(isMe ? 4 : 20),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: (isMe ? Colors.blue : Colors.grey).withOpacity(0.3),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+            spreadRadius: 0,
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (message.imageUrl != null && message.imageUrl!.isNotEmpty)
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: message.imageUrl!.startsWith('file://')
+                  ? Image.file(
+                File(message.imageUrl!.replaceFirst('file://', '')),
+                width: 200,
+                height: 200,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) {
+                  return Container(
+                    width: 200,
+                    height: 200,
+                    color: Colors.grey.shade300,
+                    child: const Icon(Icons.error),
+                  );
+                },
+              )
+                  : Builder(
+                builder: (context) {
+                  // Xử lý URL
+                  String imageUrl;
+                  if (message.imageUrl!.startsWith('http')) {
+                    imageUrl = message.imageUrl!;
+                  } else {
+                    // Đảm bảo có dấu / ở đầu nếu chưa có
+                    final path = message.imageUrl!.startsWith('/')
+                        ? message.imageUrl!
+                        : '/${message.imageUrl!}';
+                    imageUrl = '$baseUrl$path';
+                  }
+
+                  return CachedNetworkImage(
+                    imageUrl: imageUrl,
+                    width: 200,
+                    height: 200,
+                    fit: BoxFit.cover,
+                    placeholder: (context, url) => Container(
+                      width: 200,
+                      height: 200,
+                      color: Colors.grey.shade200,
+                      child: const Center(
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                    ),
+                    errorWidget: (context, url, error) => Container(
+                      width: 200,
+                      height: 200,
+                      color: Colors.grey.shade300,
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.broken_image, size: 48, color: Colors.grey),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Không thể tải ảnh',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey.shade600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          if (message.body != null) ...[
+            if (message.imageUrl != null)
+              const SizedBox(height: 8),
+            Text(
+              message.body!,
+              style: TextStyle(
+                color: isMe ? Colors.white : Colors.black87,
+              ),
+            ),
+          ],
+          const SizedBox(height: 4),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                _formatTime(message.createdAt),
+                style: TextStyle(
+                  fontSize: 10,
+                  color: isMe
+                      ? Colors.white70
+                      : Colors.grey.shade600,
+                ),
+              ),
+              if (isMe) ...[
+                const SizedBox(width: 4),
+                Icon(
+                  _getStatusIcon(message.status),
+                  size: 12,
+                  color: Colors.white70,
+                ),
+              ],
+            ],
+          ),
+        ],
+      ),
+    );
+
     return Align(
       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
         margin: const EdgeInsets.only(bottom: 8),
         constraints: BoxConstraints(
-          maxWidth: MediaQuery.of(context).size.width * 0.75,
+          maxWidth: MediaQuery.of(context).size.width * 0.85,
         ),
         child: Column(
           crossAxisAlignment:
-              isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+          isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
           children: [
             if (!isMe)
               Padding(
@@ -575,9 +764,9 @@ class _MessageBubble extends StatelessWidget {
                 ),
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: isMe 
-                      ? Colors.white.withOpacity(0.2)
-                      : Colors.grey.shade300,
+                  color: isMe
+                      ? Colors.black.withOpacity(0.15)
+                      : Colors.grey.shade200,
                   borderRadius: BorderRadius.circular(8),
                   border: Border(
                     left: BorderSide(
@@ -610,138 +799,38 @@ class _MessageBubble extends StatelessWidget {
                   ],
                 ),
               ),
-            GestureDetector(
-              onLongPress: onReply,
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
-                ),
-                decoration: BoxDecoration(
-                  color: isMe ? Colors.blue.shade600 : Colors.grey.shade100,
-                  borderRadius: BorderRadius.only(
-                    topLeft: const Radius.circular(20),
-                    topRight: const Radius.circular(20),
-                    bottomLeft: Radius.circular(isMe ? 20 : 4),
-                    bottomRight: Radius.circular(isMe ? 4 : 20),
+
+            // ✅ START: Thêm Row để chứa Bubble và nút Reply
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              // Căn chỉnh vị trí của bubble và nút reply
+              verticalDirection: VerticalDirection.down,
+              children: [
+                // Nếu là tin của người khác, nút reply ở bên phải
+                if (!isMe) Flexible(child: GestureDetector(onLongPress: onReply, child: messageContent)),
+
+                // Nút Reply
+                Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 4),
+                  child: IconButton(
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                    icon: Icon(
+                      Icons.reply,
+                      size: 18,
+                      color: Colors.grey.shade500,
+                    ),
+                    onPressed: onReply,
+                    tooltip: 'Trả lời',
                   ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: (isMe ? Colors.blue : Colors.grey).withOpacity(0.3),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                      spreadRadius: 0,
-                    ),
-                  ],
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (message.imageUrl != null && message.imageUrl!.isNotEmpty)
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child: message.imageUrl!.startsWith('file://')
-                            ? Image.file(
-                                File(message.imageUrl!.replaceFirst('file://', '')),
-                                width: 200,
-                                height: 200,
-                                fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) {
-                                  return Container(
-                                    width: 200,
-                                    height: 200,
-                                    color: Colors.grey.shade300,
-                                    child: const Icon(Icons.error),
-                                  );
-                                },
-                              )
-                            : Builder(
-                                builder: (context) {
-                                  // Xử lý URL
-                                  String imageUrl;
-                                  if (message.imageUrl!.startsWith('http')) {
-                                    imageUrl = message.imageUrl!;
-                                  } else {
-                                    // Đảm bảo có dấu / ở đầu nếu chưa có
-                                    final path = message.imageUrl!.startsWith('/')
-                                        ? message.imageUrl!
-                                        : '/${message.imageUrl!}';
-                                    imageUrl = '$baseUrl$path';
-                                  }
-                                  
-                                  return CachedNetworkImage(
-                                    imageUrl: imageUrl,
-                                    width: 200,
-                                    height: 200,
-                                    fit: BoxFit.cover,
-                                    placeholder: (context, url) => Container(
-                                      width: 200,
-                                      height: 200,
-                                      color: Colors.grey.shade200,
-                                      child: const Center(
-                                        child: CircularProgressIndicator(strokeWidth: 2),
-                                      ),
-                                    ),
-                                    errorWidget: (context, url, error) => Container(
-                                      width: 200,
-                                      height: 200,
-                                      color: Colors.grey.shade300,
-                                      child: Column(
-                                        mainAxisAlignment: MainAxisAlignment.center,
-                                        children: [
-                                          const Icon(Icons.broken_image, size: 48, color: Colors.grey),
-                                          const SizedBox(height: 8),
-                                          Text(
-                                            'Không thể tải ảnh',
-                                            style: TextStyle(
-                                              fontSize: 12,
-                                              color: Colors.grey.shade600,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  );
-                                },
-                              ),
-                      ),
-                    if (message.body != null) ...[
-                      if (message.imageUrl != null)
-                        const SizedBox(height: 8),
-                      Text(
-                        message.body!,
-                        style: TextStyle(
-                          color: isMe ? Colors.white : Colors.black87,
-                        ),
-                      ),
-                    ],
-                    const SizedBox(height: 4),
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          _formatTime(message.createdAt),
-                          style: TextStyle(
-                            fontSize: 10,
-                            color: isMe
-                                ? Colors.white70
-                                : Colors.grey.shade600,
-                          ),
-                        ),
-                        if (isMe) ...[
-                          const SizedBox(width: 4),
-                          Icon(
-                            _getStatusIcon(message.status),
-                            size: 12,
-                            color: Colors.white70,
-                          ),
-                        ],
-                      ],
-                    ),
-                  ],
-                ),
-              ),
+
+                // Nếu là tin của mình, nút reply ở bên trái
+                if (isMe) Flexible(child: GestureDetector(onLongPress: onReply, child: messageContent)),
+              ],
             ),
+            // ✅ END
           ],
         ),
       ),
@@ -761,47 +850,41 @@ class _MessageBubble extends StatelessWidget {
     }
   }
 
+  // Thay hàm _formatTime trong ChatDetailScreen bằng phiên bản chuyển sang giờ VN (+7)
   String _formatTime(DateTime time) {
-    // Convert từ UTC sang giờ Việt Nam (UTC+7) - giống logic FE
-    // Đảm bảo time là UTC trước khi convert
-    final utcTime = time.isUtc ? time : time.toUtc();
-    final vietnamTime = utcTime.add(const Duration(hours: 7));
-    
-    // Lấy thời gian hiện tại ở giờ Việt Nam để so sánh
-    final nowUtc = DateTime.now().toUtc();
-    final nowVietnam = nowUtc.add(const Duration(hours: 7));
-    
-    // So sánh ngày tháng (chỉ lấy phần date, bỏ qua time)
-    final timeDate = DateTime(vietnamTime.year, vietnamTime.month, vietnamTime.day);
-    final nowDate = DateTime(nowVietnam.year, nowVietnam.month, nowVietnam.day);
-    final daysDiff = nowDate.difference(timeDate).inDays;
+    // đảm bảo dùng UTC input (MessageModel._parseDateTime trả về UTC)
+    final vietnamTime = time.toUtc().add(const Duration(hours: 7));
+    final nowVn = DateTime.now().toUtc().add(const Duration(hours: 7));
 
-    // Cùng ngày: chỉ hiển thị giờ:phút
-    if (daysDiff == 0) {
+    // Check same day
+    final sameDay = vietnamTime.year == nowVn.year &&
+        vietnamTime.month == nowVn.month &&
+        vietnamTime.day == nowVn.day;
+
+    if (sameDay) {
       return '${vietnamTime.hour.toString().padLeft(2, '0')}:${vietnamTime.minute.toString().padLeft(2, '0')}';
     }
 
-      // Hôm qua
-    if (daysDiff == 1) {
+    final yesterday = nowVn.subtract(const Duration(days: 1));
+    if (vietnamTime.year == yesterday.year &&
+        vietnamTime.month == yesterday.month &&
+        vietnamTime.day == yesterday.day) {
       return 'Hôm qua ${vietnamTime.hour.toString().padLeft(2, '0')}:${vietnamTime.minute.toString().padLeft(2, '0')}';
     }
-    
-    // Trong 7 ngày: hiển thị thứ và giờ (giống FE: Thứ 2-7, CN)
-    if (daysDiff < 7) {
-      final dayOfWeek = vietnamTime.weekday; // 1=Monday, 7=Sunday
-      final weekdays = ['', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7', 'CN'];
-      return '${weekdays[dayOfWeek]} ${vietnamTime.hour.toString().padLeft(2, '0')}:${vietnamTime.minute.toString().padLeft(2, '0')}';
+
+    final diff = nowVn.difference(vietnamTime);
+    if (diff.inDays < 7) {
+      const weekdays = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
+      final weekdayLabel = weekdays[vietnamTime.weekday % 7];
+      return '$weekdayLabel ${vietnamTime.hour.toString().padLeft(2, '0')}:${vietnamTime.minute.toString().padLeft(2, '0')}';
     }
-    
-    // Trong cùng năm: hiển thị ngày/tháng và giờ
-    if (vietnamTime.year == nowVietnam.year) {
-      return '${vietnamTime.day.toString().padLeft(2, '0')}/${vietnamTime.month.toString().padLeft(2, '0')} ${vietnamTime.hour.toString().padLeft(2, '0')}:${vietnamTime.minute.toString().padLeft(2, '0')}';
-    }
-    
-    // Khác năm: hiển thị đầy đủ
-    return '${vietnamTime.day.toString().padLeft(2, '0')}/${vietnamTime.month.toString().padLeft(2, '0')}/${vietnamTime.year} ${vietnamTime.hour.toString().padLeft(2, '0')}:${vietnamTime.minute.toString().padLeft(2, '0')}';
+
+    final dateStr = '${vietnamTime.day}/${vietnamTime.month}';
+    final timeStr = '${vietnamTime.hour.toString().padLeft(2, '0')}:${vietnamTime.minute.toString().padLeft(2, '0')}';
+    return '$timeStr $dateStr';
   }
 }
+// --- END MODIFIED ---
 
 class _MessageInput extends StatelessWidget {
   final TextEditingController controller;
@@ -919,30 +1002,30 @@ class _AppBarTitleWidget extends ConsumerWidget {
         // Xác định người đối diện (không phải current user)
         MessageAccountModel otherParticipant;
         final currentAccountId = snapshot.data;
-        
-        if (currentAccountId != null && 
+
+        if (currentAccountId != null &&
             conversation.participantA.accountId == currentAccountId) {
           // Nếu current user là participantA, thì người đối diện là participantB
           otherParticipant = conversation.participantB;
-        } else if (currentAccountId != null && 
-                   conversation.participantB.accountId == currentAccountId) {
+        } else if (currentAccountId != null &&
+            conversation.participantB.accountId == currentAccountId) {
           // Nếu current user là participantB, thì người đối diện là participantA
           otherParticipant = conversation.participantA;
         } else {
           // Fallback: dùng participantB nếu không xác định được
           otherParticipant = conversation.participantB;
         }
-        
+
         final baseUrl = 'http://apivhs.cuahangkinhdoanh.com';
         String? avatarUrl;
-        
+
         // Ưu tiên dùng avatarUrl từ conversation (giống như trong list)
         // Nếu không có thì mới dùng từ participant
         String? rawAvatarUrl = conversation.avatarUrl;
         if (rawAvatarUrl == null || rawAvatarUrl.trim().isEmpty) {
           rawAvatarUrl = otherParticipant.avatarUrl;
         }
-        
+
         // Xử lý avatarUrl giống như trong chat_list_screen
         if (rawAvatarUrl != null && rawAvatarUrl.trim().isNotEmpty) {
           final trimmed = rawAvatarUrl.trim();
@@ -970,52 +1053,52 @@ class _AppBarTitleWidget extends ConsumerWidget {
                 ],
               ),
               child: avatarUrl != null && avatarUrl.isNotEmpty
-                ? ClipOval(
-                    child: CachedNetworkImage(
-                      imageUrl: avatarUrl,
-                        width: 40,
-                        height: 40,
-                      fit: BoxFit.cover,
-                        placeholder: (context, url) => Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(
-                            color: Colors.grey.shade200,
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Center(
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      ),
-                        ),
-                        errorWidget: (context, url, error) => Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(
-                            color: Colors.grey.shade200,
-                            shape: BoxShape.circle,
-                          ),
-                          child: Icon(
-                            Icons.person,
-                            size: 20,
-                            color: Colors.grey.shade400,
-                          ),
-                      ),
+                  ? ClipOval(
+                child: CachedNetworkImage(
+                  imageUrl: avatarUrl,
+                  width: 40,
+                  height: 40,
+                  fit: BoxFit.cover,
+                  placeholder: (context, url) => Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade200,
+                      shape: BoxShape.circle,
                     ),
-                  )
-                  : Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade200,
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        Icons.person,
-                        size: 20,
-                        color: Colors.grey.shade400,
-                      ),
+                    child: const Center(
+                      child: CircularProgressIndicator(strokeWidth: 2),
                     ),
                   ),
+                  errorWidget: (context, url, error) => Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade200,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.person,
+                      size: 20,
+                      color: Colors.grey.shade400,
+                    ),
+                  ),
+                ),
+              )
+                  : Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade200,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.person,
+                  size: 20,
+                  color: Colors.grey.shade400,
+                ),
+              ),
+            ),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
@@ -1043,11 +1126,11 @@ class _AppBarTitleWidget extends ConsumerWidget {
                           ),
                         ),
                         const SizedBox(width: 4),
-                    const Text(
-                      'Đang hoạt động',
+                        const Text(
+                          'Đang hoạt động',
                           style: TextStyle(
                             fontSize: 12,
-                            color: Colors.green,
+                            color: Colors.white, // Sửa màu để dễ nhìn trên nền gradient
                             fontWeight: FontWeight.w500,
                           ),
                         ),
@@ -1066,7 +1149,7 @@ class _AppBarTitleWidget extends ConsumerWidget {
     final authDao = ref.read(authDaoProvider);
     final auth = await authDao.getSavedAuth();
     var accountId = auth?['accountId'] as String?;
-    
+
     // Nếu accountId từ database rỗng, thử lấy từ JWT token
     if (accountId == null || accountId.isEmpty) {
       final token = await authDao.getToken();
@@ -1074,8 +1157,7 @@ class _AppBarTitleWidget extends ConsumerWidget {
         accountId = JwtHelper.getAccountIdFromToken(token);
       }
     }
-    
+
     return accountId;
   }
 }
-

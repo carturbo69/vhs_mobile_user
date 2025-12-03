@@ -49,46 +49,30 @@ class ConversationListItemModel {
     };
   }
 
-  // Helper method để parse DateTime và convert sang giờ Việt Nam (UTC+7) để lưu vào model
   static DateTime _parseDateTime(String dateTimeString) {
     try {
-      // Parse DateTime từ string
-      DateTime parsed = DateTime.parse(dateTimeString);
-      
-      // Backend trả về UTC time (thường có 'Z' ở cuối hoặc không có timezone)
-      // Convert sang UTC nếu chưa phải UTC
-      if (!parsed.isUtc) {
-        // Kiểm tra xem string có chứa timezone info không
-        final hasTimezone = dateTimeString.contains('+') || 
-                           dateTimeString.contains('-') || 
-                           dateTimeString.endsWith('Z') ||
-                           dateTimeString.contains('T') && (dateTimeString.contains('+') || dateTimeString.contains('Z'));
-        
-        if (!hasTimezone) {
-          // Không có timezone info, giả sử là UTC và tạo UTC DateTime
-          parsed = DateTime.utc(
-            parsed.year,
-            parsed.month,
-            parsed.day,
-            parsed.hour,
-            parsed.minute,
-            parsed.second,
-            parsed.millisecond,
-            parsed.microsecond,
-          );
-        } else {
-          // Có timezone info, convert sang UTC
-          parsed = parsed.toUtc();
-        }
+      final s = dateTimeString.trim();
+      final tzPattern = RegExp(r'(Z|[+\-]\d{2}:\d{2})$', caseSensitive: false);
+
+      final parsed = DateTime.parse(s);
+
+      if (tzPattern.hasMatch(s)) {
+        return parsed.toUtc();
+      } else {
+        return DateTime.utc(
+          parsed.year,
+          parsed.month,
+          parsed.day,
+          parsed.hour,
+          parsed.minute,
+          parsed.second,
+          parsed.millisecond,
+          parsed.microsecond,
+        );
       }
-      
-      // Convert UTC sang giờ Việt Nam (UTC+7) để lưu vào model
-      final vietnamTime = parsed.add(const Duration(hours: 7));
-      return vietnamTime;
     } catch (e) {
-      // Nếu parse lỗi, trả về thời gian hiện tại ở giờ Việt Nam
-      print('Error parsing DateTime: $dateTimeString, error: $e');
-      return DateTime.now().toUtc().add(const Duration(hours: 7));
+      print('Error parsing DateTime in ConversationListItemModel: $dateTimeString, error: $e');
+      return DateTime.now().toUtc();
     }
   }
 }
@@ -109,6 +93,10 @@ class ConversationModel {
   final bool isPinned;
   final List<MessageModel> messages;
 
+  // 👇 1. THÊM 2 TRƯỜNG NÀY ĐỂ BIẾT MỐC XÓA
+  final DateTime? clearBeforeAtByA;
+  final DateTime? clearBeforeAtByB;
+
   ConversationModel({
     required this.conversationId,
     required this.createdAt,
@@ -124,6 +112,9 @@ class ConversationModel {
     this.isOnline = false,
     this.isPinned = false,
     this.messages = const [],
+    // 👇 Thêm vào constructor
+    this.clearBeforeAtByA,
+    this.clearBeforeAtByB,
   });
 
   factory ConversationModel.fromJson(Map<String, dynamic> json) {
@@ -131,7 +122,7 @@ class ConversationModel {
       conversationId: json['conversationId']?.toString() ?? json['ConversationId']?.toString() ?? '',
       createdAt: json['createdAt'] != null
           ? _parseDateTime(json['createdAt'].toString())
-          : DateTime.now(),
+          : DateTime.now().toUtc(),
       lastMessageAt: json['lastMessageAt'] != null
           ? _parseDateTime(json['lastMessageAt'].toString())
           : null,
@@ -151,9 +142,16 @@ class ConversationModel {
       isPinned: json['isPinned'] ?? json['IsPinned'] ?? false,
       messages: json['messages'] != null
           ? (json['messages'] as List)
-              .map((m) => MessageModel.fromJson(m as Map<String, dynamic>))
-              .toList()
+          .map((m) => MessageModel.fromJson(m as Map<String, dynamic>))
+          .toList()
           : [],
+      // 👇 Map dữ liệu từ JSON (Backend trả về PascalCase hoặc camelCase)
+      clearBeforeAtByA: (json['clearBeforeAtByA'] ?? json['ClearBeforeAtByA']) != null
+          ? _parseDateTime((json['clearBeforeAtByA'] ?? json['ClearBeforeAtByA']).toString())
+          : null,
+      clearBeforeAtByB: (json['clearBeforeAtByB'] ?? json['ClearBeforeAtByB']) != null
+          ? _parseDateTime((json['clearBeforeAtByB'] ?? json['ClearBeforeAtByB']).toString())
+          : null,
     );
   }
 
@@ -173,50 +171,58 @@ class ConversationModel {
       'isOnline': isOnline,
       'isPinned': isPinned,
       'messages': messages.map((m) => m.toJson()).toList(),
+      // 👇 Thêm vào toJson
+      'clearBeforeAtByA': clearBeforeAtByA?.toIso8601String(),
+      'clearBeforeAtByB': clearBeforeAtByB?.toIso8601String(),
     };
   }
 
-  // Helper method để parse DateTime và convert sang giờ Việt Nam (UTC+7) để lưu vào model
+  // 👇 2. HÀM QUAN TRỌNG: Lọc tin nhắn hiển thị
+  // Hàm này được gọi từ UI để lấy danh sách tin nhắn đã loại bỏ tin cũ
+  List<MessageModel> getVisibleMessages(String myAccountId) {
+    DateTime? clearTime;
+
+    // So sánh ID để biết mình là A hay B
+    // (Dùng toLowerCase để tránh lỗi do chữ hoa/thường của GUID)
+    if (myAccountId.toLowerCase() == participantA.accountId.toLowerCase()) {
+      clearTime = clearBeforeAtByA;
+    } else if (myAccountId.toLowerCase() == participantB.accountId.toLowerCase()) {
+      clearTime = clearBeforeAtByB;
+    }
+
+    // Nếu chưa xóa lần nào -> trả về hết
+    if (clearTime == null) return messages;
+
+    // Lọc: Chỉ giữ lại tin nhắn có thời gian tạo > thời gian xóa
+    return messages.where((m) => m.createdAt.isAfter(clearTime!)).toList();
+  }
+
+
+
   static DateTime _parseDateTime(String dateTimeString) {
     try {
-      // Parse DateTime từ string
-      DateTime parsed = DateTime.parse(dateTimeString);
-      
-      // Backend trả về UTC time (thường có 'Z' ở cuối hoặc không có timezone)
-      // Convert sang UTC nếu chưa phải UTC
-      if (!parsed.isUtc) {
-        // Kiểm tra xem string có chứa timezone info không
-        final hasTimezone = dateTimeString.contains('+') || 
-                           dateTimeString.contains('-') || 
-                           dateTimeString.endsWith('Z') ||
-                           dateTimeString.contains('T') && (dateTimeString.contains('+') || dateTimeString.contains('Z'));
-        
-        if (!hasTimezone) {
-          // Không có timezone info, giả sử là UTC và tạo UTC DateTime
-          parsed = DateTime.utc(
-            parsed.year,
-            parsed.month,
-            parsed.day,
-            parsed.hour,
-            parsed.minute,
-            parsed.second,
-            parsed.millisecond,
-            parsed.microsecond,
-          );
-        } else {
-          // Có timezone info, convert sang UTC
-          parsed = parsed.toUtc();
-        }
+      final s = dateTimeString.trim();
+      final tzPattern = RegExp(r'(Z|[+\-]\d{2}:\d{2})$', caseSensitive: false);
+
+      final parsed = DateTime.parse(s);
+
+      if (tzPattern.hasMatch(s)) {
+        return parsed.toUtc();
+      } else {
+        return DateTime.utc(
+          parsed.year,
+          parsed.month,
+          parsed.day,
+          parsed.hour,
+          parsed.minute,
+          parsed.second,
+          parsed.millisecond,
+          parsed.microsecond,
+        );
       }
-      
-      // Convert UTC sang giờ Việt Nam (UTC+7) để lưu vào model
-      final vietnamTime = parsed.add(const Duration(hours: 7));
-      return vietnamTime;
     } catch (e) {
-      // Nếu parse lỗi, trả về thời gian hiện tại ở giờ Việt Nam
-      print('Error parsing DateTime: $dateTimeString, error: $e');
-      return DateTime.now().toUtc().add(const Duration(hours: 7));
+      print('Error parsing DateTime in ConversationModel: $dateTimeString, error: $e');
+      return DateTime.now().toUtc();
     }
   }
 }
-

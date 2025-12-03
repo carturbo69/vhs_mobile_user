@@ -6,15 +6,15 @@ import 'package:vhs_mobile_user/data/services/signalr_chat_service.dart';
 import 'package:vhs_mobile_user/helper/jwt_helper.dart';
 
 final chatListProvider =
-    AsyncNotifierProvider<ChatListNotifier, List<ConversationListItemModel>>(
+AsyncNotifierProvider<ChatListNotifier, List<ConversationListItemModel>>(
   ChatListNotifier.new,
 );
 
-// Provider cho tổng số tin nhắn chưa đọc
-final unreadTotalProvider = FutureProvider<int>((ref) async {
-  final notifier = ref.read(chatListProvider.notifier);
-  return await notifier.getUnreadTotal();
+final unreadTotalProvider = FutureProvider.autoDispose<int>((ref) async {
+  // Gọi hàm lấy số lượng tin chưa đọc từ ViewModel
+  return ref.read(chatListProvider.notifier).getUnreadTotal();
 });
+
 
 class ChatListNotifier extends AsyncNotifier<List<ConversationListItemModel>> {
   late ChatRepository _repo;
@@ -43,7 +43,7 @@ class ChatListNotifier extends AsyncNotifier<List<ConversationListItemModel>> {
   @override
   Future<List<ConversationListItemModel>> build() async {
     _repo = ref.read(chatRepositoryProvider);
-    
+
     final accountId = await _getAccountId();
     if (accountId == null || accountId.isEmpty) {
       return [];
@@ -63,24 +63,6 @@ class ChatListNotifier extends AsyncNotifier<List<ConversationListItemModel>> {
     _accountId = accountId;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() => _repo.getConversations(accountId));
-  }
-
-  // Refresh ngầm không hiển thị loading state
-  Future<void> silentRefresh() async {
-    final accountId = await _getAccountId();
-    if (accountId == null || accountId.isEmpty) {
-      return;
-    }
-
-    _accountId = accountId;
-    try {
-      final conversations = await _repo.getConversations(accountId);
-      // Update state trực tiếp không qua AsyncLoading
-      state = AsyncValue.data(conversations);
-    } catch (e) {
-      // Nếu có lỗi, không update state để giữ nguyên data cũ
-      print('Silent refresh error: $e');
-    }
   }
 
   Future<String?> startConversationWithProvider(String providerId) async {
@@ -126,16 +108,24 @@ class ChatListNotifier extends AsyncNotifier<List<ConversationListItemModel>> {
     }
   }
 
-  void updateConversationListItem(ConversationListItemModel updatedItem) {
-    final current = state.value;
-    if (current != null) {
-      final updated = current.map((item) {
-        if (item.conversationId == updatedItem.conversationId) {
-          return updatedItem;
-        }
-        return item;
-      }).toList();
-      state = AsyncValue.data(updated);
+  // Thay thế hoặc sửa hàm updateConversationListItem
+  void handleRealtimeUpdate(ConversationListItemModel updatedItem) {
+    final currentList = state.value;
+    if (currentList != null) {
+      // 1. Xóa item cũ (nếu có)
+      final otherItems = currentList.where((item) => item.conversationId != updatedItem.conversationId).toList();
+
+      // 2. Thêm item mới vào đầu danh sách (vì nó vừa có tin nhắn mới)
+      // Chú ý: Backend JS gửi về object message, bạn cần đảm bảo 'updatedItem'
+      // map đúng unreadCount và lastMessageAt.
+
+      final newList = [updatedItem, ...otherItems];
+
+      // 3. Cập nhật state
+      state = AsyncValue.data(newList);
+    } else {
+      // Nếu list đang rỗng, refresh lại
+      refresh();
     }
   }
 
