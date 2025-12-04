@@ -53,7 +53,7 @@ class MessageModel {
   final MessageAccountModel sender;
   final MessageModel? replyTo;
   final bool isMine;
-  final String status; // Pending, Sent, Delivered, Seen
+  final String status;
 
   MessageModel({
     required this.messageId,
@@ -102,16 +102,13 @@ class MessageModel {
           : null,
       isMine: json['isMine'] ?? json['IsMine'] ?? false,
 
-      // ✅ FIX: Xử lý cả Int và String cho Status
       status: _parseStatus(json['status'] ?? json['Status']),
     );
   }
 
-  // Hàm chuyển đổi status từ Int sang String
   static String _parseStatus(dynamic status) {
     if (status == null) return 'Sent';
 
-    // Nếu backend trả về số (Enum)
     if (status is int) {
       switch (status) {
         case 0: return 'Pending';
@@ -122,7 +119,6 @@ class MessageModel {
       }
     }
 
-    // Nếu backend trả về String
     return status.toString();
   }
 
@@ -146,7 +142,6 @@ class MessageModel {
     };
   }
 
-  // 👇 Dán đoạn này vào trong class MessageModel
   MessageModel copyWith({
     String? messageId,
     String? conversationId,
@@ -177,28 +172,21 @@ class MessageModel {
       editedAt: editedAt ?? this.editedAt,
       deletedAt: deletedAt ?? this.deletedAt,
       sender: sender ?? this.sender,
-      replyTo: replyTo ?? this.replyTo, // 👈 Đây là chỗ chúng ta cần thay đổi
+      replyTo: replyTo ?? this.replyTo,
       isMine: isMine ?? this.isMine,
       status: status ?? this.status,
     );
   }
 
-  // Cập nhật hàm _parseDateTime trong MessageModel
   static DateTime _parseDateTime(String dateTimeString) {
     try {
       final s = dateTimeString.trim();
-
-      // Kiểm tra chuỗi có timezone info (Z hoặc +HH:MM / -HH:MM) ở cuối không
       final tzPattern = RegExp(r'(Z|[+\-]\d{2}:\d{2})$', caseSensitive: false);
-
-      // Parse ban đầu (DateTime.parse sẽ parse timezone nếu có)
       final parsed = DateTime.parse(s);
 
       if (tzPattern.hasMatch(s)) {
-        // Chuỗi có timezone info -> convert về UTC (an toàn)
         return parsed.toUtc();
       } else {
-        // Không có timezone -> GIẢ SỬ server gửi UTC -> tạo DateTime UTC từ components
         return DateTime.utc(
           parsed.year,
           parsed.month,
@@ -211,7 +199,6 @@ class MessageModel {
         );
       }
     } catch (e) {
-      // Nếu parse lỗi thì fallback về now UTC
       print('Error parsing DateTime: $dateTimeString, error: $e');
       return DateTime.now().toUtc();
     }

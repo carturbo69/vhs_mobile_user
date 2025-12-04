@@ -15,7 +15,6 @@ import 'package:vhs_mobile_user/ui/chat/chat_detail_viewmodel.dart';
 import 'package:vhs_mobile_user/ui/chat/chat_list_viewmodel.dart';
 import 'package:vhs_mobile_user/ui/core/theme_helper.dart';
 
-// Màu xanh theo web - Sky blue palette
 const Color primaryBlue = Color(0xFF0284C7); // Sky-600
 
 class ChatDetailScreen extends ConsumerStatefulWidget {
@@ -69,14 +68,12 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
         }
       }
 
-      // Gọi markAsRead nhưng KHÔNG refresh lại list để tránh mất tin nhắn mới đến
       ref.read(chatDetailProvider(widget.conversationId).notifier).markAsRead(skipRefresh: true);
 
       if (accountId != null && accountId.isNotEmpty) {
         final signalRService = ref.read(signalRChatServiceProvider);
         await signalRService.connect(accountId);
 
-        // --- LẮNG NGHE TIN NHẮN MỚI ---
         _signalRSubscription = signalRService.listenToMessages(widget.conversationId).listen((message) {
           if (!mounted) return;
 
@@ -84,63 +81,52 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
 
           final notifier = ref.read(chatDetailProvider(widget.conversationId).notifier);
 
-          // 1. Thêm tin nhắn vào UI ngay lập tức
           notifier.addMessage(message);
 
-          // 2. Nếu là tin người khác gửi -> Báo server là "Đã xem"
           if (!message.isMine) {
-            // 🔥 FIX: Thêm độ trễ để đảm bảo Server đã lưu tin nhắn vào DB xong
             Future.delayed(const Duration(milliseconds: 500), () {
-              // Kiểm tra mounted để tránh lỗi nếu người dùng đã thoát màn hình
               if (mounted) {
-                // Gọi API báo đã đọc
                 notifier.markAsRead(skipRefresh: true);
               }
             });
           }
-          // 3. Cuộn xuống cuối
+
           _scrollToBottom();
         });
 
-        // --- LẮNG NGHE TRẠNG THÁI (ĐÃ NHẬN / ĐÃ XEM) ---
         _statusSubscription = signalRService.listenToMessageStatus(widget.conversationId).listen((data) {
           if (!mounted) return;
           final notifier = ref.read(chatDetailProvider(widget.conversationId).notifier);
 
-          // Trường hợp A: Cập nhật "Đã xem" cho TOÀN BỘ tin nhắn trước mốc thời gian
-          // (Backend trả về lastReadAt)
-          if (data.containsKey('lastReadAt') || data.containsKey('LastReadAt')) {
-            final dateStr = (data['lastReadAt'] ?? data['LastReadAt']).toString();
-            try {
-              DateTime date;
-              // Xử lý parse ngày tháng an toàn (UTC)
-              if (dateStr.endsWith('Z') || dateStr.contains('+')) {
-                date = DateTime.parse(dateStr).toUtc();
-              } else {
-                date = DateTime.parse(dateStr + 'Z').toUtc();
-              }
+          if (data['eventType'] == 'readUpTo' || data.containsKey('lastReadAt') || data.containsKey('LastReadAt')) {
+            final dateStr = (data['lastReadAt'] ?? data['LastReadAt'])?.toString();
 
-              print("UI Update: Mark Seen Until $date");
-              notifier.markMessagesAsSeenUntil(date);
-            } catch(e) {
-              print("Date parse error: $e");
+            if (dateStr != null) {
+              try {
+                DateTime date;
+                if (dateStr.endsWith('Z') || dateStr.contains('+')) {
+                  date = DateTime.parse(dateStr).toUtc();
+                } else {
+                  date = DateTime.parse(dateStr + 'Z').toUtc();
+                }
+                print("UI Update: Mark Seen Until $date");
+                notifier.markMessagesAsSeenUntil(date);
+              } catch(e) {
+                print("Date parse error: $e");
+              }
             }
           }
-
-          // Trường hợp B: Cập nhật status cho 1 tin nhắn cụ thể (nếu có)
           if (data.containsKey('status') || data.containsKey('Status')) {
             final msgId = (data['messageId'] ?? data['MessageId'])?.toString();
-            // Backend trả về Int (1,2,3), cần convert sang String cho ViewModel
             var statusRaw = data['status'] ?? data['Status'];
-            String statusStr = 'Sent';
 
+            String statusStr = 'Sent';
             if (statusRaw is int) {
               if (statusRaw == 2) statusStr = 'Delivered';
               if (statusRaw == 3) statusStr = 'Seen';
             } else {
               statusStr = statusRaw.toString();
             }
-
             if (msgId != null) {
               notifier.updateMessageStatus(msgId, statusStr);
             }
@@ -153,10 +139,8 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
   }
 
   void _scrollToBottom() {
-    // Delay một chút để đảm bảo ListView đã render xong
     Future.delayed(const Duration(milliseconds: 100), () {
       if (_scrollController.hasClients) {
-        // Khi reverse: false, scroll đến maxScrollExtent (cuối list) để hiển thị tin nhắn mới nhất
         final maxScroll = _scrollController.position.maxScrollExtent;
         if (maxScroll > 0) {
           _scrollController.animateTo(
@@ -165,7 +149,6 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
             curve: Curves.easeOut,
           );
         } else {
-          // Nếu maxScrollExtent = 0, có thể ListView chưa render xong, thử lại sau
           Future.delayed(const Duration(milliseconds: 200), () {
             if (_scrollController.hasClients) {
               final maxScroll2 = _scrollController.position.maxScrollExtent;
@@ -183,7 +166,6 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
     final text = _messageController.text.trim();
     if (text.isEmpty && _replyToMessage == null) return;
 
-    // Clear text field ngay lập tức (optimistic)
     final messageText = text;
     final replyToId = _replyToMessage?.messageId;
     _messageController.clear();
@@ -198,7 +180,6 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
     if (success) {
       _scrollToBottom();
     } else {
-      // Nếu gửi thất bại, khôi phục lại text
       if (messageText.isNotEmpty) {
         _messageController.text = messageText;
       }
@@ -301,7 +282,6 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
             if (context.canPop()) {
               context.pop();
             } else {
-              // Nếu không có route để pop, quay về chat list hoặc trang chủ
               context.go(Routes.chatList);
             }
           },
@@ -337,7 +317,6 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
             color: Colors.white,
             onSelected: (value) async {
               if (value == 'delete') {
-                // Hiển thị dialog xác nhận xóa
                 final confirm = await showDialog<bool>(
                   context: context,
                   builder: (context) => AlertDialog(
@@ -358,17 +337,13 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
                     ],
                   ),
                 );
-
                 if (confirm == true && mounted) {
-                  // Xóa conversation
                   final notifier = ref.read(chatDetailProvider(widget.conversationId).notifier);
                   final success = await notifier.deleteConversation();
 
                   if (mounted) {
                     if (success) {
-                      // Refresh chat list để cập nhật danh sách
                       ref.read(chatListProvider.notifier).refresh();
-                      // Quay về chat list
                       if (context.canPop()) {
                         context.pop();
                       } else {
@@ -419,7 +394,6 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
           ),
         ),
         data: (conversation) {
-          // Scroll đến cuối khi conversation được load hoặc update
           WidgetsBinding.instance.addPostFrameCallback((_) {
             _scrollToBottom();
           });
@@ -561,19 +535,13 @@ class _MessageList extends StatelessWidget {
         ),
       );
     }
-
-    // Sắp xếp messages từ cũ đến mới (oldest first) - mới nhất sẽ ở cuối list
-    // KHÔNG dùng reverse để mới nhất hiển thị ở dưới cùng
     final sortedMessages = List<MessageModel>.from(conversation.messages);
-    // Sort từ cũ đến mới (oldest first) - mới nhất sẽ ở cuối list
     sortedMessages.sort((a, b) {
-      // So sánh theo millisecondSinceEpoch để đảm bảo chính xác
       return a.createdAt.millisecondsSinceEpoch.compareTo(b.createdAt.millisecondsSinceEpoch);
     });
-
     return ListView.builder(
       controller: scrollController,
-      reverse: false, // KHÔNG reverse - mới nhất (ở cuối list) sẽ tự động ở dưới cùng
+      reverse: false,
       padding: const EdgeInsets.all(16),
       itemCount: sortedMessages.length,
       itemBuilder: (context, index) {
@@ -587,7 +555,6 @@ class _MessageList extends StatelessWidget {
   }
 }
 
-// --- MODIFIED: _MessageBubble ---
 class _MessageBubble extends StatelessWidget {
   final MessageModel message;
   final VoidCallback onReply;
@@ -647,12 +614,10 @@ class _MessageBubble extends StatelessWidget {
               )
                   : Builder(
                 builder: (context) {
-                  // Xử lý URL
                   String imageUrl;
                   if (message.imageUrl!.startsWith('http')) {
                     imageUrl = message.imageUrl!;
                   } else {
-                    // Đảm bảo có dấu / ở đầu nếu chưa có
                     final path = message.imageUrl!.startsWith('/')
                         ? message.imageUrl!
                         : '/${message.imageUrl!}';
@@ -800,17 +765,13 @@ class _MessageBubble extends StatelessWidget {
                 ),
               ),
 
-            // ✅ START: Thêm Row để chứa Bubble và nút Reply
             Row(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.end,
-              // Căn chỉnh vị trí của bubble và nút reply
               verticalDirection: VerticalDirection.down,
               children: [
-                // Nếu là tin của người khác, nút reply ở bên phải
                 if (!isMe) Flexible(child: GestureDetector(onLongPress: onReply, child: messageContent)),
 
-                // Nút Reply
                 Container(
                   margin: const EdgeInsets.symmetric(horizontal: 4),
                   child: IconButton(
@@ -826,11 +787,9 @@ class _MessageBubble extends StatelessWidget {
                   ),
                 ),
 
-                // Nếu là tin của mình, nút reply ở bên trái
                 if (isMe) Flexible(child: GestureDetector(onLongPress: onReply, child: messageContent)),
               ],
             ),
-            // ✅ END
           ],
         ),
       ),
@@ -850,9 +809,7 @@ class _MessageBubble extends StatelessWidget {
     }
   }
 
-  // Thay hàm _formatTime trong ChatDetailScreen bằng phiên bản chuyển sang giờ VN (+7)
   String _formatTime(DateTime time) {
-    // đảm bảo dùng UTC input (MessageModel._parseDateTime trả về UTC)
     final vietnamTime = time.toUtc().add(const Duration(hours: 7));
     final nowVn = DateTime.now().toUtc().add(const Duration(hours: 7));
 
@@ -884,7 +841,6 @@ class _MessageBubble extends StatelessWidget {
     return '$timeStr $dateStr';
   }
 }
-// --- END MODIFIED ---
 
 class _MessageInput extends StatelessWidget {
   final TextEditingController controller;
@@ -988,7 +944,6 @@ class _MessageInput extends StatelessWidget {
   }
 }
 
-// Widget riêng để hiển thị AppBar title với thông tin người đối diện
 class _AppBarTitleWidget extends ConsumerWidget {
   final ConversationModel conversation;
 
@@ -999,41 +954,33 @@ class _AppBarTitleWidget extends ConsumerWidget {
     return FutureBuilder<String?>(
       future: _getCurrentAccountId(ref),
       builder: (context, snapshot) {
-        // Xác định người đối diện (không phải current user)
         MessageAccountModel otherParticipant;
         final currentAccountId = snapshot.data;
-
         if (currentAccountId != null &&
             conversation.participantA.accountId == currentAccountId) {
-          // Nếu current user là participantA, thì người đối diện là participantB
           otherParticipant = conversation.participantB;
         } else if (currentAccountId != null &&
             conversation.participantB.accountId == currentAccountId) {
-          // Nếu current user là participantB, thì người đối diện là participantA
           otherParticipant = conversation.participantA;
         } else {
-          // Fallback: dùng participantB nếu không xác định được
           otherParticipant = conversation.participantB;
         }
 
         final baseUrl = 'http://apivhs.cuahangkinhdoanh.com';
         String? avatarUrl;
 
-        // Ưu tiên dùng avatarUrl từ conversation (giống như trong list)
-        // Nếu không có thì mới dùng từ participant
         String? rawAvatarUrl = conversation.avatarUrl;
         if (rawAvatarUrl == null || rawAvatarUrl.trim().isEmpty) {
           rawAvatarUrl = otherParticipant.avatarUrl;
         }
 
-        // Xử lý avatarUrl giống như trong chat_list_screen
         if (rawAvatarUrl != null && rawAvatarUrl.trim().isNotEmpty) {
           final trimmed = rawAvatarUrl.trim();
-          // Nếu đã là absolute URL (backend đã xử lý), dùng trực tiếp
+
           if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
             avatarUrl = trimmed;
           } else {
-            // Nếu là relative path, thêm base URL
+
             final path = trimmed.startsWith('/') ? trimmed : '/$trimmed';
             avatarUrl = '$baseUrl$path';
           }
@@ -1130,7 +1077,7 @@ class _AppBarTitleWidget extends ConsumerWidget {
                           'Đang hoạt động',
                           style: TextStyle(
                             fontSize: 12,
-                            color: Colors.white, // Sửa màu để dễ nhìn trên nền gradient
+                            color: Colors.white,
                             fontWeight: FontWeight.w500,
                           ),
                         ),
@@ -1149,15 +1096,12 @@ class _AppBarTitleWidget extends ConsumerWidget {
     final authDao = ref.read(authDaoProvider);
     final auth = await authDao.getSavedAuth();
     var accountId = auth?['accountId'] as String?;
-
-    // Nếu accountId từ database rỗng, thử lấy từ JWT token
     if (accountId == null || accountId.isEmpty) {
       final token = await authDao.getToken();
       if (token != null) {
         accountId = JwtHelper.getAccountIdFromToken(token);
       }
     }
-
     return accountId;
   }
 }

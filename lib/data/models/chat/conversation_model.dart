@@ -145,7 +145,6 @@ class ConversationModel {
           .map((m) => MessageModel.fromJson(m as Map<String, dynamic>))
           .toList()
           : [],
-      // 👇 Map dữ liệu từ JSON (Backend trả về PascalCase hoặc camelCase)
       clearBeforeAtByA: (json['clearBeforeAtByA'] ?? json['ClearBeforeAtByA']) != null
           ? _parseDateTime((json['clearBeforeAtByA'] ?? json['ClearBeforeAtByA']).toString())
           : null,
@@ -177,23 +176,17 @@ class ConversationModel {
     };
   }
 
-  // 👇 2. HÀM QUAN TRỌNG: Lọc tin nhắn hiển thị
-  // Hàm này được gọi từ UI để lấy danh sách tin nhắn đã loại bỏ tin cũ
   List<MessageModel> getVisibleMessages(String myAccountId) {
     DateTime? clearTime;
 
-    // So sánh ID để biết mình là A hay B
-    // (Dùng toLowerCase để tránh lỗi do chữ hoa/thường của GUID)
     if (myAccountId.toLowerCase() == participantA.accountId.toLowerCase()) {
       clearTime = clearBeforeAtByA;
     } else if (myAccountId.toLowerCase() == participantB.accountId.toLowerCase()) {
       clearTime = clearBeforeAtByB;
     }
 
-    // Nếu chưa xóa lần nào -> trả về hết
     if (clearTime == null) return messages;
 
-    // Lọc: Chỉ giữ lại tin nhắn có thời gian tạo > thời gian xóa
     return messages.where((m) => m.createdAt.isAfter(clearTime!)).toList();
   }
 

@@ -11,7 +11,6 @@ AsyncNotifierProvider<ChatListNotifier, List<ConversationListItemModel>>(
 );
 
 final unreadTotalProvider = FutureProvider.autoDispose<int>((ref) async {
-  // Gọi hàm lấy số lượng tin chưa đọc từ ViewModel
   return ref.read(chatListProvider.notifier).getUnreadTotal();
 });
 
@@ -29,7 +28,6 @@ class ChatListNotifier extends AsyncNotifier<List<ConversationListItemModel>> {
     final auth = await authDao.getSavedAuth();
     _accountId = auth?['accountId'] as String?;
 
-    // Nếu accountId từ database rỗng, thử lấy từ JWT token
     if (_accountId == null || _accountId!.isEmpty) {
       final token = await authDao.getToken();
       if (token != null) {
@@ -108,28 +106,19 @@ class ChatListNotifier extends AsyncNotifier<List<ConversationListItemModel>> {
     }
   }
 
-  // Thay thế hoặc sửa hàm updateConversationListItem
   void handleRealtimeUpdate(ConversationListItemModel updatedItem) {
     final currentList = state.value;
     if (currentList != null) {
-      // 1. Xóa item cũ (nếu có)
       final otherItems = currentList.where((item) => item.conversationId != updatedItem.conversationId).toList();
-
-      // 2. Thêm item mới vào đầu danh sách (vì nó vừa có tin nhắn mới)
-      // Chú ý: Backend JS gửi về object message, bạn cần đảm bảo 'updatedItem'
-      // map đúng unreadCount và lastMessageAt.
 
       final newList = [updatedItem, ...otherItems];
 
-      // 3. Cập nhật state
       state = AsyncValue.data(newList);
     } else {
-      // Nếu list đang rỗng, refresh lại
       refresh();
     }
   }
 
-  // Setup SignalR listener for real-time conversation updates
   Stream<ConversationListItemModel> listenToConversations() {
     final signalRService = ref.read(signalRChatServiceProvider);
     return signalRService.listenToConversations();

@@ -11,7 +11,6 @@ import 'package:vhs_mobile_user/ui/chat/chat_list_viewmodel.dart';
 import 'package:vhs_mobile_user/ui/chat/chat_detail_screen.dart';
 import 'package:vhs_mobile_user/ui/core/theme_helper.dart';
 
-// Màu xanh theo web - Sky blue palette
 const Color primaryBlue = Color(0xFF0284C7); // Sky-600
 
 class ChatListScreen extends ConsumerStatefulWidget {
@@ -40,17 +39,12 @@ class _ChatListScreenState extends ConsumerState<ChatListScreen> {
           accountId = JwtHelper.getAccountIdFromToken(token);
         }
       }
-
       if (accountId != null && accountId.isNotEmpty) {
         final signalRService = ref.read(signalRChatServiceProvider);
         await signalRService.connect(accountId);
-
-        // Lắng nghe update realtime
         signalRService.listenToConversations().listen((updatedItem) {
           if (!mounted) return;
           ref.read(chatListProvider.notifier).handleRealtimeUpdate(updatedItem);
-
-          // Khi có tin nhắn mới, làm mới lại số lượng tin chưa đọc
           ref.refresh(unreadTotalProvider);
         });
       }
@@ -209,7 +203,6 @@ class _ChatListScreenState extends ConsumerState<ChatListScreen> {
           return RefreshIndicator(
             onRefresh: () async {
               await ref.read(chatListProvider.notifier).refresh();
-                    // Refresh unread total when pull-to-refresh
                     ref.invalidate(unreadTotalProvider);
             },
                   child: ListView.builder(
@@ -260,16 +253,12 @@ class _ConversationListItem extends StatelessWidget {
   Widget build(BuildContext context) {
     final baseUrl = 'http://apivhs.cuahangkinhdoanh.com';
     String? avatarUrl;
-    
-    // Xử lý avatarUrl giống như trong chat_detail_screen
     final rawAvatarUrl = conversation.avatarUrl;
     if (rawAvatarUrl != null && rawAvatarUrl.trim().isNotEmpty) {
       final trimmed = rawAvatarUrl.trim();
-      // Nếu đã là absolute URL (backend đã xử lý), dùng trực tiếp
       if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
         avatarUrl = trimmed;
       } else {
-        // Nếu là relative path, thêm base URL
         final path = trimmed.startsWith('/') ? trimmed : '/$trimmed';
         avatarUrl = '$baseUrl$path';
       }
@@ -484,16 +473,14 @@ class _ConversationListItem extends StatelessWidget {
   }
 
   String _formatTime(DateTime time) {
-    // Normalize input to UTC (MessageModel._parseDateTime should already return UTC).
+
     final vnTime = time.toUtc().add(const Duration(hours: 7));
     final nowVn = DateTime.now().toUtc().add(const Duration(hours: 7));
 
-    // Same-day check
     if (vnTime.year == nowVn.year && vnTime.month == nowVn.month && vnTime.day == nowVn.day) {
       return '${vnTime.hour.toString().padLeft(2, '0')}:${vnTime.minute.toString().padLeft(2, '0')}';
     }
 
-    // Yesterday
     final yesterdayVn = nowVn.subtract(const Duration(days: 1));
     if (vnTime.year == yesterdayVn.year && vnTime.month == yesterdayVn.month && vnTime.day == yesterdayVn.day) {
       return 'Hôm qua';
@@ -503,8 +490,6 @@ class _ConversationListItem extends StatelessWidget {
     if (diff.inDays < 7) {
       return '${diff.inDays} ngày trước';
     }
-
-    // Older: show full date
     return '${vnTime.day}/${vnTime.month}/${vnTime.year}';
 
   }

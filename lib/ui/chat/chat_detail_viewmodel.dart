@@ -29,7 +29,6 @@ class ChatDetailNotifier extends AsyncNotifier<ConversationModel> {
     final auth = await authDao.getSavedAuth();
     _accountId = auth?['accountId'] as String?;
 
-    // Nếu accountId từ database rỗng, thử lấy từ JWT token
     if (_accountId == null || _accountId!.isEmpty) {
       final token = await authDao.getToken();
       if (token != null) {
@@ -46,17 +45,12 @@ class ChatDetailNotifier extends AsyncNotifier<ConversationModel> {
   Future<ConversationModel> build() async {
     _repo = ref.read(chatRepositoryProvider);
 
-    // 1. Lắng nghe tin nhắn mới từ SignalR ngay khi màn hình chat được khởi tạo
-    // Lưu ý: dùng ref.read để lấy service, và listen vào stream
     final signalRService = ref.read(signalRChatServiceProvider);
 
-    // Tạo subscription
     final subscription = signalRService.listenToMessages(_conversationId).listen((message) {
-      // Khi có tin nhắn tới -> Gọi hàm addMessage để cập nhật UI
       addMessage(message);
     });
 
-    // Quan trọng: Hủy lắng nghe khi màn hình này bị đóng (dispose)
     ref.onDispose(() {
       subscription.cancel();
     });
@@ -72,7 +66,6 @@ class ChatDetailNotifier extends AsyncNotifier<ConversationModel> {
       accountId: accountId,
     );
 
-    // Nếu conversation không có avatarUrl, lấy từ list item
     ConversationModel finalConversation = conversation;
     if (conversation.avatarUrl == null || conversation.avatarUrl!.trim().isEmpty) {
       try {
@@ -84,17 +77,15 @@ class ChatDetailNotifier extends AsyncNotifier<ConversationModel> {
             orElse: () => throw Exception('Not found'),
           );
 
-          // Nếu list item có avatarUrl, dùng nó
           if (listItem.avatarUrl != null && listItem.avatarUrl!.trim().isNotEmpty) {
             return conversation.copyWith(avatarUrl: listItem.avatarUrl);
           }
         }
       } catch (e) {
-        // Nếu không tìm thấy trong list, giữ nguyên conversation
+
       }
     }
 
-    // return conversation;
     final visibleMessages = finalConversation.getVisibleMessages(accountId);
 
     return finalConversation.copyWith(messages: visibleMessages);
@@ -112,166 +103,6 @@ class ChatDetailNotifier extends AsyncNotifier<ConversationModel> {
     ));
   }
 
-
-
-  // Future<bool> sendMessage({
-  //   String? body,
-  //   File? image,
-  //   String? replyToMessageId,
-  // }) async {
-  //   final accountId = await _getAccountId();
-  //   if (accountId == null || accountId.isEmpty) return false;
-  //
-  //   _accountId = accountId;
-  //
-  //   try {
-  //     // Cập nhật UI ngay lập tức với message đang gửi (optimistic update)
-  //     final current = state.value;
-  //     String? tempMessageId;
-  //     if (current != null) {
-  //       // Tạo message tạm thời để hiển thị ngay
-  //       tempMessageId = 'temp-${DateTime.now().millisecondsSinceEpoch}';
-  //       // Nếu có ảnh, dùng file:// để hiển thị ảnh local
-  //       final tempImageUrl = image != null ? 'file://${image.path}' : null;
-  //       final tempMessage = MessageModel(
-  //         messageId: tempMessageId,
-  //         conversationId: _conversationId,
-  //         senderAccountId: accountId,
-  //         body: body,
-  //         messageType: image != null ? 'Image' : 'Text',
-  //         replyToMessageId: replyToMessageId,
-  //         imageUrl: tempImageUrl,
-  //         metadata: null,
-  //         createdAt: DateTime.now().toUtc(), // Dùng UTC để consistent
-  //         editedAt: null,
-  //         deletedAt: null,
-  //         sender: MessageAccountModel(
-  //           accountId: accountId,
-  //           accountName: 'Bạn',
-  //           avatarUrl: null, email: '', role: '',
-  //         ),
-  //         replyTo: null,
-  //         isMine: true,
-  //         status: 'Sending',
-  //       );
-  //       // Thêm message và sort lại từ cũ đến mới
-  //       final updatedMessages = [...current.messages, tempMessage];
-  //       updatedMessages.sort((a, b) => a.createdAt.compareTo(b.createdAt));
-  //       state = AsyncValue.data(
-  //         current.copyWith(messages: updatedMessages),
-  //       );
-  //     }
-  //
-  //     // Gửi message thực tế
-  //     final message = await _repo.sendMessage(
-  //       conversationId: _conversationId,
-  //       accountId: accountId,
-  //       body: body,
-  //       image: image,
-  //       replyToMessageId: replyToMessageId,
-  //     );
-  //
-  //     // Cập nhật lại với message thực tế từ server
-  //     final updated = state.value;
-  //     if (updated != null) {
-  //       // Xóa message tạm và thêm message thực tế
-  //       final filteredMessages = updated.messages
-  //           .where((m) => !m.messageId.startsWith('temp-'))
-  //           .toList();
-  //       // Thêm message thực tế và sort lại từ cũ đến mới
-  //       final finalMessages = [...filteredMessages, message];
-  //       finalMessages.sort((a, b) => a.createdAt.compareTo(b.createdAt));
-  //       state = AsyncValue.data(
-  //         updated.copyWith(messages: finalMessages),
-  //       );
-  //     } else {
-  //       await refresh();
-  //     }
-  //
-  //     return true;
-  //   } catch (e, st) {
-  //     // Nếu có lỗi, rollback optimistic update
-  //     final updated = state.value;
-  //     if (updated != null) {
-  //       final filteredMessages = updated.messages
-  //           .where((m) => !m.messageId.startsWith('temp-'))
-  //           .toList();
-  //       state = AsyncValue.data(
-  //         updated.copyWith(messages: filteredMessages),
-  //       );
-  //     }
-  //     print('Error sending message: $e');
-  //     return false;
-  //   }
-  // }
-
-  // Mở file chat_detail_viewmodel.dart và thay thế hàm sendMessage
-
-  // Future<bool> sendMessage({
-  //   String? body,
-  //   File? image,
-  //   String? replyToMessageId,
-  // }) async {
-  //   final accountId = await _getAccountId();
-  //   if (accountId == null || accountId.isEmpty) return false;
-  //   _accountId = accountId;
-  //
-  //   try {
-  //     // 1. Vẫn gọi API như bình thường và hứng kết quả trả về
-  //     final messageFromServer = await _repo.sendMessage(
-  //       conversationId: _conversationId,
-  //       accountId: accountId,
-  //       body: body,
-  //       image: image,
-  //       replyToMessageId: replyToMessageId,
-  //     );
-  //
-  //     // 2. Khi API trả về thành công, cập nhật vào State
-  //     final current = state.value;
-  //     if (current != null) {
-  //       // Kiểm tra xem SignalR đã thêm tin nhắn này chưa (tránh trùng)
-  //       final alreadyExists = current.messages.any((m) => m.messageId == messageFromServer.messageId);
-  //
-  //       if (!alreadyExists) {
-  //         MessageModel finalMessage = messageFromServer;
-  //
-  //         // ✅ LOGIC MỚI: TỰ ĐIỀN DỮ LIỆU `replyTo`
-  //         // Nếu tin nhắn trả về là tin nhắn reply nhưng đối tượng `replyTo` lại null...
-  //         if (finalMessage.replyToMessageId != null && finalMessage.replyTo == null) {
-  //           try {
-  //             // ...thì tìm tin nhắn gốc trong danh sách tin nhắn hiện có.
-  //             final originalMessage = current.messages.firstWhere(
-  //                   (m) => m.messageId == finalMessage.replyToMessageId,
-  //             );
-  //             // "Vá" lại tin nhắn trả về từ server bằng cách gán đối tượng `replyTo`
-  //             finalMessage = finalMessage.copyWith(replyTo: originalMessage);
-  //           } catch (e) {
-  //             // Không tìm thấy tin nhắn gốc (rất hiếm, có thể đã bị xóa), bỏ qua
-  //             print("Original message for reply not found locally.");
-  //           }
-  //         }
-  //         // ✅ KẾT THÚC LOGIC MỚI
-  //
-  //         final updatedMessages = [...current.messages, finalMessage];
-  //         // Sắp xếp lại
-  //         updatedMessages.sort((a, b) => a.createdAt.compareTo(b.createdAt));
-  //
-  //         state = AsyncValue.data(
-  //           current.copyWith(messages: updatedMessages),
-  //         );
-  //       }
-  //     } else {
-  //       await refresh();
-  //     }
-  //
-  //     return true;
-  //   } catch (e, st) {
-  //     print('Error sending message: $e');
-  //     return false;
-  //   }
-  // }
-
-// 2. SỬA HÀM sendMessage
   Future<bool> sendMessage({
     String? body,
     File? image,
@@ -282,7 +113,7 @@ class ChatDetailNotifier extends AsyncNotifier<ConversationModel> {
     _accountId = accountId;
 
     try {
-      // Gọi API
+
       final messageFromServer = await _repo.sendMessage(
         conversationId: _conversationId,
         accountId: accountId,
@@ -291,37 +122,38 @@ class ChatDetailNotifier extends AsyncNotifier<ConversationModel> {
         replyToMessageId: replyToMessageId,
       );
 
-      // Cập nhật State
       final current = state.value;
       if (current != null) {
         MessageModel finalMessage = messageFromServer;
 
-        // 🔥 FIX 1: Tự điền Reply cho API Response (vì API cũng trả về null)
         if (finalMessage.replyToMessageId != null && finalMessage.replyTo == null) {
           try {
             final originalMessage = current.messages.firstWhere(
                   (m) => m.messageId == finalMessage.replyToMessageId,
             );
             finalMessage = finalMessage.copyWith(replyTo: originalMessage);
-            print("API: Đã vá replyTo cho tin nhắn ${finalMessage.body}");
           } catch (e) {
-            print("Original message for reply not found locally.");
+
           }
         }
 
-        // 🔥 FIX 2: Xử lý xung đột với SignalR
-        // Kiểm tra xem tin nhắn này đã được SignalR thêm vào chưa
         final index = current.messages.indexWhere((m) => m.messageId == finalMessage.messageId);
 
         List<MessageModel> updatedMessages;
 
         if (index != -1) {
-          // TRƯỜNG HỢP QUAN TRỌNG:
-          // Nếu SignalR đã thêm tin nhắn trước đó (thường là thiếu replyTo),
-          // Ta phải GHI ĐÈ nó bằng tin nhắn 'finalMessage' (đã được vá replyTo ở trên).
+
+          final existingMessage = current.messages[index];
+
+          if (existingMessage.status == 'Seen') {
+            finalMessage = finalMessage.copyWith(status: 'Seen');
+          } else if (existingMessage.status == 'Delivered' && finalMessage.status == 'Sent') {
+            finalMessage = finalMessage.copyWith(status: 'Delivered');
+          }
+
           updatedMessages = [...current.messages];
           updatedMessages[index] = finalMessage;
-          print("API: Đã cập nhật lại tin nhắn từ SignalR để hiện Reply");
+          print("API: Đã cập nhật message (giữ status: ${finalMessage.status})");
         } else {
           // Nếu chưa có thì thêm mới
           updatedMessages = [...current.messages, finalMessage];
@@ -385,21 +217,15 @@ class ChatDetailNotifier extends AsyncNotifier<ConversationModel> {
         );
       }
     } catch (e) {
-      // Ignore errors
     }
   }
 
 
   void addMessage(MessageModel message) {
     final current = state.value;
-    // Kiểm tra đúng hội thoại
     if (current != null && message.conversationId.toLowerCase() == _conversationId.toLowerCase()) {
-
-      // 1. Kiểm tra trùng
       final index = current.messages.indexWhere((m) => m.messageId == message.messageId);
       if (index != -1) return;
-
-      // 2. Logic vá lỗi Reply (như cũ)
       MessageModel finalMessage = message;
       if (finalMessage.replyToMessageId != null && finalMessage.replyTo == null) {
         try {
@@ -408,28 +234,22 @@ class ChatDetailNotifier extends AsyncNotifier<ConversationModel> {
           );
           finalMessage = finalMessage.copyWith(replyTo: originalMessage);
         } catch (e) {
-          // Ignore
         }
       }
 
-      // 🔥 FIX LỖI TIME SKEW (Giờ máy > Giờ server):
-      // Nếu tin nhắn mới đến có thời gian "nhỏ hơn" mốc xóa hiện tại -> Cần lùi mốc xóa lại
-      // để tin nhắn này không bị ẩn.
       DateTime? updatedClearA = current.clearBeforeAtByA;
       DateTime? updatedClearB = current.clearBeforeAtByB;
       bool needUpdateClearTime = false;
 
-      // Logic kiểm tra xem mình là A hay B để lấy mốc xóa tương ứng
-      // (Lưu ý: _accountId phải đảm bảo đã có giá trị)
       if (_accountId != null) {
         if (_accountId == current.participantA.accountId) {
-          // Nếu tin mới <= mốc xóa của A -> Lùi mốc xóa về trước tin mới 1 mili giây
+
           if (updatedClearA != null && !finalMessage.createdAt.isAfter(updatedClearA)) {
             updatedClearA = finalMessage.createdAt.subtract(const Duration(milliseconds: 1));
             needUpdateClearTime = true;
           }
         } else if (_accountId == current.participantB.accountId) {
-          // Tương tự cho B
+
           if (updatedClearB != null && !finalMessage.createdAt.isAfter(updatedClearB)) {
             updatedClearB = finalMessage.createdAt.subtract(const Duration(milliseconds: 1));
             needUpdateClearTime = true;
@@ -437,11 +257,9 @@ class ChatDetailNotifier extends AsyncNotifier<ConversationModel> {
         }
       }
 
-      // 3. Thêm tin mới vào list
       final newMessages = [...current.messages, finalMessage];
       newMessages.sort((a, b) => a.createdAt.compareTo(b.createdAt));
 
-      // 4. Cập nhật State với danh sách mới VÀ mốc xóa đã điều chỉnh (nếu cần)
       state = AsyncValue.data(
         current.copyWith(
           messages: newMessages,
@@ -483,121 +301,48 @@ class ChatDetailNotifier extends AsyncNotifier<ConversationModel> {
     }
   }
 
+  // void markMessagesAsSeenUntil(DateTime lastReadAt) {
+  //   final current = state.value;
+  //   if (current != null) {
+  //     final cutoffTime = lastReadAt.add(const Duration(seconds: 1));
+  //     final updatedMessages = current.messages.map((m) {
+  //       if (m.isMine && m.status != 'Seen') {
+  //         if (m.createdAt.isBefore(cutoffTime) || m.createdAt.isAtSameMomentAs(cutoffTime)) {
+  //           return m.copyWith(status: 'Seen');
+  //         }
+  //       }
+  //       return m;
+  //     }).toList();
+  //     if (current.messages != updatedMessages) {
+  //       state = AsyncValue.data(current.copyWith(messages: updatedMessages));
+  //     }
+  //   }
+  // }
 
-  void markMessagesAsSeenUntil(DateTime lastReadAt) {
+  void markMessagesAsSeenUntil(DateTime lastReadAt, {String? lastReadMessageId}) {
     final current = state.value;
     if (current != null) {
+      final cutoffTime = lastReadAt.add(const Duration(seconds: 1));
       final updatedMessages = current.messages.map((m) {
-        if (m.isMine && (m.createdAt.isBefore(lastReadAt) || m.createdAt.isAtSameMomentAs(lastReadAt))) {
-          return MessageModel(
-            messageId: m.messageId,
-            conversationId: m.conversationId,
-            senderAccountId: m.senderAccountId,
-            body: m.body,
-            messageType: m.messageType,
-            replyToMessageId: m.replyToMessageId,
-            imageUrl: m.imageUrl,
-            metadata: m.metadata,
-            createdAt: m.createdAt,
-            editedAt: m.editedAt,
-            deletedAt: m.deletedAt,
-            sender: m.sender,
-            replyTo: m.replyTo,
-            isMine: m.isMine,
-            status: 'Seen',
-          );
+        if (m.isMine && m.status != 'Seen') {
+          if (m.messageId == lastReadMessageId ||
+              m.createdAt.isBefore(cutoffTime) ||
+              m.createdAt.isAtSameMomentAs(cutoffTime)) {
+            return m.copyWith(status: 'Seen');
+          }
         }
         return m;
       }).toList();
+
       state = AsyncValue.data(current.copyWith(messages: updatedMessages));
     }
   }
 
-  // Setup SignalR listener for real-time messages
   Stream<MessageModel> listenToMessages() {
     final signalRService = ref.read(signalRChatServiceProvider);
     return signalRService.listenToMessages(_conversationId);
   }
 
-//   // Xóa cuộc trò chuyện (xóa tất cả tin nhắn của người dùng trước)
-//   Future<bool> deleteConversation() async {
-//     final accountId = await _getAccountId();
-//     if (accountId == null || accountId.isEmpty) return false;
-//
-//     _accountId = accountId;
-//     try {
-//       // Bước 1: Xóa tất cả tin nhắn của người dùng trong conversation
-//       try {
-//         await _repo.deleteAllMyMessages(
-//           conversationId: _conversationId,
-//           accountId: accountId,
-//         );
-//       } catch (e) {
-//         // Nếu API xóa tất cả tin nhắn không tồn tại, thử xóa từng tin nhắn
-//         print('Warning: Could not delete all messages at once, trying individual deletion: $e');
-//         final current = state.value;
-//         if (current != null) {
-//           // Xóa từng tin nhắn của người dùng
-//           for (final message in current.messages) {
-//             if (message.isMine && message.senderAccountId == accountId) {
-//               try {
-//                 await _repo.deleteMessage(
-//                   messageId: message.messageId,
-//                   accountId: accountId,
-//                 );
-//               } catch (e) {
-//                 print('Warning: Could not delete message ${message.messageId}: $e');
-//                 // Tiếp tục xóa các tin nhắn khác
-//               }
-//             }
-//           }
-//         }
-//       }
-//
-//       // Bước 2: Xóa/ẩn conversation
-//       await _repo.clearConversation(
-//         conversationId: _conversationId,
-//         accountId: accountId,
-//         hide: true, // Xóa hoàn toàn (ẩn khỏi danh sách)
-//       );
-//       // Refresh unread total when deleting conversation
-//       ref.invalidate(unreadTotalProvider);
-//
-//       final current = state.value;
-//       if (current != null) {
-//         final now = DateTime.now().toUtc();
-//
-//         // Xác định mình là A hay B để cập nhật mốc thời gian (Client-side simulation)
-//         DateTime? newClearA = current.clearBeforeAtByA;
-//         DateTime? newClearB = current.clearBeforeAtByB;
-//
-//         if (accountId == current.participantA.accountId) {
-//           newClearA = now;
-//         } else if (accountId == current.participantB.accountId) {
-//           newClearB = now;
-//         }
-//
-//         // Cập nhật State: Xóa sạch list messages và set mốc thời gian mới
-//         state = AsyncValue.data(
-//           current.copyWith(
-//             messages: [], // Xóa sạch tin nhắn trên màn hình ngay lập tức
-//             clearBeforeAtByA: newClearA,
-//             clearBeforeAtByB: newClearB,
-//           ),
-//         );
-//       }
-//       // 🔥 KẾT THÚC ĐOẠN THÊM MỚI
-//
-//       return true;
-//     } catch (e) {
-//       print('Error deleting conversation: $e');
-//       return false;
-//     }
-//   }
-// }
-//
-
-// 🔥 SỬA HÀM NÀY: Dùng thời gian tin nhắn cuối cùng làm mốc xóa an toàn
   Future<bool> deleteConversation() async {
     final accountId = await _getAccountId();
     if (accountId == null || accountId.isEmpty) return false;
@@ -631,21 +376,14 @@ class ChatDetailNotifier extends AsyncNotifier<ConversationModel> {
 
       final current = state.value;
       if (current != null) {
-        // 🔥 LOGIC MỚI BẮT ĐẦU
         DateTime safeClearTime;
-
-        // Nếu có tin nhắn, lấy thời gian của tin mới nhất + 1ms làm mốc xóa.
-        // Điều này đảm bảo mốc xóa luôn nằm SAU tin cuối cùng, nhưng TRƯỚC tin nhắn tương lai.
         if (current.messages.isNotEmpty) {
           final sortedMsgs = [...current.messages];
           sortedMsgs.sort((a, b) => a.createdAt.compareTo(b.createdAt));
           safeClearTime = sortedMsgs.last.createdAt.add(const Duration(milliseconds: 1));
         } else {
-          // Nếu không có tin thì dùng giờ hiện tại (ít rủi ro hơn vì list đang rỗng)
           safeClearTime = DateTime.now().toUtc();
         }
-        // 🔥 LOGIC MỚI KẾT THÚC
-
         DateTime? newClearA = current.clearBeforeAtByA;
         DateTime? newClearB = current.clearBeforeAtByB;
 
