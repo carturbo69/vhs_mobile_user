@@ -2,8 +2,20 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:vhs_mobile_user/routing/router.dart';
 import 'package:vhs_mobile_user/providers/theme_provider.dart';
+import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart'; // Thư viện lõi
+import 'data/services/notification_service.dart';
+import 'firebase_options.dart'; // File cấu hình vừa được tạo tự động
 
-void main() {
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
+void main() async{
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+
+  await NotificationService.instance.initialize();
   runApp(const AppRoot());
 }
 

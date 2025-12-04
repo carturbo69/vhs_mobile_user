@@ -39,6 +39,7 @@ import 'package:vhs_mobile_user/ui/report/report_detail_screen.dart';
 import 'package:vhs_mobile_user/data/models/booking/booking_history_detail_model.dart';
 import 'package:vhs_mobile_user/data/models/review/review_list_item.dart';
 import 'package:vhs_mobile_user/ui/service_shop/service_shop_screen.dart';
+import 'package:vhs_mobile_user/main.dart';
 
 /// Helper class để refresh router khi auth state thay đổi
 class AuthStateNotifier extends ChangeNotifier {
@@ -63,6 +64,7 @@ final routerProvider = Provider<GoRouter>((ref) {
   final authNotifier = AuthStateNotifier(ref);
 
   return GoRouter(
+    navigatorKey: navigatorKey,
     initialLocation: Routes.login,
     refreshListenable: authNotifier,
     redirect: (context, state) async {
