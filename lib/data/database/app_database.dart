@@ -46,7 +46,7 @@ class AppDatabase extends _$AppDatabase {
   /// Xóa database file
   static Future<void> deleteDatabase() async {
     final dir = await getApplicationDocumentsDirectory();
-    final file = File(p.join(dir.path, 'VietHomeServiceUserDatabase.sqlite'));
+    final file = File(p.join(dir.path, 'VietHomeServiceUsersDatabase.sqlite'));
 
     if (await file.exists()) {
       await file.delete();
@@ -56,7 +56,7 @@ class AppDatabase extends _$AppDatabase {
 LazyDatabase openConnection() {
   return LazyDatabase(() async {
     final dir = await getApplicationDocumentsDirectory();
-    final file = File(p.join(dir.path, 'VietHomeServiceUserDatabase.sqlite'));
+    final file = File(p.join(dir.path, 'VietHomeServiceUsersDatabase.sqlite'));
     return NativeDatabase.createInBackground(file);
   });
 }

@@ -47,6 +47,7 @@ const Map<String, String> enTranslations = {
   'reviews': 'Reviews',
   'dark_mode': 'Dark Mode',
   'light_mode': 'Light Mode',
+  'provider_registration_guide': 'Provider Registration Guide',
   'language': 'English - Vietnamese',
   'privacy_policy': 'Privacy Policy',
   'terms_of_service': 'Terms of Service',

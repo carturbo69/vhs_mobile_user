@@ -9,6 +9,7 @@ import 'package:vhs_mobile_user/data/models/user/profile_model.dart';
 import 'package:vhs_mobile_user/providers/theme_provider.dart';
 import 'package:vhs_mobile_user/providers/locale_provider.dart';
 import 'package:vhs_mobile_user/l10n/app_localizations.dart';
+import 'package:vhs_mobile_user/routing/routes.dart';
 
 class ProfileSummaryScreen extends ConsumerWidget {
   const ProfileSummaryScreen({super.key});
@@ -163,6 +164,17 @@ class _ProfileSummaryView extends ConsumerWidget {
                         }
                       },
                     );
+                  },
+                ),
+                const SizedBox(height: 12),
+                _buildMenuButton(
+                  context: context,
+                  icon: Icons.business_center_outlined,
+                  label: AppLocalizations.of(context).t('provider_registration_guide') ?? 
+                      'Hướng dẫn đăng ký nhà cung cấp',
+                  iconColor: Colors.green,
+                  onPressed: () {
+                    context.push(Routes.providerRegistrationGuide);
                   },
                 ),
                 const SizedBox(height: 20),

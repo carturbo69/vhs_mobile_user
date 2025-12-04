@@ -47,6 +47,7 @@ const Map<String, String> viTranslations = {
   'reviews': 'Đánh giá',
   'dark_mode': 'Chế độ tối',
   'light_mode': 'Chế độ sáng',
+  'provider_registration_guide': 'Hướng dẫn đăng ký nhà cung cấp',
   'language': 'Tiếng anh - Tiếng việt',
   'privacy_policy': 'Bảo mật',
   'terms_of_service': 'Điều khoản',

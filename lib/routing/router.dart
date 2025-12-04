@@ -22,6 +22,7 @@ import 'package:vhs_mobile_user/ui/history/history_detail_screen.dart';
 import 'package:vhs_mobile_user/ui/history/history_screen.dart';
 import 'package:vhs_mobile_user/ui/profile/profile_screen.dart';
 import 'package:vhs_mobile_user/ui/profile/profile_summary_screen.dart';
+import 'package:vhs_mobile_user/ui/profile/provider_registration_guide_screen.dart';
 import 'package:vhs_mobile_user/data/models/user/profile_model.dart';
 import 'package:vhs_mobile_user/ui/service_detail/service_detail_page.dart';
 import 'package:vhs_mobile_user/ui/service_list/service_list_screen.dart';
@@ -185,6 +186,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           final profile = state.extra as ProfileModel;
           return ChangeEmailScreen(profile: profile);
         },
+      ),
+      GoRoute(
+        path: Routes.providerRegistrationGuide,
+        builder: (context, state) => const ProviderRegistrationGuideScreen(),
       ),
       // -------------------------
       // ADDRESS ROUTES

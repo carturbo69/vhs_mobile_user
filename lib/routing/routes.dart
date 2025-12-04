@@ -10,6 +10,7 @@ abstract final class Routes {
   static const resetPassword = "/reset-password";
   static const profile = "/profile";
   static const profileDetail = "/profile/detail";
+  static const providerRegistrationGuide = "/profile/provider-registration-guide";
   static const history = "/history";
   static const bookingDetail ="/history/detail";
   static const editProfile = "/profile/edit";

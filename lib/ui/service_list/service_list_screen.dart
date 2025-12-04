@@ -203,7 +203,7 @@ class _ServiceListScreenState extends ConsumerState<ServiceListScreen> {
                               final currentLocation = GoRouterState.of(context).matchedLocation;
                               if (currentLocation != Routes.cart) {
                                 // Lưu route hiện tại vào extra để có thể quay lại
-                                context.go(Routes.cart, extra: {'previousRoute': currentLocation});
+                                context.push(Routes.cart, extra: {'previousRoute': currentLocation});
                               }
                             },
                             tooltip: context.tr('cart_tooltip'),

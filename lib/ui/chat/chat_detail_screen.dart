@@ -219,23 +219,42 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
     final picker = ImagePicker();
     final source = await showModalBottomSheet<ImageSource>(
       context: context,
+      backgroundColor: ThemeHelper.getBottomSheetBackgroundColor(context),
       builder: (context) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
-              leading: const Icon(Icons.camera_alt),
-              title: Text(context.tr('take_photo')),
+              leading: Icon(
+                Icons.camera_alt,
+                color: ThemeHelper.getIconColor(context),
+              ),
+              title: Text(
+                context.tr('take_photo'),
+                style: TextStyle(color: ThemeHelper.getTextColor(context)),
+              ),
               onTap: () => Navigator.pop(context, ImageSource.camera),
             ),
             ListTile(
-              leading: const Icon(Icons.photo_library),
-              title: Text(context.tr('choose_from_gallery')),
+              leading: Icon(
+                Icons.photo_library,
+                color: ThemeHelper.getIconColor(context),
+              ),
+              title: Text(
+                context.tr('choose_from_gallery'),
+                style: TextStyle(color: ThemeHelper.getTextColor(context)),
+              ),
               onTap: () => Navigator.pop(context, ImageSource.gallery),
             ),
             ListTile(
-              leading: const Icon(Icons.cancel),
-              title: Text(context.tr('cancel')),
+              leading: Icon(
+                Icons.cancel,
+                color: ThemeHelper.getIconColor(context),
+              ),
+              title: Text(
+                context.tr('cancel'),
+                style: TextStyle(color: ThemeHelper.getTextColor(context)),
+              ),
               onTap: () => Navigator.pop(context),
             ),
           ],
@@ -285,7 +304,10 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
     final conversationAsync = ref.watch(chatDetailProvider(widget.conversationId));
     final notifier = ref.read(chatDetailProvider(widget.conversationId).notifier);
 
+    final isDark = ThemeHelper.isDarkMode(context);
+    
     return Scaffold(
+      backgroundColor: ThemeHelper.getScaffoldBackgroundColor(context),
       appBar: AppBar(
         elevation: 0,
         flexibleSpace: Container(
@@ -293,10 +315,15 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [
-                Colors.blue.shade400,
-                Colors.blue.shade600,
-              ],
+              colors: isDark
+                  ? [
+                      Colors.blue.shade700,
+                      Colors.blue.shade900,
+                    ]
+                  : [
+                      Colors.blue.shade400,
+                      Colors.blue.shade600,
+                    ],
             ),
           ),
         ),
@@ -326,18 +353,28 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
         actions: [
           PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert),
-            color: Colors.white,
+            color: ThemeHelper.getPopupMenuBackgroundColor(context),
             onSelected: (value) async {
               if (value == 'delete') {
                 final confirm = await showDialog<bool>(
                   context: context,
                   builder: (context) => AlertDialog(
-                    title: Text(context.tr('delete_conversation')),
-                    content: Text(context.tr('confirm_delete_conversation')),
+                    backgroundColor: ThemeHelper.getDialogBackgroundColor(context),
+                    title: Text(
+                      context.tr('delete_conversation'),
+                      style: TextStyle(color: ThemeHelper.getTextColor(context)),
+                    ),
+                    content: Text(
+                      context.tr('confirm_delete_conversation'),
+                      style: TextStyle(color: ThemeHelper.getSecondaryTextColor(context)),
+                    ),
                     actions: [
                       TextButton(
                         onPressed: () => Navigator.pop(context, false),
-                        child: Text(context.tr('cancel')),
+                        child: Text(
+                          context.tr('cancel'),
+                          style: TextStyle(color: ThemeHelper.getTextColor(context)),
+                        ),
                       ),
                       TextButton(
                         onPressed: () => Navigator.pop(context, true),
@@ -380,7 +417,10 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
                   children: [
                     const Icon(Icons.delete, color: Colors.red),
                     const SizedBox(width: 8),
-                    Text(context.tr('delete_conversation')),
+                    Text(
+                      context.tr('delete_conversation'),
+                      style: TextStyle(color: ThemeHelper.getTextColor(context)),
+                    ),
                   ],
                 ),
               ),
@@ -389,12 +429,19 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
         ],
       ),
       body: conversationAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => Center(
+          child: CircularProgressIndicator(
+            color: ThemeHelper.getPrimaryColor(context),
+          ),
+        ),
         error: (e, st) => Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text('${context.tr('error')}: $e'),
+              Text(
+                '${context.tr('error')}: $e',
+                style: TextStyle(color: ThemeHelper.getTextColor(context)),
+              ),
               const SizedBox(height: 16),
               ElevatedButton(
                 onPressed: () {
@@ -451,12 +498,19 @@ class _ReplyToBanner extends ConsumerWidget {
     // Watch locale và translation cache để rebuild khi đổi ngôn ngữ
     ref.watch(localeProvider);
     ref.watch(translationCacheProvider);
+    final isDark = ThemeHelper.isDarkMode(context);
+    
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: Colors.blue.shade50,
+        color: isDark
+            ? Colors.blue.shade900.withOpacity(0.3)
+            : Colors.blue.shade50,
         border: Border(
-          left: BorderSide(color: Colors.blue, width: 4),
+          left: BorderSide(
+            color: ThemeHelper.getPrimaryColor(context),
+            width: 4,
+          ),
         ),
       ),
       child: Row(
@@ -471,7 +525,7 @@ class _ReplyToBanner extends ConsumerWidget {
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 13,
-                    color: Colors.blue.shade700,
+                    color: ThemeHelper.getPrimaryColor(context),
                   ),
                 ),
                 const SizedBox(height: 2),
@@ -481,14 +535,18 @@ class _ReplyToBanner extends ConsumerWidget {
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontSize: 12,
-                    color: Colors.grey.shade700,
+                    color: ThemeHelper.getSecondaryTextColor(context),
                   ),
                 ),
               ],
             ),
           ),
           IconButton(
-            icon: Icon(Icons.close, size: 20, color: Colors.grey.shade600),
+            icon: Icon(
+              Icons.close,
+              size: 20,
+              color: ThemeHelper.getSecondaryIconColor(context),
+            ),
             onPressed: onCancel,
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints(),
@@ -516,6 +574,8 @@ class _MessageList extends ConsumerWidget {
     ref.watch(localeProvider);
     ref.watch(translationCacheProvider);
     if (conversation.messages.isEmpty) {
+      final isDark = ThemeHelper.isDarkMode(context);
+      
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -523,20 +583,22 @@ class _MessageList extends ConsumerWidget {
             Container(
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                color: Colors.blue.shade50,
+                color: isDark
+                    ? Colors.blue.shade900.withOpacity(0.3)
+                    : Colors.blue.shade50,
                 shape: BoxShape.circle,
               ),
               child: Icon(
                 Icons.chat_bubble_outline,
                 size: 64,
-                color: Colors.blue.shade300,
+                color: ThemeHelper.getPrimaryColor(context).withOpacity(0.7),
               ),
             ),
             const SizedBox(height: 24),
             Text(
               context.tr('no_messages_yet'),
               style: TextStyle(
-                color: Colors.grey.shade700,
+                color: ThemeHelper.getTextColor(context),
                 fontSize: 18,
                 fontWeight: FontWeight.w500,
               ),
@@ -545,7 +607,7 @@ class _MessageList extends ConsumerWidget {
             Text(
               context.tr('start_conversation'),
               style: TextStyle(
-                color: Colors.grey.shade500,
+                color: ThemeHelper.getSecondaryTextColor(context),
                 fontSize: 14,
               ),
             ),
@@ -557,18 +619,21 @@ class _MessageList extends ConsumerWidget {
     sortedMessages.sort((a, b) {
       return a.createdAt.millisecondsSinceEpoch.compareTo(b.createdAt.millisecondsSinceEpoch);
     });
-    return ListView.builder(
-      controller: scrollController,
-      reverse: false,
-      padding: const EdgeInsets.all(16),
-      itemCount: sortedMessages.length,
-      itemBuilder: (context, index) {
-        final message = sortedMessages[index];
-        return _MessageBubble(
-          message: message,
-          onReply: () => onReply(message),
-        );
-      },
+    return Container(
+      color: ThemeHelper.getScaffoldBackgroundColor(context),
+      child: ListView.builder(
+        controller: scrollController,
+        reverse: false,
+        padding: const EdgeInsets.all(16),
+        itemCount: sortedMessages.length,
+        itemBuilder: (context, index) {
+          final message = sortedMessages[index];
+          return _MessageBubble(
+            message: message,
+            onReply: () => onReply(message),
+          );
+        },
+      ),
     );
   }
 }
@@ -588,6 +653,7 @@ class _MessageBubble extends ConsumerWidget {
     ref.watch(localeProvider);
     ref.watch(translationCacheProvider);
     final isMe = message.isMine;
+    final isDark = ThemeHelper.isDarkMode(context);
     final baseUrl = 'http://apivhs.cuahangkinhdoanh.com';
 
     Widget messageContent = Container(
@@ -596,7 +662,11 @@ class _MessageBubble extends ConsumerWidget {
         vertical: 12,
       ),
       decoration: BoxDecoration(
-        color: isMe ? Colors.blue.shade600 : Colors.grey.shade100,
+        color: isMe
+            ? ThemeHelper.getPrimaryColor(context)
+            : isDark
+                ? const Color(0xFF2D2D2D)
+                : Colors.grey.shade100,
         borderRadius: BorderRadius.only(
           topLeft: const Radius.circular(20),
           topRight: const Radius.circular(20),
@@ -605,7 +675,7 @@ class _MessageBubble extends ConsumerWidget {
         ),
         boxShadow: [
           BoxShadow(
-            color: (isMe ? Colors.blue : Colors.grey).withOpacity(0.3),
+            color: ThemeHelper.getShadowColor(context),
             blurRadius: 8,
             offset: const Offset(0, 2),
             spreadRadius: 0,
@@ -624,12 +694,15 @@ class _MessageBubble extends ConsumerWidget {
                 width: 200,
                 height: 200,
                 fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) {
+                  errorBuilder: (context, error, stackTrace) {
                   return Container(
                     width: 200,
                     height: 200,
-                    color: Colors.grey.shade300,
-                    child: const Icon(Icons.error),
+                    color: isDark ? Colors.grey.shade800 : Colors.grey.shade300,
+                    child: Icon(
+                      Icons.error,
+                      color: ThemeHelper.getIconColor(context),
+                    ),
                   );
                 },
               )
@@ -653,25 +726,32 @@ class _MessageBubble extends ConsumerWidget {
                     placeholder: (context, url) => Container(
                       width: 200,
                       height: 200,
-                      color: Colors.grey.shade200,
-                      child: const Center(
-                        child: CircularProgressIndicator(strokeWidth: 2),
+                      color: isDark ? Colors.grey.shade800 : Colors.grey.shade200,
+                      child: Center(
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: ThemeHelper.getPrimaryColor(context),
+                        ),
                       ),
                     ),
                     errorWidget: (context, url, error) => Container(
                       width: 200,
                       height: 200,
-                      color: Colors.grey.shade300,
+                      color: isDark ? Colors.grey.shade800 : Colors.grey.shade300,
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Icon(Icons.broken_image, size: 48, color: Colors.grey),
+                          Icon(
+                            Icons.broken_image,
+                            size: 48,
+                            color: ThemeHelper.getSecondaryIconColor(context),
+                          ),
                           const SizedBox(height: 8),
                           Text(
                             context.tr('cannot_load_image'),
                             style: TextStyle(
                               fontSize: 12,
-                              color: Colors.grey.shade600,
+                              color: ThemeHelper.getSecondaryTextColor(context),
                             ),
                           ),
                         ],
@@ -687,7 +767,9 @@ class _MessageBubble extends ConsumerWidget {
             Text(
               message.body!,
               style: TextStyle(
-                color: isMe ? Colors.white : Colors.black87,
+                color: isMe
+                    ? Colors.white
+                    : ThemeHelper.getTextColor(context),
               ),
             ),
           ],
@@ -701,7 +783,7 @@ class _MessageBubble extends ConsumerWidget {
                   fontSize: 10,
                   color: isMe
                       ? Colors.white70
-                      : Colors.grey.shade600,
+                      : ThemeHelper.getSecondaryTextColor(context),
                 ),
               ),
               if (isMe) ...[
@@ -736,7 +818,7 @@ class _MessageBubble extends ConsumerWidget {
                   message.sender.accountName,
                   style: TextStyle(
                     fontSize: 12,
-                    color: Colors.grey.shade600,
+                    color: ThemeHelper.getSecondaryTextColor(context),
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -752,11 +834,15 @@ class _MessageBubble extends ConsumerWidget {
                 decoration: BoxDecoration(
                   color: isMe
                       ? Colors.black.withOpacity(0.15)
-                      : Colors.grey.shade200,
+                      : isDark
+                          ? Colors.grey.shade800
+                          : Colors.grey.shade200,
                   borderRadius: BorderRadius.circular(8),
                   border: Border(
                     left: BorderSide(
-                      color: isMe ? Colors.white70 : Colors.blue,
+                      color: isMe
+                          ? Colors.white70
+                          : ThemeHelper.getPrimaryColor(context),
                       width: 3,
                     ),
                   ),
@@ -769,7 +855,9 @@ class _MessageBubble extends ConsumerWidget {
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.bold,
-                        color: isMe ? Colors.white : Colors.blue.shade700,
+                        color: isMe
+                            ? Colors.white
+                            : ThemeHelper.getPrimaryColor(context),
                       ),
                     ),
                     const SizedBox(height: 2),
@@ -779,7 +867,9 @@ class _MessageBubble extends ConsumerWidget {
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         fontSize: 11,
-                        color: isMe ? Colors.white70 : Colors.grey.shade700,
+                        color: isMe
+                            ? Colors.white70
+                            : ThemeHelper.getSecondaryTextColor(context),
                       ),
                     ),
                   ],
@@ -801,7 +891,7 @@ class _MessageBubble extends ConsumerWidget {
                     icon: Icon(
                       Icons.reply,
                       size: 18,
-                      color: Colors.grey.shade500,
+                      color: ThemeHelper.getSecondaryIconColor(context),
                     ),
                     onPressed: onReply,
                     tooltip: context.tr('reply'),
@@ -887,13 +977,15 @@ class _MessageInput extends ConsumerWidget {
     // Watch locale và translation cache để rebuild khi đổi ngôn ngữ
     ref.watch(localeProvider);
     ref.watch(translationCacheProvider);
+    final isDark = ThemeHelper.isDarkMode(context);
+    
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: ThemeHelper.getCardBackgroundColor(context),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.shade300.withOpacity(0.5),
+            color: ThemeHelper.getShadowColor(context),
             blurRadius: 12,
             offset: const Offset(0, -2),
             spreadRadius: 0,
@@ -906,18 +998,21 @@ class _MessageInput extends ConsumerWidget {
             Container(
               margin: const EdgeInsets.only(right: 8),
               decoration: BoxDecoration(
-                color: Colors.grey.shade100,
+                color: ThemeHelper.getInputBackgroundColor(context),
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.grey.shade300,
+                    color: ThemeHelper.getShadowColor(context),
                     blurRadius: 4,
                     offset: const Offset(0, 2),
                   ),
                 ],
               ),
               child: IconButton(
-                icon: Icon(Icons.image_outlined, color: Colors.grey.shade700),
+                icon: Icon(
+                  Icons.image_outlined,
+                  color: ThemeHelper.getIconColor(context),
+                ),
                 onPressed: onPickImage,
                 tooltip: context.tr('send_image'),
               ),
@@ -925,18 +1020,21 @@ class _MessageInput extends ConsumerWidget {
             Expanded(
               child: Container(
                 decoration: BoxDecoration(
-                  color: Colors.grey.shade50,
+                  color: ThemeHelper.getInputBackgroundColor(context),
                   borderRadius: BorderRadius.circular(24),
                   border: Border.all(
-                    color: Colors.grey.shade200,
+                    color: ThemeHelper.getBorderColor(context),
                     width: 1,
                   ),
                 ),
                 child: TextField(
                   controller: controller,
+                  style: TextStyle(color: ThemeHelper.getTextColor(context)),
                   decoration: InputDecoration(
                     hintText: context.tr('type_a_message'),
-                    hintStyle: TextStyle(color: Colors.grey.shade500),
+                    hintStyle: TextStyle(
+                      color: ThemeHelper.getTertiaryTextColor(context),
+                    ),
                     border: InputBorder.none,
                     contentPadding: const EdgeInsets.symmetric(
                       horizontal: 20,
@@ -952,11 +1050,11 @@ class _MessageInput extends ConsumerWidget {
             const SizedBox(width: 8),
             Container(
               decoration: BoxDecoration(
-                color: Colors.blue.shade600,
+                color: ThemeHelper.getPrimaryColor(context),
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.blue.withOpacity(0.4),
+                    color: ThemeHelper.getPrimaryColor(context).withOpacity(0.4),
                     blurRadius: 8,
                     offset: const Offset(0, 2),
                     spreadRadius: 0,
@@ -1029,7 +1127,7 @@ class _AppBarTitleWidget extends ConsumerWidget {
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.grey.shade300,
+                    color: ThemeHelper.getShadowColor(context),
                     blurRadius: 4,
                     offset: const Offset(0, 2),
                   ),
@@ -1046,24 +1144,27 @@ class _AppBarTitleWidget extends ConsumerWidget {
                     width: 40,
                     height: 40,
                     decoration: BoxDecoration(
-                      color: Colors.grey.shade200,
+                      color: Colors.white.withOpacity(0.2),
                       shape: BoxShape.circle,
                     ),
                     child: const Center(
-                      child: CircularProgressIndicator(strokeWidth: 2),
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
                     ),
                   ),
                   errorWidget: (context, url, error) => Container(
                     width: 40,
                     height: 40,
                     decoration: BoxDecoration(
-                      color: Colors.grey.shade200,
+                      color: Colors.white.withOpacity(0.2),
                       shape: BoxShape.circle,
                     ),
-                    child: Icon(
+                    child: const Icon(
                       Icons.person,
                       size: 20,
-                      color: Colors.grey.shade400,
+                      color: Colors.white70,
                     ),
                   ),
                 ),
@@ -1072,13 +1173,13 @@ class _AppBarTitleWidget extends ConsumerWidget {
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
-                  color: Colors.grey.shade200,
+                  color: Colors.white.withOpacity(0.2),
                   shape: BoxShape.circle,
                 ),
-                child: Icon(
+                child: const Icon(
                   Icons.person,
                   size: 20,
-                  color: Colors.grey.shade400,
+                  color: Colors.white70,
                 ),
               ),
             ),
