@@ -156,33 +156,6 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
               ],
             ),
           ),
-          // Center pin indicator
-          Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.location_on_rounded,
-                  size: 48,
-                  color: ThemeHelper.getPrimaryColor(context),
-                  shadows: [
-                    Shadow(
-                      blurRadius: 8,
-                      color: ThemeHelper.getShadowColor(context),
-                    ),
-                  ],
-                ),
-                Container(
-                  width: 8,
-                  height: 8,
-                  decoration: BoxDecoration(
-                    color: ThemeHelper.getPrimaryColor(context),
-                    shape: BoxShape.circle,
-                  ),
-                ),
-              ],
-            ),
-          ),
           // Bottom button
           Positioned(
             bottom: 0,

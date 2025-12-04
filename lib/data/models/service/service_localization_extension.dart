@@ -67,13 +67,12 @@ extension ServiceLocalizationExtension on ServiceModel {
   }
   
   /// Lấy unitType theo locale hiện tại
+  /// Backend trả về tiếng Anh, nếu app ở tiếng Việt thì dịch sang tiếng Việt
+  /// Nếu app ở tiếng Anh thì giữ nguyên tiếng Anh
   String getLocalizedUnitType(WidgetRef ref) {
-    final locale = ref.read(localeProvider);
+    // Watch locale để rebuild khi đổi ngôn ngữ
+    final locale = ref.watch(localeProvider);
     final isVietnamese = locale.languageCode == 'vi';
-    
-    if (isVietnamese) {
-      return unitType;
-    }
     
     // Watch translation cache
     ref.watch(translationCacheProvider);
@@ -135,13 +134,11 @@ extension ServiceDetailLocalizationExtension on ServiceDetail {
   }
   
   /// Lấy unitType theo locale hiện tại
+  /// Backend trả về tiếng Anh, nếu app ở tiếng Việt thì dịch sang tiếng Việt
+  /// Nếu app ở tiếng Anh thì giữ nguyên tiếng Anh
   String getLocalizedUnitType(WidgetRef ref) {
-    final locale = ref.read(localeProvider);
-    final isVietnamese = locale.languageCode == 'vi';
-    
-    if (isVietnamese) {
-      return unitType;
-    }
+    // Watch locale để rebuild khi đổi ngôn ngữ
+    final locale = ref.watch(localeProvider);
     
     // Watch translation cache
     ref.watch(translationCacheProvider);
