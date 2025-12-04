@@ -149,7 +149,7 @@ class CheckoutNotifier extends AsyncNotifier<void> {
           : allCartItems;
 
       if (cartItems.isEmpty) {
-        throw Exception('Không có dịch vụ nào được chọn');
+        throw Exception('No services selected'); // Will be translated in UI
       }
 
       final result = await _bookingRepo.createFromCart(

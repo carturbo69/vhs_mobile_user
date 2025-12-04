@@ -5,15 +5,60 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:vhs_mobile_user/data/models/report/report_models.dart';
 import 'package:vhs_mobile_user/ui/report/report_viewmodel.dart';
 import 'package:vhs_mobile_user/ui/core/theme_helper.dart';
+import 'package:vhs_mobile_user/l10n/extensions/localization_extension.dart';
+import 'package:vhs_mobile_user/providers/locale_provider.dart';
+import 'package:vhs_mobile_user/services/translation_cache_provider.dart';
+import 'package:vhs_mobile_user/services/data_translation_service.dart';
 
 class ReportDetailScreen extends ConsumerWidget {
   final String reportId;
 
   const ReportDetailScreen({super.key, required this.reportId});
 
+  String _getReportTypeDisplayName(BuildContext context, ReportTypeEnum type) {
+    switch (type) {
+      case ReportTypeEnum.serviceQuality:
+        return context.tr('report_type_service_quality');
+      case ReportTypeEnum.providerMisconduct:
+        return context.tr('report_type_provider_misconduct');
+      case ReportTypeEnum.staffMisconduct:
+        return context.tr('report_type_staff_misconduct');
+      case ReportTypeEnum.dispute:
+        return context.tr('report_type_dispute');
+      case ReportTypeEnum.technicalIssue:
+        return context.tr('report_type_technical_issue');
+      case ReportTypeEnum.refundRequest:
+        return context.tr('refund_request');
+      case ReportTypeEnum.other:
+        return context.tr('report_type_other');
+    }
+  }
+
+  String _getStatusDisplayName(BuildContext context, String status) {
+    final s = status.toLowerCase();
+    if (s == 'pending') return context.tr('report_status_pending');
+    if (s == 'inreview') return context.tr('report_status_in_review');
+    if (s == 'resolved') return context.tr('report_status_resolved');
+    if (s == 'rejected') return context.tr('report_status_rejected');
+    return status;
+  }
+
+  String _getRefundStatusDisplayName(BuildContext context, String status) {
+    final s = status.toLowerCase();
+    if (s == 'pending') return context.tr('refund_pending');
+    if (s == 'approved') return context.tr('refund_approved');
+    if (s == 'rejected') return context.tr('refund_rejected');
+    return status;
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Watch locale and translation cache to trigger rebuilds
+    ref.watch(localeProvider);
+    ref.watch(translationCacheProvider);
+    
     final asyncReport = ref.watch(reportByIdProvider(reportId));
+    final translationService = DataTranslationService(ref);
 
     return Scaffold(
       appBar: AppBar(
@@ -33,9 +78,9 @@ class ReportDetailScreen extends ConsumerWidget {
             ),
           ),
         ),
-        title: const Text(
-          "Chi tiết báo cáo",
-          style: TextStyle(
+        title: Text(
+          context.tr('report_detail'),
+          style: const TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.bold,
             fontSize: 20,
@@ -54,7 +99,7 @@ class ReportDetailScreen extends ConsumerWidget {
               onPressed: () {
                 ref.invalidate(reportByIdProvider(reportId));
               },
-              tooltip: "Làm mới",
+              tooltip: context.tr('refresh'),
             ),
           ),
         ],
@@ -72,7 +117,7 @@ class ReportDetailScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 24),
               Text(
-                "Đang tải...",
+                context.tr('loading'),
                 style: TextStyle(
                   color: ThemeHelper.getSecondaryTextColor(context),
                   fontSize: 16,
@@ -104,7 +149,7 @@ class ReportDetailScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 24),
                 Text(
-                  "Đã xảy ra lỗi",
+                  context.tr('error_occurred'),
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
@@ -124,9 +169,9 @@ class ReportDetailScreen extends ConsumerWidget {
                 ElevatedButton.icon(
                   onPressed: () => ref.invalidate(reportByIdProvider(reportId)),
                   icon: const Icon(Icons.refresh_rounded, size: 20),
-                  label: const Text(
-                    "Thử lại",
-                    style: TextStyle(
+                  label: Text(
+                    context.tr('try_again'),
+                    style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
                     ),
@@ -181,7 +226,7 @@ class ReportDetailScreen extends ConsumerWidget {
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      report.statusVi,
+                      _getStatusDisplayName(context, report.status),
                       style: TextStyle(
                         color: _getStatusColor(context, report.status),
                         fontWeight: FontWeight.bold,
@@ -196,8 +241,8 @@ class ReportDetailScreen extends ConsumerWidget {
               // Loại báo cáo
               _buildInfoCard(
                 icon: Icons.category_rounded,
-                label: "Loại báo cáo",
-                value: _getReportTypeDisplay(report),
+                label: context.tr('report_type_label'),
+                value: _getReportTypeDisplay(context, report),
                 context: context,
               ),
               const SizedBox(height: 16),
@@ -205,8 +250,8 @@ class ReportDetailScreen extends ConsumerWidget {
               // Tiêu đề
               _buildInfoCard(
                 icon: Icons.title_rounded,
-                label: "Tiêu đề",
-                value: report.title,
+                label: context.tr('report_title'),
+                value: translationService.smartTranslate(report.title),
                 context: context,
               ),
               const SizedBox(height: 16),
@@ -217,7 +262,7 @@ class ReportDetailScreen extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      "Mô tả",
+                      context.tr('description'),
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.bold,
@@ -225,12 +270,18 @@ class ReportDetailScreen extends ConsumerWidget {
                       ),
                     ),
                     const SizedBox(height: 4),
-                    Text(
-                      report.description!,
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: ThemeHelper.getTextColor(context),
-                      ),
+                    FutureBuilder<String>(
+                      future: translationService.smartTranslateAsync(report.description!),
+                      builder: (context, snapshot) {
+                        final description = snapshot.data ?? report.description!;
+                        return Text(
+                          description,
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: ThemeHelper.getTextColor(context),
+                          ),
+                        );
+                      },
                     ),
                     const SizedBox(height: 16),
                   ],
@@ -240,7 +291,7 @@ class ReportDetailScreen extends ConsumerWidget {
               if (report.createdAt != null)
                 _buildInfoCard(
                   icon: Icons.calendar_today_rounded,
-                  label: "Ngày tạo",
+                  label: context.tr('created_date'),
                   value: DateFormat('dd/MM/yyyy HH:mm').format(report.createdAt!),
                   context: context,
                 ),
@@ -284,7 +335,7 @@ class ReportDetailScreen extends ConsumerWidget {
                           ),
                           const SizedBox(width: 12),
                           Text(
-                            "Hình ảnh đính kèm",
+                            context.tr('attached_images'),
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
@@ -404,7 +455,7 @@ class ReportDetailScreen extends ConsumerWidget {
                           ),
                           const SizedBox(width: 12),
                           Text(
-                            "Ghi chú giải quyết",
+                            context.tr('resolution_note'),
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
@@ -433,13 +484,19 @@ class ReportDetailScreen extends ConsumerWidget {
                           ),
                         ],
                       ),
-                      child: Text(
-                        report.resolutionNote!,
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: ThemeHelper.getTextColor(context),
-                          height: 1.5,
-                        ),
+                      child: FutureBuilder<String>(
+                        future: translationService.smartTranslateAsync(report.resolutionNote!),
+                        builder: (context, snapshot) {
+                          final note = snapshot.data ?? report.resolutionNote!;
+                          return Text(
+                            note,
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: ThemeHelper.getTextColor(context),
+                              height: 1.5,
+                            ),
+                          );
+                        },
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -492,7 +549,7 @@ class ReportDetailScreen extends ConsumerWidget {
                           ),
                           const SizedBox(width: 12),
                           Text(
-                            "Thông tin hoàn tiền",
+                            context.tr('refund_info'),
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
@@ -507,7 +564,7 @@ class ReportDetailScreen extends ConsumerWidget {
                     if (report.refundAmount != null)
                       _buildInfoCard(
                         icon: Icons.attach_money_rounded,
-                        label: "Số tiền",
+                        label: context.tr('amount'),
                         value: "${NumberFormat('#,###').format(report.refundAmount!.toInt())} ₫",
                         context: context,
                       ),
@@ -515,31 +572,31 @@ class ReportDetailScreen extends ConsumerWidget {
                     if (report.refundStatus != null)
                       _buildInfoCard(
                         icon: Icons.info_rounded,
-                        label: "Trạng thái",
-                        value: _getRefundStatusVi(report.refundStatus!),
+                        label: context.tr('refund_status'),
+                        value: _getRefundStatusDisplayName(context, report.refundStatus!),
                         context: context,
                       ),
                     const SizedBox(height: 12),
                     if (report.bankName != null)
                       _buildInfoCard(
                         icon: Icons.account_balance_rounded,
-                        label: "Ngân hàng",
-                        value: report.bankName!,
+                        label: context.tr('bank_name'),
+                        value: translationService.smartTranslate(report.bankName!),
                         context: context,
                       ),
                     const SizedBox(height: 12),
                     if (report.accountHolderName != null)
                       _buildInfoCard(
                         icon: Icons.person_rounded,
-                        label: "Chủ tài khoản",
-                        value: report.accountHolderName!,
+                        label: context.tr('owner'),
+                        value: translationService.smartTranslate(report.accountHolderName!),
                         context: context,
                       ),
                     const SizedBox(height: 12),
                     if (report.bankAccountNumber != null)
                       _buildInfoCard(
                         icon: Icons.credit_card_rounded,
-                        label: "Số tài khoản",
+                        label: context.tr('bank_account_number'),
                         value: report.bankAccountNumber!,
                         context: context,
                       ),
@@ -666,18 +723,10 @@ class ReportDetailScreen extends ConsumerWidget {
     return Icons.info_rounded;
   }
 
-  String _getRefundStatusVi(String status) {
-    final s = status.toLowerCase();
-    if (s == 'pending') return 'Chờ duyệt';
-    if (s == 'approved') return 'Đã duyệt';
-    if (s == 'rejected') return 'Đã từ chối';
-    return status;
-  }
-
-  String _getReportTypeDisplay(ReadReportDTO report) {
+  String _getReportTypeDisplay(BuildContext context, ReadReportDTO report) {
     // Nếu là RefundRequest thì hiển thị "Yêu cầu hoàn tiền"
     if (report.reportType == ReportTypeEnum.refundRequest) {
-      return "Yêu cầu hoàn tiền";
+      return context.tr('refund_request');
     }
     
     // Nếu là Other nhưng có thông tin ngân hàng hoặc description chứa thông tin hoàn tiền
@@ -688,15 +737,16 @@ class ReportDetailScreen extends ConsumerWidget {
                           (report.bankAccountNumber != null && report.bankAccountNumber!.isNotEmpty);
       
       final hasRefundInDescription = report.description != null && 
-          report.description!.contains("THÔNG TIN NGÂN HÀNG ĐỂ HOÀN TIỀN");
+          (report.description!.contains(context.tr('bank_info_header')) ||
+           report.description!.contains("THÔNG TIN NGÂN HÀNG ĐỂ HOÀN TIỀN"));
       
       if (hasBankInfo || hasRefundInDescription) {
-        return "Yêu cầu hoàn tiền";
+        return context.tr('refund_request');
       }
     }
     
-    // Mặc định hiển thị theo displayName
-    return report.reportType.displayName;
+    // Mặc định hiển thị theo displayName đã dịch
+    return _getReportTypeDisplayName(context, report.reportType);
   }
 }
 

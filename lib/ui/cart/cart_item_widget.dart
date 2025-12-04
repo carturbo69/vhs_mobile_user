@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:vhs_mobile_user/data/models/cart/cart_item_model.dart';
 import 'package:vhs_mobile_user/ui/core/theme_helper.dart';
+import 'package:vhs_mobile_user/l10n/extensions/localization_extension.dart';
+import 'package:vhs_mobile_user/providers/locale_provider.dart';
+import 'package:vhs_mobile_user/services/translation_cache_provider.dart';
+import 'package:vhs_mobile_user/services/data_translation_service.dart';
 
 // Màu xanh theo web - Sky blue palette
 const Color primaryBlue = Color(0xFF0284C7); // Sky-600
@@ -9,7 +14,7 @@ const Color darkBlue = Color(0xFF0369A1); // Sky-700
 const Color lightBlue = Color(0xFFE0F2FE); // Sky-100
 const Color accentBlue = Color(0xFFBAE6FD); // Sky-200
 
-class CartItemWidget extends StatelessWidget {
+class CartItemWidget extends ConsumerWidget {
   final CartItemModel item;
   final bool isSelected;
   final ValueChanged<bool?>? onSelectChanged;
@@ -39,9 +44,22 @@ class CartItemWidget extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Watch locale và translation cache để rebuild khi đổi ngôn ngữ hoặc có translation mới
+    ref.watch(localeProvider);
+    ref.watch(translationCacheProvider);
+    
     final img = item.serviceImages.isNotEmpty ? item.serviceImages.first : null;
     final isDark = ThemeHelper.isDarkMode(context);
+    
+    // Dịch serviceName nếu cần
+    final locale = ref.read(localeProvider);
+    final translationService = DataTranslationService(ref);
+    
+    String serviceName = item.serviceName;
+    if (locale.languageCode != 'vi') {
+      serviceName = translationService.smartTranslate(item.serviceName);
+    }
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
@@ -122,7 +140,7 @@ class CartItemWidget extends StatelessWidget {
                 // Service Name
                 Flexible(
                   child: Text(
-                    item.serviceName,
+                    serviceName,
                     style: TextStyle(
                       fontWeight: FontWeight.w600,
                       fontSize: 13,
@@ -188,9 +206,9 @@ class CartItemWidget extends StatelessWidget {
                     borderRadius: BorderRadius.circular(8),
                   ),
                 ),
-                child: const Text(
-                  'Xoá',
-                  style: TextStyle(
+                child: Text(
+                  context.tr('delete_item'),
+                  style: const TextStyle(
                     color: Colors.red,
                     fontSize: 11,
                     fontWeight: FontWeight.w600,

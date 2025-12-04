@@ -7,6 +7,10 @@ import 'package:vhs_mobile_user/data/models/report/report_models.dart';
 import 'package:vhs_mobile_user/ui/report/report_viewmodel.dart';
 import 'package:go_router/go_router.dart';
 import 'package:vhs_mobile_user/ui/core/theme_helper.dart';
+import 'package:vhs_mobile_user/l10n/extensions/localization_extension.dart';
+import 'package:vhs_mobile_user/providers/locale_provider.dart';
+import 'package:vhs_mobile_user/services/translation_cache_provider.dart';
+import 'package:vhs_mobile_user/services/data_translation_service.dart';
 
 class ReportScreen extends ConsumerStatefulWidget {
   final HistoryBookingDetail bookingDetail;
@@ -49,7 +53,7 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
   Future<void> _pickImages() async {
     if (_selectedImages.length >= 5) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Tối đa 5 hình ảnh")),
+        SnackBar(content: Text(context.tr('max_5_images'))),
       );
       return;
     }
@@ -68,7 +72,7 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Lỗi khi chọn ảnh: $e")),
+        SnackBar(content: Text("${context.tr('error_picking_image')}: $e")),
       );
     }
   }
@@ -97,7 +101,7 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
     // Validation
     if (_selectedType == null) {
       setState(() {
-        _reportTypeError = "Vui lòng chọn loại báo cáo";
+        _reportTypeError = context.tr('please_select_report_type');
       });
       hasError = true;
     }
@@ -105,12 +109,12 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
     final title = _titleController.text.trim();
     if (title.isEmpty) {
       setState(() {
-        _titleError = "Vui lòng nhập tiêu đề báo cáo";
+        _titleError = context.tr('please_enter_report_title');
       });
       hasError = true;
     } else if (title.length > 100) {
       setState(() {
-        _titleError = "Tiêu đề không được vượt quá 100 ký tự";
+        _titleError = context.tr('title_max_length');
       });
       hasError = true;
     }
@@ -118,12 +122,12 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
     final description = _descriptionController.text.trim();
     if (description.isEmpty) {
       setState(() {
-        _descriptionError = "Vui lòng nhập mô tả chi tiết";
+        _descriptionError = context.tr('please_enter_description');
       });
       hasError = true;
     } else if (description.length > 1000) {
       setState(() {
-        _descriptionError = "Mô tả không được vượt quá 1000 ký tự";
+        _descriptionError = context.tr('description_max_length');
       });
       hasError = true;
     }
@@ -136,26 +140,26 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
 
       if (bankName.isEmpty) {
         setState(() {
-          _bankNameError = "Vui lòng nhập tên ngân hàng";
+          _bankNameError = context.tr('please_enter_bank_name');
         });
         hasError = true;
       }
 
       if (accountHolder.isEmpty) {
         setState(() {
-          _accountHolderError = "Vui lòng nhập tên chủ tài khoản";
+          _accountHolderError = context.tr('please_enter_account_holder');
         });
         hasError = true;
       }
 
       if (bankAccount.isEmpty) {
         setState(() {
-          _bankAccountError = "Vui lòng nhập số tài khoản";
+          _bankAccountError = context.tr('please_enter_bank_account');
         });
         hasError = true;
       } else if (!RegExp(r'^\d{6,20}$').hasMatch(bankAccount)) {
         setState(() {
-          _bankAccountError = "Số tài khoản phải là số và có từ 6 đến 20 ký tự";
+          _bankAccountError = context.tr('bank_account_validation');
         });
         hasError = true;
       }
@@ -187,10 +191,10 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
         final accountHolder = _accountHolderController.text.trim();
         final bankAccount = _bankAccountController.text.trim();
         
-        final bankInfo = "\n\n--- THÔNG TIN NGÂN HÀNG ĐỂ HOÀN TIỀN ---\n" +
-                        "Tên ngân hàng: $bankName\n" +
-                        "Tên chủ tài khoản: $accountHolder\n" +
-                        "Số tài khoản: $bankAccount";
+        final bankInfo = "\n\n${context.tr('bank_info_header')}\n" +
+                        "${context.tr('bank_name_label')}: $bankName\n" +
+                        "${context.tr('account_holder_label')}: $accountHolder\n" +
+                        "${context.tr('bank_account_label')}: $bankAccount";
         
         finalDescription = finalDescription != null 
             ? finalDescription + bankInfo 
@@ -214,8 +218,8 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
       if (mounted) {
         if (result != null) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text("Báo cáo đã được gửi thành công!"),
+            SnackBar(
+              content: Text(context.tr('report_sent_success')),
               backgroundColor: Colors.green,
             ),
           );
@@ -223,8 +227,8 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
           context.pop(true); // Return true để indicate success
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text("Gửi báo cáo thất bại. Vui lòng thử lại."),
+            SnackBar(
+              content: Text(context.tr('report_send_failed')),
               backgroundColor: Colors.red,
             ),
           );
@@ -272,8 +276,8 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
           if (mounted) {
             if (retryResult != null) {
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text("Báo cáo đã được gửi thành công!"),
+                SnackBar(
+                  content: Text(context.tr('report_sent_success')),
                   backgroundColor: Colors.green,
                 ),
               );
@@ -287,9 +291,9 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
       }
       
       if (mounted) {
-        String errorMessage = "Lỗi: ${e.toString()}";
+        String errorMessage = "${context.tr('error')}: ${e.toString()}";
         if (e.toString().contains("Booking đã được báo cáo")) {
-          errorMessage = "Đơn hàng này đã được báo cáo trước đó. Mỗi đơn hàng chỉ được báo cáo 1 lần.";
+          errorMessage = context.tr('order_already_reported');
         }
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -307,8 +311,31 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
     }
   }
 
+  String _getReportTypeDisplayName(BuildContext context, ReportTypeEnum type) {
+    switch (type) {
+      case ReportTypeEnum.serviceQuality:
+        return context.tr('report_type_service_quality');
+      case ReportTypeEnum.providerMisconduct:
+        return context.tr('report_type_provider_misconduct');
+      case ReportTypeEnum.staffMisconduct:
+        return context.tr('report_type_staff_misconduct');
+      case ReportTypeEnum.dispute:
+        return context.tr('report_type_dispute');
+      case ReportTypeEnum.technicalIssue:
+        return context.tr('report_type_technical_issue');
+      case ReportTypeEnum.refundRequest:
+        return context.tr('refund_request');
+      case ReportTypeEnum.other:
+        return context.tr('report_type_other');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    // Watch locale and translation cache to trigger rebuilds
+    ref.watch(localeProvider);
+    ref.watch(translationCacheProvider);
+    
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.transparent,
@@ -327,9 +354,9 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
             ),
           ),
         ),
-        title: const Text(
-          "Báo cáo",
-          style: TextStyle(
+        title: Text(
+          context.tr('report'),
+          style: const TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.bold,
             fontSize: 20,
@@ -377,7 +404,7 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
                   ),
                   const SizedBox(width: 12),
                   Text(
-                    "Loại báo cáo *",
+                    "${context.tr('report_type')} *",
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -392,7 +419,7 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
             DropdownButtonFormField<ReportTypeEnum>(
               value: _selectedType,
               decoration: InputDecoration(
-                hintText: "Chọn loại báo cáo",
+                hintText: context.tr('select_report_type'),
                 hintStyle: TextStyle(
                   color: ThemeHelper.getTertiaryTextColor(context),
                 ),
@@ -434,7 +461,7 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
               items: ReportTypeEnum.values.map((type) {
                 return DropdownMenuItem<ReportTypeEnum>(
                   value: type,
-                  child: Text(type.displayName),
+                  child: Text(_getReportTypeDisplayName(context, type)),
                 );
               }).toList(),
               onChanged: (value) {
@@ -480,7 +507,7 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
                   ),
                   const SizedBox(width: 12),
                   Text(
-                    "Tiêu đề *",
+                    "${context.tr('report_title')} *",
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -498,7 +525,7 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
                 color: ThemeHelper.getTextColor(context),
               ),
               decoration: InputDecoration(
-                hintText: "Nhập tiêu đề báo cáo",
+                hintText: context.tr('enter_report_title'),
                 hintStyle: TextStyle(
                   color: ThemeHelper.getTertiaryTextColor(context),
                 ),
@@ -582,7 +609,7 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
                   ),
                   const SizedBox(width: 12),
                   Text(
-                    "Mô tả chi tiết *",
+                    "${context.tr('description')} *",
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -600,7 +627,7 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
                 color: ThemeHelper.getTextColor(context),
               ),
               decoration: InputDecoration(
-                hintText: "Nhập mô tả chi tiết về vấn đề",
+                hintText: context.tr('enter_detailed_description'),
                 hintStyle: TextStyle(
                   color: ThemeHelper.getTertiaryTextColor(context),
                 ),
@@ -681,7 +708,7 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
                         ),
                         const SizedBox(width: 12),
                         Text(
-                          "Thông tin ngân hàng để hoàn tiền",
+                          context.tr('bank_info_refund'),
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
@@ -693,7 +720,7 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      "Điền đầy đủ để nhận hoàn tiền",
+                      context.tr('fill_complete_for_refund'),
                       style: TextStyle(
                         fontSize: 12,
                         color: ThemeHelper.getSecondaryTextColor(context),
@@ -707,11 +734,11 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
                         color: ThemeHelper.getTextColor(context),
                       ),
                       decoration: InputDecoration(
-                        labelText: "Tên ngân hàng *",
+                        labelText: "${context.tr('bank_name')} *",
                         labelStyle: TextStyle(
                           color: ThemeHelper.getSecondaryTextColor(context),
                         ),
-                        hintText: "VD: Vietcombank, Techcombank, BIDV...",
+                        hintText: context.tr('bank_name_example'),
                         hintStyle: TextStyle(
                           color: ThemeHelper.getTertiaryTextColor(context),
                         ),
@@ -766,11 +793,11 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
                         color: ThemeHelper.getTextColor(context),
                       ),
                       decoration: InputDecoration(
-                        labelText: "Tên chủ tài khoản *",
+                        labelText: "${context.tr('account_holder_name')} *",
                         labelStyle: TextStyle(
                           color: ThemeHelper.getSecondaryTextColor(context),
                         ),
-                        hintText: "VD: NGUYEN VAN A",
+                        hintText: context.tr('account_holder_example'),
                         hintStyle: TextStyle(
                           color: ThemeHelper.getTertiaryTextColor(context),
                         ),
@@ -826,11 +853,11 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
                         color: ThemeHelper.getTextColor(context),
                       ),
                       decoration: InputDecoration(
-                        labelText: "Số tài khoản *",
+                        labelText: "${context.tr('bank_account_number')} *",
                         labelStyle: TextStyle(
                           color: ThemeHelper.getSecondaryTextColor(context),
                         ),
-                        hintText: "Chỉ nhập số, từ 6–20 ký tự",
+                        hintText: context.tr('bank_account_hint'),
                         hintStyle: TextStyle(
                           color: ThemeHelper.getTertiaryTextColor(context),
                         ),
@@ -901,7 +928,7 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
-                              "Thông tin ngân hàng được bảo mật và chỉ dùng để hoàn tiền.",
+                              context.tr('bank_info_security'),
                               style: TextStyle(
                                 fontSize: 12,
                                 color: ThemeHelper.getSecondaryTextColor(context),
@@ -952,7 +979,7 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
                   ),
                   const SizedBox(width: 12),
                   Text(
-                    "Hình ảnh đính kèm (tối đa 5)",
+                    context.tr('attached_images_max'),
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -1044,7 +1071,7 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
                     : ThemeHelper.getPrimaryColor(context),
               ),
               label: Text(
-                "Thêm hình ảnh (${_selectedImages.length}/5)",
+                "${context.tr('add_images')} (${_selectedImages.length}/5)",
                 style: TextStyle(
                   color: _selectedImages.length >= 5
                       ? ThemeHelper.getSecondaryTextColor(context)
@@ -1083,7 +1110,7 @@ class _ReportScreenState extends ConsumerState<ReportScreen> {
                       )
                     : const Icon(Icons.send_rounded, size: 20),
                 label: Text(
-                  _isSubmitting ? "Đang gửi..." : "Gửi báo cáo",
+                  _isSubmitting ? context.tr('sending') : context.tr('submit_report'),
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,

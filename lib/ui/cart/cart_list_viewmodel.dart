@@ -5,6 +5,11 @@ import 'package:vhs_mobile_user/data/models/cart/cart_item_model.dart';
 import 'package:vhs_mobile_user/data/repositories/cart_repository.dart';
 import 'package:vhs_mobile_user/data/models/cart/add_cart_item_request.dart'; // nhớ import
 
+// Error message constants - UI layer sẽ dịch các message này
+class CartErrorMessages {
+  static const String serviceAlreadyInCart = 'Dịch vụ này đã có trong giỏ hàng';
+}
+
 final cartProvider = AsyncNotifierProvider<CartNotifier, List<CartItemModel>>(
   CartNotifier.new,
 );
@@ -53,7 +58,7 @@ class CartNotifier extends AsyncNotifier<List<CartItemModel>> {
     final serviceExists = currentItems.any((item) => item.serviceId == req.serviceId);
     
     if (serviceExists) {
-      throw Exception('Dịch vụ này đã có trong giỏ hàng');
+      throw Exception(CartErrorMessages.serviceAlreadyInCart);
     }
     
     try {

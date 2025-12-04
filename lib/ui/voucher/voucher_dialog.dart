@@ -3,6 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:vhs_mobile_user/data/models/voucher/voucher_model.dart';
 import 'package:vhs_mobile_user/ui/voucher/voucher_viewmodel.dart';
 import 'package:vhs_mobile_user/ui/core/theme_helper.dart';
+import 'package:vhs_mobile_user/l10n/extensions/localization_extension.dart';
+import 'package:vhs_mobile_user/providers/locale_provider.dart';
+import 'package:vhs_mobile_user/services/translation_cache_provider.dart';
+import 'package:vhs_mobile_user/services/data_translation_service.dart';
 
 class VoucherDialog extends ConsumerWidget {
   final double totalAmount; // Tổng tiền để tính discount
@@ -37,6 +41,10 @@ class VoucherDialog extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Watch locale và translation cache để rebuild khi đổi ngôn ngữ hoặc có translation mới
+    ref.watch(localeProvider);
+    ref.watch(translationCacheProvider);
+    
     final voucherAsync = ref.watch(voucherListProvider);
     final selectedVoucher = ref.watch(selectedVoucherProvider);
 
@@ -86,10 +94,10 @@ class VoucherDialog extends ConsumerWidget {
                     ),
                   ),
                   const SizedBox(width: 12),
-                  const Expanded(
+                  Expanded(
                     child: Text(
-                      'Chọn Voucher',
-                      style: TextStyle(
+                      context.tr('select_voucher'),
+                      style: const TextStyle(
                         color: Colors.white,
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -127,7 +135,7 @@ class VoucherDialog extends ConsumerWidget {
                       ),
                       const SizedBox(height: 16),
                       Text(
-                        "Đang tải...",
+                        context.tr('loading'),
                         style: TextStyle(
                           color: ThemeHelper.getSecondaryTextColor(context),
                           fontSize: 14,
@@ -159,7 +167,7 @@ class VoucherDialog extends ConsumerWidget {
                         ),
                         const SizedBox(height: 16),
                         Text(
-                          'Không thể tải voucher',
+                          context.tr('cannot_load_vouchers'),
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
@@ -179,9 +187,9 @@ class VoucherDialog extends ConsumerWidget {
                         ElevatedButton.icon(
                           onPressed: () => ref.refresh(voucherListProvider),
                           icon: const Icon(Icons.refresh_rounded, size: 18),
-                          label: const Text(
-                            'Thử lại',
-                            style: TextStyle(
+                          label: Text(
+                            context.tr('try_again'),
+                            style: const TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w600,
                             ),
@@ -227,7 +235,7 @@ class VoucherDialog extends ConsumerWidget {
                             ),
                             const SizedBox(height: 24),
                             Text(
-                              'Không có voucher nào',
+                              context.tr('no_vouchers'),
                               style: TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
@@ -236,7 +244,7 @@ class VoucherDialog extends ConsumerWidget {
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              'Hiện tại không có voucher khả dụng',
+                              context.tr('no_vouchers_available'),
                               style: TextStyle(
                                 fontSize: 14,
                                 color: ThemeHelper.getSecondaryTextColor(context),
@@ -258,244 +266,20 @@ class VoucherDialog extends ConsumerWidget {
                       final discount = voucher.calculateDiscount(totalAmount);
                       final isSelected = selectedVoucher?.voucherId == voucher.voucherId;
 
-                      return Container(
-                        margin: const EdgeInsets.only(bottom: 12),
-                        decoration: BoxDecoration(
-                          color: ThemeHelper.getCardBackgroundColor(context),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: isSelected 
-                                ? ThemeHelper.getPrimaryColor(context)
-                                : ThemeHelper.getBorderColor(context),
-                            width: isSelected ? 2 : 1,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: isSelected
-                                  ? ThemeHelper.getPrimaryColor(context).withOpacity(0.2)
-                                  : ThemeHelper.getShadowColor(context),
-                              blurRadius: isSelected ? 8 : 4,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: InkWell(
-                          onTap: () {
-                            if (isSelected) {
-                              ref.read(selectedVoucherProvider.notifier).clear();
-                            } else {
-                              ref.read(selectedVoucherProvider.notifier).select(voucher);
-                            }
-                          },
-                          borderRadius: BorderRadius.circular(12),
-                          child: Padding(
-                            padding: const EdgeInsets.all(14),
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                // Checkbox
-                                Container(
-                                  padding: const EdgeInsets.all(2),
-                                  decoration: BoxDecoration(
-                                    color: isSelected 
-                                        ? ThemeHelper.getPrimaryColor(context)
-                                        : Colors.transparent,
-                                    shape: BoxShape.circle,
-                                    border: Border.all(
-                                      color: isSelected 
-                                          ? ThemeHelper.getPrimaryColor(context)
-                                          : ThemeHelper.getSecondaryIconColor(context),
-                                      width: 2,
-                                    ),
-                                  ),
-                                  child: Icon(
-                                    isSelected
-                                        ? Icons.check_rounded
-                                        : null,
-                                    color: Colors.white,
-                                    size: 16,
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                // Voucher Info
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      // Code
-                                      Text(
-                                        voucher.code,
-                                        style: TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.bold,
-                                          color: isSelected 
-                                              ? ThemeHelper.getPrimaryColor(context)
-                                              : ThemeHelper.getTextColor(context),
-                                        ),
-                                      ),
-                                      const SizedBox(height: 4),
-                                      // Description
-                                      if (voucher.description != null)
-                                        Text(
-                                          voucher.description!,
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            color: ThemeHelper.getSecondaryTextColor(context),
-                                          ),
-                                          maxLines: 2,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      const SizedBox(height: 8),
-                                      // Discount Info - Wrap để tránh overflow
-                                      Wrap(
-                                        spacing: 6,
-                                        runSpacing: 4,
-                                        children: [
-                                          if (voucher.discountPercent != null)
-                                            Container(
-                                              padding: const EdgeInsets.symmetric(
-                                                horizontal: 8,
-                                                vertical: 4,
-                                              ),
-                                              decoration: BoxDecoration(
-                                                gradient: LinearGradient(
-                                                  colors: [
-                                                    ThemeHelper.getLightBlueBackgroundColor(context),
-                                                    ThemeHelper.getLightBlueBackgroundColor(context).withOpacity(0.7),
-                                                  ],
-                                                ),
-                                                borderRadius: BorderRadius.circular(6),
-                                                border: Border.all(
-                                                  color: ThemeHelper.getPrimaryColor(context).withOpacity(0.3),
-                                                  width: 1,
-                                                ),
-                                              ),
-                                              child: Text(
-                                                'Giảm ${voucher.discountPercent}%',
-                                                style: TextStyle(
-                                                  fontSize: 11,
-                                                  fontWeight: FontWeight.w600,
-                                                  color: ThemeHelper.getPrimaryDarkColor(context),
-                                                ),
-                                              ),
-                                            ),
-                                          if (voucher.discountMaxAmount != null)
-                                            Container(
-                                              padding: const EdgeInsets.symmetric(
-                                                horizontal: 6,
-                                                vertical: 4,
-                                              ),
-                                              decoration: BoxDecoration(
-                                                color: ThemeHelper.getLightBackgroundColor(context),
-                                                borderRadius: BorderRadius.circular(6),
-                                              ),
-                                              child: Text(
-                                                'Tối đa ${_formatPrice(voucher.discountMaxAmount!)}₫',
-                                                style: TextStyle(
-                                                  fontSize: 10,
-                                                  color: ThemeHelper.getTertiaryTextColor(context),
-                                                  fontWeight: FontWeight.w500,
-                                                ),
-                                              ),
-                                            ),
-                                        ],
-                                      ),
-                                      if (discount > 0) ...[
-                                        const SizedBox(height: 6),
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 8,
-                                            vertical: 4,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: ThemeHelper.isDarkMode(context)
-                                                ? Colors.green.shade900.withOpacity(0.3)
-                                                : Colors.green.shade50,
-                                            borderRadius: BorderRadius.circular(6),
-                                            border: Border.all(
-                                              color: Colors.green.shade400,
-                                              width: 1,
-                                            ),
-                                          ),
-                                          child: Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              Icon(
-                                                Icons.savings_rounded,
-                                                size: 14,
-                                                color: Colors.green.shade400,
-                                              ),
-                                              const SizedBox(width: 4),
-                                              Text(
-                                                'Tiết kiệm: ${_formatPrice(discount)}₫',
-                                                style: TextStyle(
-                                                  fontSize: 12,
-                                                  fontWeight: FontWeight.w600,
-                                                  color: Colors.green.shade400,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ],
-                                      const SizedBox(height: 6),
-                                      // Usage và Expiry Info - Wrap để tránh overflow
-                                      Wrap(
-                                        spacing: 8,
-                                        runSpacing: 4,
-                                        children: [
-                                          // Số lượt còn lại
-                                          if (voucher.usageLimit != null)
-                                            Row(
-                                              mainAxisSize: MainAxisSize.min,
-                                              children: [
-                                                Icon(
-                                                  Icons.people_outline,
-                                                  size: 12,
-                                                  color: ThemeHelper.getTertiaryTextColor(context),
-                                                ),
-                                                const SizedBox(width: 3),
-                                                Text(
-                                                  'Còn ${voucher.usageLimit! - (voucher.usedCount ?? 0)} lượt',
-                                                  style: TextStyle(
-                                                    fontSize: 10,
-                                                    color: ThemeHelper.getTertiaryTextColor(context),
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          // Thời gian hết hạn
-                                          if (voucher.endDate != null)
-                                            Row(
-                                              mainAxisSize: MainAxisSize.min,
-                                              children: [
-                                                Icon(
-                                                  Icons.access_time,
-                                                  size: 12,
-                                                  color: ThemeHelper.getTertiaryTextColor(context),
-                                                ),
-                                                const SizedBox(width: 3),
-                                                Flexible(
-                                                  child: Text(
-                                                    'Hết hạn: ${_formatDate(voucher.endDate!)}',
-                                                    style: TextStyle(
-                                                      fontSize: 10,
-                                                      color: ThemeHelper.getTertiaryTextColor(context),
-                                                    ),
-                                                    overflow: TextOverflow.ellipsis,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                        ],
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
+                      return _VoucherCard(
+                        voucher: voucher,
+                        discount: discount,
+                        isSelected: isSelected,
+                        totalAmount: totalAmount,
+                        formatPrice: _formatPrice,
+                        formatDate: _formatDate,
+                        onTap: () {
+                          if (isSelected) {
+                            ref.read(selectedVoucherProvider.notifier).clear();
+                          } else {
+                            ref.read(selectedVoucherProvider.notifier).select(voucher);
+                          }
+                        },
                       );
                     },
                   );
@@ -528,7 +312,7 @@ class VoucherDialog extends ConsumerWidget {
                           color: ThemeHelper.getSecondaryTextColor(context),
                         ),
                         label: Text(
-                          'Bỏ chọn',
+                          context.tr('deselect'),
                           style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
@@ -555,9 +339,9 @@ class VoucherDialog extends ConsumerWidget {
                         Navigator.of(context).pop();
                       },
                       icon: const Icon(Icons.check_rounded, size: 20),
-                      label: const Text(
-                        'Xác nhận',
-                        style: TextStyle(
+                      label: Text(
+                        context.tr('confirm'),
+                        style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
                         ),
@@ -577,6 +361,277 @@ class VoucherDialog extends ConsumerWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Widget để hiển thị voucher card với translation cho description
+class _VoucherCard extends ConsumerWidget {
+  final VoucherModel voucher;
+  final double discount;
+  final bool isSelected;
+  final double totalAmount;
+  final String Function(double) formatPrice;
+  final String Function(DateTime) formatDate;
+  final VoidCallback onTap;
+  
+  const _VoucherCard({
+    required this.voucher,
+    required this.discount,
+    required this.isSelected,
+    required this.totalAmount,
+    required this.formatPrice,
+    required this.formatDate,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Watch locale và translation cache để rebuild khi đổi ngôn ngữ hoặc có translation mới
+    ref.watch(localeProvider);
+    ref.watch(translationCacheProvider);
+    
+    // Dịch voucher.description nếu cần
+    final locale = ref.read(localeProvider);
+    final translationService = DataTranslationService(ref);
+    
+    String? description = voucher.description;
+    if (description != null && locale.languageCode != 'vi') {
+      description = translationService.smartTranslate(description);
+    }
+    
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: ThemeHelper.getCardBackgroundColor(context),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isSelected 
+              ? ThemeHelper.getPrimaryColor(context)
+              : ThemeHelper.getBorderColor(context),
+          width: isSelected ? 2 : 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: isSelected
+                ? ThemeHelper.getPrimaryColor(context).withOpacity(0.2)
+                : ThemeHelper.getShadowColor(context),
+            blurRadius: isSelected ? 8 : 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Checkbox
+              Container(
+                padding: const EdgeInsets.all(2),
+                decoration: BoxDecoration(
+                  color: isSelected 
+                      ? ThemeHelper.getPrimaryColor(context)
+                      : Colors.transparent,
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: isSelected 
+                        ? ThemeHelper.getPrimaryColor(context)
+                        : ThemeHelper.getSecondaryIconColor(context),
+                    width: 2,
+                  ),
+                ),
+                child: Icon(
+                  isSelected
+                      ? Icons.check_rounded
+                      : null,
+                  color: Colors.white,
+                  size: 16,
+                ),
+              ),
+              const SizedBox(width: 12),
+              // Voucher Info
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Code
+                    Text(
+                      voucher.code,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: isSelected 
+                            ? ThemeHelper.getPrimaryColor(context)
+                            : ThemeHelper.getTextColor(context),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    // Description
+                    if (description != null)
+                      Text(
+                        description!,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: ThemeHelper.getSecondaryTextColor(context),
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    const SizedBox(height: 8),
+                    // Discount Info - Wrap để tránh overflow
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 4,
+                      children: [
+                        if (voucher.discountPercent != null)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [
+                                  ThemeHelper.getLightBlueBackgroundColor(context),
+                                  ThemeHelper.getLightBlueBackgroundColor(context).withOpacity(0.7),
+                                ],
+                              ),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(
+                                color: ThemeHelper.getPrimaryColor(context).withOpacity(0.3),
+                                width: 1,
+                              ),
+                            ),
+                            child: Text(
+                              '${context.tr('discount')} ${voucher.discountPercent}%',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: ThemeHelper.getPrimaryDarkColor(context),
+                              ),
+                            ),
+                          ),
+                        if (voucher.discountMaxAmount != null)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: ThemeHelper.getLightBackgroundColor(context),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              '${context.tr('max')} ${formatPrice(voucher.discountMaxAmount!)}₫',
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: ThemeHelper.getTertiaryTextColor(context),
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                    if (discount > 0) ...[
+                      const SizedBox(height: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: ThemeHelper.isDarkMode(context)
+                              ? Colors.green.shade900.withOpacity(0.3)
+                              : Colors.green.shade50,
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(
+                            color: Colors.green.shade400,
+                            width: 1,
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.savings_rounded,
+                              size: 14,
+                              color: Colors.green.shade400,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              '${context.tr('savings')}: ${formatPrice(discount)}₫',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.green.shade400,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 6),
+                    // Usage và Expiry Info - Wrap để tránh overflow
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 4,
+                      children: [
+                        // Số lượt còn lại
+                        if (voucher.usageLimit != null)
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.people_outline,
+                                size: 12,
+                                color: ThemeHelper.getTertiaryTextColor(context),
+                              ),
+                              const SizedBox(width: 3),
+                              Text(
+                                '${context.tr('remaining')} ${voucher.usageLimit! - (voucher.usedCount ?? 0)} ${context.tr('uses')}',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  color: ThemeHelper.getTertiaryTextColor(context),
+                                ),
+                              ),
+                            ],
+                          ),
+                        // Thời gian hết hạn
+                        if (voucher.endDate != null)
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.access_time,
+                                size: 12,
+                                color: ThemeHelper.getTertiaryTextColor(context),
+                              ),
+                              const SizedBox(width: 3),
+                              Flexible(
+                                child: Text(
+                                  '${context.tr('expires')}: ${formatDate(voucher.endDate!)}',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    color: ThemeHelper.getTertiaryTextColor(context),
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

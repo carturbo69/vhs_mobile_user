@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:vhs_mobile_user/ui/chat/chat_list_viewmodel.dart';
+import 'package:vhs_mobile_user/ui/notification/notification_viewmodel.dart';
 import 'package:vhs_mobile_user/ui/core/theme_helper.dart';
+import 'package:vhs_mobile_user/l10n/extensions/localization_extension.dart';
 
 class BottomNavbarWidget extends ConsumerWidget {
   final StatefulNavigationShell navigationShell;
@@ -28,6 +30,8 @@ class BottomNavbarWidget extends ConsumerWidget {
     
     // Lấy tổng số tin nhắn chưa đọc
     final unreadTotalAsync = ref.watch(unreadTotalProvider);
+    // Lấy tổng số thông báo chưa đọc
+    final notificationUnreadAsync = ref.watch(notificationUnreadCountProvider);
     
     final isDark = ThemeHelper.isDarkMode(context);
     final backgroundColor = ThemeHelper.getCardBackgroundColor(context);
@@ -86,7 +90,26 @@ class BottomNavbarWidget extends ConsumerWidget {
                       color: selectedColor,
                       size: 26,
                     ),
-                    label: "Trang chủ",
+                    label: context.tr('nav_home_label'),
+                  ),
+                  NavigationDestination(
+                    icon: _buildNotificationIcon(
+                      context: context,
+                      icon: Icons.notifications_outlined,
+                      unreadCount: notificationUnreadAsync,
+                      isSelected: false,
+                      selectedColor: selectedColor,
+                      unselectedColor: unselectedColor,
+                    ),
+                    selectedIcon: _buildNotificationIcon(
+                      context: context,
+                      icon: Icons.notifications_rounded,
+                      unreadCount: notificationUnreadAsync,
+                      isSelected: true,
+                      selectedColor: selectedColor,
+                      unselectedColor: unselectedColor,
+                    ),
+                    label: context.tr('notifications'),
                   ),
                   NavigationDestination(
                     icon: _buildChatIcon(
@@ -105,7 +128,7 @@ class BottomNavbarWidget extends ConsumerWidget {
                       selectedColor: selectedColor,
                       unselectedColor: unselectedColor,
                     ),
-                    label: "Tin nhắn",
+                    label: context.tr('nav_messages_label'),
                   ),
                   NavigationDestination(
                     icon: Icon(
@@ -118,7 +141,7 @@ class BottomNavbarWidget extends ConsumerWidget {
                       color: selectedColor,
                       size: 26,
                     ),
-                    label: "Lịch sử",
+                    label: context.tr('nav_history_label'),
                   ),
                   NavigationDestination(
                     icon: Icon(
@@ -131,7 +154,7 @@ class BottomNavbarWidget extends ConsumerWidget {
                       color: selectedColor,
                       size: 26,
                     ),
-                    label: "Tôi",
+                    label: context.tr('nav_profile_label'),
                   ),
                 ],
               ),
@@ -140,6 +163,68 @@ class BottomNavbarWidget extends ConsumerWidget {
   }
 
   Widget _buildChatIcon({
+    required BuildContext context,
+    required IconData icon,
+    required int unreadCount,
+    required bool isSelected,
+    required Color selectedColor,
+    required Color unselectedColor,
+  }) {
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Icon(
+          icon,
+          color: isSelected ? selectedColor : unselectedColor,
+          size: isSelected ? 26 : 24,
+        ),
+        if (unreadCount > 0)
+          Positioned(
+            right: -4,
+            top: -8,
+            child: Container(
+              padding: EdgeInsets.symmetric(
+                horizontal: unreadCount > 9 ? 6 : 5,
+                vertical: 2,
+              ),
+              decoration: BoxDecoration(
+                color: Colors.red.shade600,
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: ThemeHelper.getCardBackgroundColor(context),
+                  width: 2,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.red.withOpacity(0.4),
+                    blurRadius: 6,
+                    spreadRadius: 1,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              constraints: const BoxConstraints(
+                minWidth: 20,
+                minHeight: 20,
+              ),
+              child: Center(
+                child: Text(
+                  unreadCount > 99 ? '99+' : unreadCount.toString(),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildNotificationIcon({
     required BuildContext context,
     required IconData icon,
     required int unreadCount,

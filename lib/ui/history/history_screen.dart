@@ -10,6 +10,10 @@ import 'package:vhs_mobile_user/ui/history/history_viewmodel.dart';
 import 'package:vhs_mobile_user/ui/cart/cart_list_viewmodel.dart';
 import 'package:vhs_mobile_user/ui/payment/payment_viewmodel.dart';
 import 'package:vhs_mobile_user/ui/core/theme_helper.dart';
+import 'package:vhs_mobile_user/l10n/extensions/localization_extension.dart';
+import 'package:vhs_mobile_user/providers/locale_provider.dart';
+import 'package:vhs_mobile_user/services/translation_cache_provider.dart';
+import 'package:vhs_mobile_user/services/data_translation_service.dart';
 
 class HistoryScreen extends ConsumerStatefulWidget {
   const HistoryScreen({super.key});
@@ -116,6 +120,10 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Watch locale và translation cache để rebuild khi đổi ngôn ngữ hoặc có translation mới
+    ref.watch(localeProvider);
+    ref.watch(translationCacheProvider);
+    
     final historyState = ref.watch(historyProvider);
 
     return Scaffold(
@@ -136,9 +144,9 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
             ),
           ),
         ),
-        title: const Text(
-          "Lịch sử đơn hàng",
-          style: TextStyle(
+        title: Text(
+          context.tr('order_history'),
+          style: const TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.bold,
             fontSize: 20,
@@ -157,7 +165,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
               onPressed: () {
                 ref.read(historyProvider.notifier).refresh();
               },
-              tooltip: 'Làm mới',
+              tooltip: context.tr('refresh'),
             ),
           ),
         ],
@@ -183,12 +191,12 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                     scrollDirection: Axis.horizontal,
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     children: [
-                    _StatusTab("All", "Tất cả", _selectedStatus == "All", () {
+                    _StatusTab("All", context.tr('all'), _selectedStatus == "All", () {
                       setState(() => _selectedStatus = "All");
                     }),
                     _StatusTab(
                       "Pending",
-                      "Chờ xác nhận",
+                      context.tr('pending'),
                       _selectedStatus == "Pending",
                       () {
                         setState(() => _selectedStatus = "Pending");
@@ -196,7 +204,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                     ),
                     _StatusTab(
                       "Confirmed",
-                      "Xác Nhận",
+                      context.tr('confirmed'),
                       _selectedStatus == "Confirmed",
                       () {
                         setState(() => _selectedStatus = "Confirmed");
@@ -204,7 +212,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                     ),
                     _StatusTab(
                       "InProgress",
-                      "Bắt Đầu Làm Việc",
+                      context.tr('in_progress'),
                       _selectedStatus == "InProgress",
                       () {
                         setState(() => _selectedStatus = "InProgress");
@@ -212,7 +220,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                     ),
                     _StatusTab(
                       "Completed",
-                      "Hoàn thành",
+                      context.tr('completed'),
                       _selectedStatus == "Completed",
                       () {
                         setState(() => _selectedStatus = "Completed");
@@ -220,7 +228,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                     ),
                     _StatusTab(
                       "Cancelled",
-                      "Đã hủy",
+                      context.tr('cancelled'),
                       _selectedStatus == "Cancelled",
                       () {
                         setState(() => _selectedStatus = "Cancelled");
@@ -239,7 +247,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                     },
                     decoration: InputDecoration(
                       hintText:
-                          "Tìm kiếm theo tên Shop, ID đơn hàng hoặc Tên dịch vụ",
+                          context.tr('search_by_shop_id_service'),
                       prefixIcon: Icon(
                         Icons.search_rounded,
                         color: ThemeHelper.getPrimaryColor(context),
@@ -305,7 +313,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
               ),
               const SizedBox(height: 24),
               Text(
-                "Đang tải...",
+                context.tr('loading'),
                 style: TextStyle(
                       color: ThemeHelper.getSecondaryTextColor(context),
                   fontSize: 16,
@@ -316,22 +324,18 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
           ),
         ),
         error: (error, stack) {
-          String errorMessage = "Đã xảy ra lỗi khi tải lịch sử";
+          String errorMessage = context.tr('error_loading_history');
 
           if (error.toString().contains('404')) {
-            errorMessage =
-                "Không tìm thấy dữ liệu. Có thể bạn chưa có đơn hàng nào.";
+            errorMessage = context.tr('no_data_found');
           } else if (error.toString().contains('401')) {
-            errorMessage =
-                "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.";
+            errorMessage = context.tr('session_expired');
           } else if (error.toString().contains('timeout') ||
               error.toString().contains('Timeout')) {
-            errorMessage =
-                "Kết nối timeout. Vui lòng kiểm tra kết nối mạng và thử lại.";
+            errorMessage = context.tr('connection_timeout');
           } else if (error.toString().contains('connection') ||
               error.toString().contains('Connection')) {
-            errorMessage =
-                "Không thể kết nối đến server. Vui lòng kiểm tra kết nối mạng.";
+            errorMessage = context.tr('cannot_connect_server');
           }
 
           return Center(
@@ -381,9 +385,9 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                       ref.read(historyProvider.notifier).refresh();
                     },
                     icon: const Icon(Icons.refresh_rounded, size: 20),
-                    label: const Text(
-                      "Thử lại",
-                      style: TextStyle(
+                    label: Text(
+                      context.tr('try_again'),
+                      style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
                       ),
@@ -438,7 +442,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                     ),
                     const SizedBox(height: 24),
                     Text(
-                      "Chưa có lịch sử",
+                      context.tr('no_history_yet'),
                       style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
@@ -447,7 +451,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      "Lịch sử đặt dịch vụ của bạn sẽ hiển thị ở đây",
+                      context.tr('history_will_appear_here'),
                       style: TextStyle(
                         fontSize: 14,
                         color: ThemeHelper.getSecondaryTextColor(context),
@@ -483,7 +487,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                     ),
                     const SizedBox(height: 24),
                     Text(
-                      "Không tìm thấy kết quả",
+                      context.tr('no_results_found'),
                       style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
@@ -492,7 +496,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      "Thử thay đổi bộ lọc hoặc từ khóa tìm kiếm",
+                      context.tr('try_changing_filter'),
                       style: TextStyle(
                         fontSize: 14,
                         color: ThemeHelper.getSecondaryTextColor(context),
@@ -611,11 +615,44 @@ class _BookingHistoryCard extends ConsumerWidget {
         s.contains("service completed");
   }
 
+  String _getLocalizedStatus(WidgetRef ref, String status, String statusVi, DataTranslationService translationService) {
+    final locale = ref.read(localeProvider);
+    final isVietnamese = locale.languageCode == 'vi';
+    
+    if (isVietnamese) {
+      return statusVi;
+    }
+    
+    // Dịch statusVi bằng DataTranslationService
+    return translationService.smartTranslate(statusVi);
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Watch locale và translation cache để rebuild khi đổi ngôn ngữ hoặc có translation mới
+    ref.watch(localeProvider);
+    ref.watch(translationCacheProvider);
+    
     final firstImage = item.serviceImageList.isNotEmpty
         ? item.serviceImageList.first
         : null;
+    
+    // Dịch service name và provider name từ backend
+    final translationService = DataTranslationService(ref);
+    final locale = ref.read(localeProvider);
+    final isVietnamese = locale.languageCode == 'vi';
+    
+    String serviceTitle = item.serviceTitle;
+    String providerName = item.providerName;
+    String statusText = item.statusVi;
+    
+    if (!isVietnamese) {
+      serviceTitle = translationService.smartTranslate(serviceTitle);
+      providerName = translationService.smartTranslate(providerName);
+      // Dịch status từ statusVi sang tiếng Anh
+      statusText = _getLocalizedStatus(ref, item.status, item.statusVi, translationService);
+    }
+    
     // Hiển thị tất cả options - dịch vụ nào cũng phải có options
     // Chỉ lọc bỏ những option hoàn toàn không hợp lệ (không có optionId, optionName và không có value hợp lệ)
     // Xử lý trường hợp value là chuỗi "null" (không phải null thực sự)
@@ -678,7 +715,7 @@ class _BookingHistoryCard extends ConsumerWidget {
                           ),
                         ),
                         child: Text(
-                          item.statusVi,
+                          statusText,
                           style: TextStyle(
                             color: _getStatusColor(context, item.status),
                             fontSize: 12,
@@ -692,7 +729,7 @@ class _BookingHistoryCard extends ConsumerWidget {
                         Padding(
                           padding: const EdgeInsets.only(left: 8),
                           child: Text(
-                            item.hasReview ? "Đã đánh giá" : "Đánh giá",
+                            item.hasReview ? context.tr('reviewed') : context.tr('review'),
                             style: TextStyle(
                               fontSize: 12,
                               color: item.hasReview 
@@ -762,7 +799,7 @@ class _BookingHistoryCard extends ConsumerWidget {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      item.providerName,
+                      providerName,
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
@@ -846,7 +883,7 @@ class _BookingHistoryCard extends ConsumerWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          item.serviceTitle,
+                          serviceTitle,
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
@@ -894,7 +931,7 @@ class _BookingHistoryCard extends ConsumerWidget {
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Text(
-                                  'Giá dịch vụ:',
+                                  '${context.tr('service_price')}:',
                                   style: TextStyle(
                                     fontSize: 12,
                                     color: ThemeHelper.getTertiaryTextColor(context),
@@ -916,7 +953,7 @@ class _BookingHistoryCard extends ConsumerWidget {
                                     MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(
-                                    'Giảm giá:',
+                                    '${context.tr('discount')}:',
                                     style: TextStyle(
                                       fontSize: 12,
                                       color: ThemeHelper.getTertiaryTextColor(context),
@@ -943,7 +980,7 @@ class _BookingHistoryCard extends ConsumerWidget {
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Text(
-                                  'Thành tiền:',
+                                  '${context.tr('total_amount')}:',
                                   style: TextStyle(
                                     fontSize: 14,
                                     fontWeight: FontWeight.w600,
@@ -978,6 +1015,25 @@ class _BookingHistoryCard extends ConsumerWidget {
                       option.type.toLowerCase() == "textarea" ||
                       option.type.toLowerCase() == "text";
                   final isDark = ThemeHelper.isDarkMode(context);
+                  
+                  // Dịch option name và value
+                  String optionName = option.optionName.isNotEmpty 
+                      ? option.optionName 
+                      : (option.optionId.isNotEmpty 
+                          ? 'Option ${option.optionId}' 
+                          : context.tr('option'));
+                  
+                  String? optionValue = option.value;
+                  
+                  if (!isVietnamese) {
+                    if (option.optionName.isNotEmpty) {
+                      optionName = translationService.smartTranslate(option.optionName);
+                    }
+                    if (optionValue != null && optionValue.isNotEmpty) {
+                      optionValue = translationService.smartTranslate(optionValue);
+                    }
+                  }
+                  
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 8),
                     child: Column(
@@ -1002,11 +1058,7 @@ class _BookingHistoryCard extends ConsumerWidget {
                                 const SizedBox(width: 8),
                             Expanded(
                               child: Text(
-                                option.optionName.isNotEmpty 
-                                    ? option.optionName 
-                                    : (option.optionId.isNotEmpty 
-                                        ? 'Option ${option.optionId}' 
-                                        : 'Tùy chọn'),
+                                optionName,
                                 style: TextStyle(
                                   fontSize: 13,
                                   fontWeight: FontWeight.w500,
@@ -1016,14 +1068,14 @@ class _BookingHistoryCard extends ConsumerWidget {
                             ),
                           ],
                         ),
-                        if (option.value != null &&
-                            option.value!.isNotEmpty) ...[
+                        if (optionValue != null &&
+                            optionValue.isNotEmpty) ...[
                           const SizedBox(height: 4),
                           Padding(
                             padding: const EdgeInsets.only(left: 22),
                             child: isTextarea
                                 ? Text(
-                                    option.value!,
+                                    optionValue,
                                     style: TextStyle(
                                       fontSize: 12,
                                       color: ThemeHelper.getSecondaryTextColor(context),
@@ -1031,7 +1083,7 @@ class _BookingHistoryCard extends ConsumerWidget {
                                     ),
                                   )
                                 : Text(
-                                    option.value!,
+                                    optionValue,
                                     style: TextStyle(
                                       fontSize: 12,
                                       color: ThemeHelper.getTertiaryTextColor(context),
@@ -1048,7 +1100,7 @@ class _BookingHistoryCard extends ConsumerWidget {
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 8),
                   child: Text(
-                    'Không có tùy chọn',
+                    context.tr('no_options'),
                     style: TextStyle(
                       fontSize: 13,
                       color: ThemeHelper.getTertiaryTextColor(context),
@@ -1075,7 +1127,7 @@ class _BookingHistoryCard extends ConsumerWidget {
                               return AlertDialog(
                                 backgroundColor: ThemeHelper.getDialogBackgroundColor(context),
                                 title: Text(
-                                  'Hủy đơn hàng',
+                                  context.tr('cancel_order'),
                                   style: TextStyle(color: ThemeHelper.getTextColor(context)),
                                 ),
                                 content: Column(
@@ -1083,7 +1135,7 @@ class _BookingHistoryCard extends ConsumerWidget {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      'Vui lòng nhập lý do hủy đơn hàng:',
+                                      context.tr('please_enter_cancel_reason'),
                                       style: TextStyle(
                                         fontSize: 14,
                                         color: ThemeHelper.getTextColor(context),
@@ -1094,7 +1146,7 @@ class _BookingHistoryCard extends ConsumerWidget {
                                       controller: reasonController,
                                       style: TextStyle(color: ThemeHelper.getTextColor(context)),
                                       decoration: InputDecoration(
-                                        hintText: 'Nhập lý do hủy...',
+                                        hintText: context.tr('enter_cancel_reason'),
                                         hintStyle: TextStyle(
                                           color: ThemeHelper.getTertiaryTextColor(context),
                                         ),
@@ -1126,7 +1178,7 @@ class _BookingHistoryCard extends ConsumerWidget {
                                   TextButton(
                                     onPressed: () => Navigator.pop(context),
                                     child: Text(
-                                      'Hủy',
+                                      context.tr('cancel'),
                                       style: TextStyle(
                                         color: ThemeHelper.getSecondaryTextColor(context),
                                       ),
@@ -1138,7 +1190,7 @@ class _BookingHistoryCard extends ConsumerWidget {
                                       if (reason.isEmpty) {
                                         ScaffoldMessenger.of(context).showSnackBar(
                                           SnackBar(
-                                            content: const Text('Vui lòng nhập lý do hủy'),
+                                            content: Text(context.tr('please_enter_cancel_reason_required')),
                                             backgroundColor: Colors.orange.shade400,
                                           ),
                                         );
@@ -1149,7 +1201,7 @@ class _BookingHistoryCard extends ConsumerWidget {
                                     style: TextButton.styleFrom(
                                       foregroundColor: Colors.red.shade400,
                                     ),
-                                    child: const Text('Xác nhận hủy'),
+                                    child: Text(context.tr('confirm_cancel')),
                                   ),
                                 ],
                               );
@@ -1196,9 +1248,9 @@ class _BookingHistoryCard extends ConsumerWidget {
                           }
                         },
                         icon: const Icon(Icons.cancel_rounded, size: 18),
-                        label: const Text(
-                          "Hủy",
-                          style: TextStyle(
+                        label: Text(
+                          context.tr('cancel'),
+                          style: const TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
                           ),
@@ -1220,7 +1272,7 @@ class _BookingHistoryCard extends ConsumerWidget {
                           context.push(Routes.bookingDetail, extra: item);
                         },
                         icon: const Icon(Icons.visibility, size: 18),
-                        label: const Text("Xem chi tiết"),
+                        label: Text(context.tr('view_details')),
                         style: OutlinedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 12),
                         ),
@@ -1261,9 +1313,9 @@ class _BookingHistoryCard extends ConsumerWidget {
                                     ),
                                   )
                                 : const Icon(Icons.payment_rounded, size: 18),
-                            label: const Text(
-                              "Thanh toán",
-                              style: TextStyle(
+                            label: Text(
+                              context.tr('payment'),
+                              style: const TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w600,
                               ),
@@ -1286,9 +1338,9 @@ class _BookingHistoryCard extends ConsumerWidget {
                               context.push(Routes.bookingDetail, extra: item);
                             },
                             icon: const Icon(Icons.visibility_rounded, size: 18),
-                            label: const Text(
-                              "Xem chi tiết",
-                              style: TextStyle(
+                            label: Text(
+                              context.tr('view_details'),
+                              style: const TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w600,
                               ),
@@ -1360,8 +1412,8 @@ class _BookingHistoryCard extends ConsumerWidget {
                                 SnackBar(
                                   content: Text(
                                     e.toString().contains('đã có trong giỏ hàng')
-                                        ? 'Dịch vụ này đã có trong giỏ hàng'
-                                        : 'Không thể đặt lại đơn hàng. Vui lòng thử lại.',
+                                        ? context.tr('service_already_in_cart_error')
+                                        : context.tr('cannot_reorder_try_again'),
                                   ),
                                   backgroundColor: Colors.red,
                                   duration: const Duration(seconds: 3),
@@ -1371,9 +1423,9 @@ class _BookingHistoryCard extends ConsumerWidget {
                           }
                         },
                         icon: const Icon(Icons.replay_rounded, size: 18),
-                        label: const Text(
-                          "Đặt lại",
-                          style: TextStyle(
+                        label: Text(
+                          context.tr('reorder'),
+                          style: const TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
                           ),
@@ -1398,9 +1450,9 @@ class _BookingHistoryCard extends ConsumerWidget {
                           context.push(Routes.bookingDetail, extra: item);
                         },
                         icon: const Icon(Icons.visibility_rounded, size: 18),
-                        label: const Text(
-                          "Xem chi tiết",
-                          style: TextStyle(
+                        label: Text(
+                          context.tr('view_details'),
+                          style: const TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
                           ),
@@ -1455,18 +1507,18 @@ class _ConfirmServiceCompletedButtonState extends ConsumerState<_ConfirmServiceC
           // Refresh history
           ref.read(historyProvider.notifier).refresh();
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text("Xác nhận hoàn thành thành công!"),
+            SnackBar(
+              content: Text(context.tr('confirm_completed_success')),
               backgroundColor: Colors.green,
-              duration: Duration(seconds: 3),
+              duration: const Duration(seconds: 3),
             ),
           );
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text("Xác nhận hoàn thành thất bại. Vui lòng thử lại."),
+            SnackBar(
+              content: Text(context.tr('confirm_completed_failed')),
               backgroundColor: Colors.red,
-              duration: Duration(seconds: 3),
+              duration: const Duration(seconds: 3),
             ),
           );
         }
@@ -1475,7 +1527,7 @@ class _ConfirmServiceCompletedButtonState extends ConsumerState<_ConfirmServiceC
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text("Lỗi: ${e.toString()}"),
+            content: Text("${context.tr('error')}: ${e.toString()}"),
             backgroundColor: Colors.red,
             duration: const Duration(seconds: 3),
           ),
@@ -1507,9 +1559,9 @@ class _ConfirmServiceCompletedButtonState extends ConsumerState<_ConfirmServiceC
                     ),
                   )
                 : const Icon(Icons.check_circle_rounded, size: 18),
-            label: const Text(
-              "Xác nhận hoàn thành",
-              style: TextStyle(
+            label: Text(
+              context.tr('confirm_service_completed'),
+              style: const TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
               ),
@@ -1532,9 +1584,9 @@ class _ConfirmServiceCompletedButtonState extends ConsumerState<_ConfirmServiceC
               context.push(Routes.bookingDetail, extra: widget.item);
             },
             icon: const Icon(Icons.visibility_rounded, size: 18),
-            label: const Text(
-              "Xem chi tiết",
-              style: TextStyle(
+            label: Text(
+              context.tr('view_details'),
+              style: const TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
               ),

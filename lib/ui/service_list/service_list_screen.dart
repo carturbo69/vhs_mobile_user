@@ -9,6 +9,8 @@ import 'service_list_viewmodel.dart';
 import 'package:vhs_mobile_user/routing/routes.dart';
 import 'package:vhs_mobile_user/ui/cart/cart_list_viewmodel.dart';
 import 'package:vhs_mobile_user/ui/core/theme_helper.dart';
+import 'package:vhs_mobile_user/l10n/extensions/localization_extension.dart';
+import 'package:vhs_mobile_user/providers/locale_provider.dart';
 
 // Màu xanh theo web - Sky blue palette
 const Color primaryBlue = Color(0xFF0284C7); // Sky-600
@@ -91,7 +93,7 @@ class _ServiceListScreenState extends ConsumerState<ServiceListScreen> {
                 },
                 icon: const Icon(Icons.expand_more_rounded, size: 22),
                 label: Text(
-                  "Xem thêm ${list.length - 20} dịch vụ",
+                  context.tr('view_more_services').replaceAll('{count}', '${list.length - 20}'),
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
@@ -130,6 +132,9 @@ class _ServiceListScreenState extends ConsumerState<ServiceListScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Watch locale để rebuild khi đổi ngôn ngữ
+    ref.watch(localeProvider);
+    
     final asyncList = ref.watch(serviceListProvider);
 
     final isDark = ThemeHelper.isDarkMode(context);
@@ -149,8 +154,8 @@ class _ServiceListScreenState extends ConsumerState<ServiceListScreen> {
               elevation: 0,
               backgroundColor: Colors.transparent,
               toolbarHeight: 56,
-              title: const Text(
-                "Danh sách dịch vụ",
+              title: Text(
+                context.tr('service_list_title'),
                 style: TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
@@ -201,7 +206,7 @@ class _ServiceListScreenState extends ConsumerState<ServiceListScreen> {
                                 context.go(Routes.cart, extra: {'previousRoute': currentLocation});
                               }
                             },
-                            tooltip: 'Giỏ hàng',
+                            tooltip: context.tr('cart_tooltip'),
                           ),
                         ),
                         if (cartCount > 0)
@@ -254,7 +259,7 @@ class _ServiceListScreenState extends ConsumerState<ServiceListScreen> {
                   child: IconButton(
                     icon: const Icon(Icons.refresh, color: Colors.white),
                     onPressed: () => ref.read(serviceListProvider.notifier).refresh(),
-                    tooltip: 'Làm mới',
+                    tooltip: context.tr('refresh'),
                   ),
                 ),
               ],
@@ -293,7 +298,7 @@ class _ServiceListScreenState extends ConsumerState<ServiceListScreen> {
                           },
                           style: TextStyle(color: ThemeHelper.getTextColor(context)),
                           decoration: InputDecoration(
-                            hintText: "Tìm kiếm dịch vụ...",
+                            hintText: context.tr('search_services'),
                             hintStyle: TextStyle(color: ThemeHelper.getTertiaryTextColor(context)),
                             prefixIcon: Container(
                               margin: const EdgeInsets.all(10),
@@ -430,7 +435,7 @@ class _ServiceListScreenState extends ConsumerState<ServiceListScreen> {
                                       ),
                                       const SizedBox(width: 12),
                                       Text(
-                                        "Tất cả",
+                                        context.tr('all_categories'),
                                         style: TextStyle(color: ThemeHelper.getTextColor(context)),
                                       ),
                                     ],
@@ -510,7 +515,7 @@ class _ServiceListScreenState extends ConsumerState<ServiceListScreen> {
                         ),
                         const SizedBox(height: 24),
                         Text(
-                          "Đang tải...",
+                          context.tr('loading'),
                           style: TextStyle(
                             color: ThemeHelper.getSecondaryTextColor(context),
                             fontSize: 16,
@@ -546,7 +551,7 @@ class _ServiceListScreenState extends ConsumerState<ServiceListScreen> {
                           ),
                           const SizedBox(height: 24),
                           Text(
-                            "Đã xảy ra lỗi",
+                            context.tr('error_occurred'),
                             style: TextStyle(
                               fontSize: 20,
                               fontWeight: FontWeight.bold,
@@ -566,8 +571,8 @@ class _ServiceListScreenState extends ConsumerState<ServiceListScreen> {
                           ElevatedButton.icon(
                             onPressed: () => ref.read(serviceListProvider.notifier).refresh(),
                             icon: const Icon(Icons.refresh_rounded, size: 20),
-                            label: const Text(
-                              "Thử lại",
+                            label: Text(
+                              context.tr('try_again'),
                               style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,
@@ -620,7 +625,7 @@ class _ServiceListScreenState extends ConsumerState<ServiceListScreen> {
                               ),
                               const SizedBox(height: 24),
                               Text(
-                                "Không tìm thấy kết quả",
+                                context.tr('no_results_found'),
                                 style: TextStyle(
                                   fontSize: 20,
                                   fontWeight: FontWeight.bold,
@@ -629,7 +634,7 @@ class _ServiceListScreenState extends ConsumerState<ServiceListScreen> {
                               ),
                               const SizedBox(height: 8),
                               Text(
-                                "Thử tìm kiếm với từ khóa khác",
+                                context.tr('try_different_keyword'),
                                 style: TextStyle(
                                   fontSize: 14,
                                   color: ThemeHelper.getSecondaryTextColor(context),

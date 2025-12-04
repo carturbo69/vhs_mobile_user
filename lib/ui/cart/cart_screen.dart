@@ -9,6 +9,10 @@ import 'package:vhs_mobile_user/data/models/cart/cart_item_model.dart';
 import 'package:vhs_mobile_user/ui/voucher/voucher_dialog.dart';
 import 'package:vhs_mobile_user/ui/voucher/voucher_viewmodel.dart';
 import 'package:vhs_mobile_user/ui/core/theme_helper.dart';
+import 'package:vhs_mobile_user/l10n/extensions/localization_extension.dart';
+import 'package:vhs_mobile_user/providers/locale_provider.dart';
+import 'package:vhs_mobile_user/services/translation_cache_provider.dart';
+import 'package:vhs_mobile_user/services/data_translation_service.dart';
 
 // Màu xanh theo web - Sky blue palette
 const Color primaryBlue = Color(0xFF0284C7); // Sky-600
@@ -99,6 +103,10 @@ class _CartScreenState extends ConsumerState<CartScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Watch locale và translation cache để rebuild khi đổi ngôn ngữ hoặc có translation mới
+    ref.watch(localeProvider);
+    ref.watch(translationCacheProvider);
+    
     final asyncCart = ref.watch(cartProvider);
 
     final isDark = ThemeHelper.isDarkMode(context);
@@ -135,8 +143,8 @@ class _CartScreenState extends ConsumerState<CartScreen> {
             ),
           ),
         ),
-        title: const Text(
-          'Giỏ hàng của bạn',
+        title: Text(
+          context.tr('your_cart'),
           style: TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.bold,
@@ -162,20 +170,20 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(16),
                           ),
-                          title: const Text(
-                            'Xóa toàn bộ giỏ hàng?',
+                          title: Text(
+                            context.tr('delete_all_cart'),
                             style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                           ),
-                          content: const Text('Bạn có chắc chắn muốn xóa tất cả dịch vụ trong giỏ hàng?'),
+                          content: Text(context.tr('confirm_delete_all_cart')),
                           actions: [
                             TextButton(
                               onPressed: () => Navigator.pop(c, false),
-                              child: const Text('Hủy'),
+                              child: Text(context.tr('cancel')),
                             ),
                             TextButton(
                               onPressed: () => Navigator.pop(c, true),
-                              child: const Text(
-                                'Xóa tất cả',
+                              child: Text(
+                                context.tr('delete_all'),
                                 style: TextStyle(color: Colors.red, fontWeight: FontWeight.w600),
                               ),
                             ),
@@ -200,7 +208,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                       Icon(Icons.delete_outline, color: Colors.red[700], size: 20),
                       const SizedBox(width: 12),
                       Text(
-                        'Xóa tất cả',
+                        context.tr('delete_all'),
                         style: TextStyle(
                           color: Colors.red[700],
                           fontWeight: FontWeight.w600,
@@ -227,7 +235,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
               ),
               const SizedBox(height: 24),
               Text(
-                "Đang tải...",
+                context.tr('loading'),
                 style: TextStyle(
                   color: ThemeHelper.getSecondaryTextColor(context),
                   fontSize: 16,
@@ -259,7 +267,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                 ),
                 const SizedBox(height: 24),
                 Text(
-                  'Không thể tải giỏ hàng',
+                  context.tr('cannot_load_cart'),
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
@@ -268,7 +276,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Vui lòng thử lại sau',
+                  context.tr('please_try_again_later'),
                   style: TextStyle(
                     fontSize: 14,
                     color: ThemeHelper.getSecondaryTextColor(context),
@@ -280,8 +288,8 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                     ref.read(cartProvider.notifier).refresh();
                   },
                   icon: const Icon(Icons.refresh_rounded, size: 20),
-                  label: const Text(
-                    'Thử lại',
+                  label: Text(
+                    context.tr('try_again'),
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
@@ -374,7 +382,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                               Expanded(
                                 flex: 4,
                                 child: Text(
-                                  'Dịch vụ',
+                                  context.tr('service_column'),
                                   style: TextStyle(
                                     fontWeight: FontWeight.w700,
                                     color: ThemeHelper.getTextColor(context),
@@ -386,7 +394,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                               Expanded(
                                 flex: 2,
                                 child: Text(
-                                  'Số tiền',
+                                  context.tr('amount_column'),
                                   style: TextStyle(
                                     fontWeight: FontWeight.w700,
                                     color: ThemeHelper.getTextColor(context),
@@ -400,7 +408,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                               Expanded(
                                 flex: 1,
                                 child: Text(
-                                  'Thao tác',
+                                  context.tr('action_column'),
                                   style: TextStyle(
                                     fontWeight: FontWeight.w700,
                                     color: ThemeHelper.getTextColor(context),
@@ -625,7 +633,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                                   child: Text(
                                     selectedVoucher != null 
                                         ? selectedVoucher.code 
-                                        : 'Chọn voucher',
+                                        : context.tr('select_voucher'),
                                     style: const TextStyle(
                                       fontSize: 12,
                                       fontWeight: FontWeight.w700,
@@ -698,7 +706,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                                             ),
                                             const SizedBox(width: 4),
                                             Text(
-                                              'Đã chọn $selectedCount',
+                                              '${context.tr('selected_count')} $selectedCount',
                                               style: TextStyle(
                                                 color: ThemeHelper.getSecondaryTextColor(context),
                                                 fontSize: 12,
@@ -709,7 +717,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                                         ),
                                         const SizedBox(height: 4),
                                         Text(
-                                          'Tạm tính',
+                                          context.tr('temporary_total'),
                                           style: TextStyle(
                                             color: ThemeHelper.getTertiaryTextColor(context),
                                             fontSize: 11,
@@ -745,7 +753,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                                                 ),
                                                 const SizedBox(width: 3),
                                                 Text(
-                                                  'Giảm: -${_formatPrice(voucherDiscount)}₫',
+                                                  '${context.tr('discount_prefix')} -${_formatPrice(voucherDiscount)}₫',
                                                   style: TextStyle(
                                                     color: isDark 
                                                         ? Colors.green.shade300
@@ -767,7 +775,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
                                       Text(
-                                        'Tổng cộng',
+                                        context.tr('total_amount'),
                                         style: TextStyle(
                                           fontSize: 12,
                                           color: ThemeHelper.getTertiaryTextColor(context),
@@ -810,7 +818,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                                   ),
                                 ),
                                 Text(
-                                  'Chọn tất cả',
+                                  context.tr('select_all'),
                                   style: TextStyle(
                                     fontSize: 13,
                                     fontWeight: FontWeight.w600,
@@ -864,8 +872,8 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                                   children: [
                                     const Icon(Icons.shopping_bag_rounded, size: 20),
                                     const SizedBox(width: 8),
-                                    const Text(
-                                      'Đặt Dịch Vụ',
+                                    Text(
+                                      context.tr('proceed_to_checkout'),
                                       style: TextStyle(
                                         fontSize: 16,
                                         fontWeight: FontWeight.w600,
@@ -913,7 +921,7 @@ class _EmptyCart extends StatelessWidget {
             ),
             const SizedBox(height: 24),
             Text(
-              'Giỏ hàng trống',
+                context.tr('empty_cart'),
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
@@ -922,7 +930,7 @@ class _EmptyCart extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              'Thêm dịch vụ vào giỏ để đặt lịch',
+              context.tr('add_service_to_cart_message'),
               style: TextStyle(
                 fontSize: 14,
                 color: ThemeHelper.getSecondaryTextColor(context),
@@ -933,9 +941,9 @@ class _EmptyCart extends StatelessWidget {
             ElevatedButton.icon(
               onPressed: () => context.go(Routes.listService),
               icon: const Icon(Icons.search_rounded, size: 20),
-              label: const Text(
-                'Tìm dịch vụ',
-                style: TextStyle(
+              label: Text(
+                context.tr('find_service'),
+                style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
                 ),

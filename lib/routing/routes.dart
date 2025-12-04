@@ -18,6 +18,7 @@ abstract final class Routes {
   static const chatList = "/chat";
   static const chatDetail = "/chat/:conversationId";
   static String chatDetailPath(String conversationId) => '/chat/$conversationId';
+  static const notifications = "/notifications";
   // Cart + Booking
   static const cart = '/cart';
   static const checkout = '/checkout';

@@ -11,6 +11,10 @@ import 'package:vhs_mobile_user/ui/report/report_viewmodel.dart';
 import 'package:vhs_mobile_user/routing/routes.dart';
 import 'package:go_router/go_router.dart';
 import 'package:vhs_mobile_user/ui/core/theme_helper.dart';
+import 'package:vhs_mobile_user/l10n/extensions/localization_extension.dart';
+import 'package:vhs_mobile_user/providers/locale_provider.dart';
+import 'package:vhs_mobile_user/services/translation_cache_provider.dart';
+import 'package:vhs_mobile_user/services/data_translation_service.dart';
 
   class HistoryDetailScreen extends ConsumerWidget {
     final String bookingId;
@@ -19,6 +23,10 @@ import 'package:vhs_mobile_user/ui/core/theme_helper.dart';
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Watch locale và translation cache để rebuild khi đổi ngôn ngữ hoặc có translation mới
+    ref.watch(localeProvider);
+    ref.watch(translationCacheProvider);
+    
     final asyncDetail = ref.watch(historyDetailProvider(bookingId));
 
     return Scaffold(
@@ -39,8 +47,8 @@ import 'package:vhs_mobile_user/ui/core/theme_helper.dart';
             ),
           ),
         ),
-        title: const Text(
-          "Chi tiết đơn hàng",
+        title: Text(
+          context.tr('order_detail'),
           style: TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.bold,
@@ -60,7 +68,7 @@ import 'package:vhs_mobile_user/ui/core/theme_helper.dart';
               onPressed: () {
                 ref.invalidate(historyDetailProvider(bookingId));
               },
-              tooltip: "Làm mới",
+              tooltip: context.tr('refresh'),
             ),
           ),
         ],
@@ -87,7 +95,7 @@ import 'package:vhs_mobile_user/ui/core/theme_helper.dart';
                 ),
                 const SizedBox(height: 24),
                 Text(
-                  "Đang tải...",
+                  context.tr('loading'),
                   style: TextStyle(
                     color: ThemeHelper.getSecondaryTextColor(context),
                     fontSize: 16,
@@ -121,7 +129,7 @@ import 'package:vhs_mobile_user/ui/core/theme_helper.dart';
                     ),
                     const SizedBox(height: 24),
                     Text(
-                      "Đã xảy ra lỗi",
+                      context.tr('error_loading_history'),
                       style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
@@ -200,6 +208,10 @@ class _DetailBodyState extends State<_DetailBody> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
+    // Watch locale và translation cache để rebuild khi đổi ngôn ngữ hoặc có translation mới
+    widget.ref.watch(localeProvider);
+    widget.ref.watch(translationCacheProvider);
+    
     // Watch lại để cập nhật khi data thay đổi
     final asyncDetail = widget.ref.watch(historyDetailProvider(widget.bookingId));
     
@@ -252,7 +264,7 @@ class _DetailBodyState extends State<_DetailBody> with WidgetsBindingObserver {
           const SizedBox(width: 12),
           Expanded(
             child: Text(
-              _statusVi(detail.status),
+              _getLocalizedStatus(context, detail.status),
               style: TextStyle(
                 color: _statusColor(detail.status),
                 fontSize: 20,
@@ -265,14 +277,34 @@ class _DetailBodyState extends State<_DetailBody> with WidgetsBindingObserver {
     );
   }
 
-  String _statusVi(String status) {
+  String _getLocalizedStatus(BuildContext context, String status) {
+    final locale = widget.ref.read(localeProvider);
+    final isVietnamese = locale.languageCode == 'vi';
+    final translationService = DataTranslationService(widget.ref);
+    
     final s = status.toLowerCase();
-    if (s.contains("pending")) return "Chờ xác nhận";
-    if (s.contains("confirmed")) return "Đã xác nhận";
-    if (s.contains("progress")) return "Bắt đầu làm việc";
-    if (s.contains("completed")) return "Hoàn thành";
-    if (s.contains("cancel")) return "Đã hủy";
-    return status;
+    String statusVi;
+    
+    if (s.contains("pending")) {
+      statusVi = "Chờ xác nhận";
+    } else if (s.contains("confirmed")) {
+      statusVi = "Đã xác nhận";
+    } else if (s.contains("progress")) {
+      statusVi = "Bắt đầu làm việc";
+    } else if (s.contains("completed")) {
+      statusVi = "Hoàn thành";
+    } else if (s.contains("cancel")) {
+      statusVi = "Đã hủy";
+    } else {
+      statusVi = status;
+    }
+    
+    if (isVietnamese) {
+      return statusVi;
+    }
+    
+    // Dịch statusVi bằng DataTranslationService
+    return translationService.smartTranslate(statusVi);
   }
 
     // ========================================
@@ -354,14 +386,24 @@ class _DetailBodyState extends State<_DetailBody> with WidgetsBindingObserver {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      detail.service.title,
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: ThemeHelper.getTextColor(context),
-                      ),
-                      maxLines: 2,
+                    Builder(
+                      builder: (context) {
+                        final locale = widget.ref.read(localeProvider);
+                        final isVietnamese = locale.languageCode == 'vi';
+                        final translationService = DataTranslationService(widget.ref);
+                        final title = isVietnamese 
+                            ? detail.service.title 
+                            : translationService.smartTranslate(detail.service.title);
+                        return Text(
+                          title,
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: ThemeHelper.getTextColor(context),
+                          ),
+                          maxLines: 2,
+                        );
+                      },
                     ),
                     const SizedBox(height: 6),
                     Text(
@@ -436,18 +478,28 @@ class _DetailBodyState extends State<_DetailBody> with WidgetsBindingObserver {
                   : null,
             ),
           ),
-          title: Text(
-            provider.providerName,
-            style: TextStyle(
-              fontWeight: FontWeight.w600,
-              fontSize: 16,
-              color: ThemeHelper.getTextColor(context),
-            ),
+          title: Builder(
+            builder: (context) {
+              final locale = widget.ref.read(localeProvider);
+              final isVietnamese = locale.languageCode == 'vi';
+              final translationService = DataTranslationService(widget.ref);
+              final name = isVietnamese 
+                  ? provider.providerName 
+                  : translationService.smartTranslate(provider.providerName);
+              return Text(
+                name,
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 16,
+                  color: ThemeHelper.getTextColor(context),
+                ),
+              );
+            },
           ),
           subtitle: Padding(
             padding: const EdgeInsets.only(top: 4),
             child: Text(
-              "Mã đơn: ${detail.bookingCode}",
+              "${context.tr('order_code')}: ${detail.bookingCode}",
               style: TextStyle(
                 fontSize: 13,
                 color: ThemeHelper.getSecondaryTextColor(context),
@@ -511,7 +563,7 @@ class _DetailBodyState extends State<_DetailBody> with WidgetsBindingObserver {
           subtitle: Padding(
             padding: const EdgeInsets.only(top: 4),
             child: Text(
-              "SĐT: ${detail.staffPhone ?? "Không có"}",
+              "${context.tr('phone_number')}: ${detail.staffPhone ?? context.tr('not_available')}",
               style: TextStyle(
                 fontSize: 13,
                 color: ThemeHelper.getSecondaryTextColor(context),
@@ -563,7 +615,7 @@ class _DetailBodyState extends State<_DetailBody> with WidgetsBindingObserver {
                   ),
                   const SizedBox(width: 12),
                   Text(
-                    "Tiến trình đơn hàng",
+                    context.tr('order_timeline'),
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -623,29 +675,49 @@ class _DetailBodyState extends State<_DetailBody> with WidgetsBindingObserver {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              e.title,
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                                color: ThemeHelper.getTextColor(context),
-                              ),
+                            Builder(
+                              builder: (context) {
+                                final locale = widget.ref.read(localeProvider);
+                                final isVietnamese = locale.languageCode == 'vi';
+                                final translationService = DataTranslationService(widget.ref);
+                                final title = isVietnamese 
+                                    ? e.title 
+                                    : translationService.smartTranslate(e.title);
+                                return Text(
+                                  title,
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    color: ThemeHelper.getTextColor(context),
+                                  ),
+                                );
+                              },
                             ),
                             if (e.description != null)
-                              Padding(
-                                padding: const EdgeInsets.only(top: 4),
-                                child: Text(
-                                  e.description!,
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: ThemeHelper.getSecondaryTextColor(context),
-                                  ),
-                                ),
+                              Builder(
+                                builder: (context) {
+                                  final locale = widget.ref.read(localeProvider);
+                                  final isVietnamese = locale.languageCode == 'vi';
+                                  final translationService = DataTranslationService(widget.ref);
+                                  final description = isVietnamese 
+                                      ? e.description! 
+                                      : translationService.smartTranslate(e.description!);
+                                  return Padding(
+                                    padding: const EdgeInsets.only(top: 4),
+                                    child: Text(
+                                      description,
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: ThemeHelper.getSecondaryTextColor(context),
+                                      ),
+                                    ),
+                                  );
+                                },
                               ),
                             Text(
                               time != null
                                   ? DateFormat("dd/MM/yyyy HH:mm").format(time)
-                                  : "Chưa cập nhật",
+                                  : context.tr('not_updated'),
                               style: TextStyle(
                                 fontSize: 12,
                                 color: ThemeHelper.getTertiaryTextColor(context),
@@ -727,7 +799,7 @@ class _DetailBodyState extends State<_DetailBody> with WidgetsBindingObserver {
                                       onTap: () {
                                         // TODO: Mở video player
                                         ScaffoldMessenger.of(context).showSnackBar(
-                                          const SnackBar(content: Text("Video player chưa được implement")),
+                                          SnackBar(content: Text(context.tr('video_player_not_implemented'))),
                                         );
                                       },
                                       child: Container(
@@ -810,9 +882,9 @@ print("🔥 TOTAL = ${detail.service.lineTotal - detail.voucherDiscount}");
                     ),
                   ),
                   const SizedBox(width: 12),
-                  const Text(
-                    "Thông tin thanh toán",
-                    style: TextStyle(
+                  Text(
+                    context.tr('payment_info'),
+                    style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                     ),
@@ -821,16 +893,16 @@ print("🔥 TOTAL = ${detail.service.lineTotal - detail.voucherDiscount}");
               ),
               const SizedBox(height: 12),
               _priceRow(
-                "Giá dịch vụ",
+                context.tr('service_price'),
                 "${NumberFormat('#,###').format(price)} ₫",
               ),
               _priceRow(
-                "Giảm giá",
+                context.tr('discount'),
                 "-${NumberFormat('#,###').format(discount)} ₫",
               ),
               const Divider(),
               _priceRow(
-                "Thành tiền",
+                context.tr('total_amount'),
                 "${NumberFormat('#,###').format(total)} ₫",
                 isTotal: true,
               ),
@@ -857,7 +929,7 @@ print("🔥 TOTAL = ${detail.service.lineTotal - detail.voucherDiscount}");
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          "Phương thức: ",
+                          "${context.tr('payment_method_label')}: ",
                           style: TextStyle(
                             fontSize: 13,
                             color: ThemeHelper.getSecondaryTextColor(context),
@@ -865,7 +937,7 @@ print("🔥 TOTAL = ${detail.service.lineTotal - detail.voucherDiscount}");
                           ),
                         ),
                         Text(
-                          detail.paymentMethod ?? "Chưa thanh toán",
+                          detail.paymentMethod ?? context.tr('not_paid'),
                           style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w600,
@@ -884,7 +956,7 @@ print("🔥 TOTAL = ${detail.service.lineTotal - detail.voucherDiscount}");
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          "Trạng thái: ",
+                          "${context.tr('payment_status')}: ",
                           style: TextStyle(
                             fontSize: 13,
                             color: ThemeHelper.getSecondaryTextColor(context),
@@ -906,7 +978,7 @@ print("🔥 TOTAL = ${detail.service.lineTotal - detail.voucherDiscount}");
                             ),
                           ),
                           child: Text(
-                            _getPaymentStatusText(detail.paymentStatus),
+                            _getPaymentStatusText(context, detail.paymentStatus),
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
@@ -925,24 +997,32 @@ print("🔥 TOTAL = ${detail.service.lineTotal - detail.voucherDiscount}");
       );
     }
 
-    String _getPaymentStatusText(String? status) {
+    String _getPaymentStatusText(BuildContext context, String? status) {
       if (status == null || status.isEmpty) {
-        return "Chưa thanh toán";
+        return context.tr('not_paid');
       }
       final s = status.toLowerCase();
       if (s.contains("paid") || s.contains("đã thanh toán") || s.contains("thành công")) {
-        return "Đã thanh toán";
+        return context.tr('paid');
       }
       if (s.contains("pending") || s.contains("chờ")) {
-        return "Chờ thanh toán";
+        return context.tr('pending_payment');
       }
       if (s.contains("failed") || s.contains("thất bại")) {
-        return "Thanh toán thất bại";
+        return context.tr('payment_failed');
       }
       if (s.contains("refund") || s.contains("hoàn")) {
-        return "Đã hoàn tiền";
+        return context.tr('refunded');
       }
-      return status;
+      
+      // Dịch status nếu không khớp với các trường hợp trên
+      final locale = widget.ref.read(localeProvider);
+      final isVietnamese = locale.languageCode == 'vi';
+      if (isVietnamese) {
+        return status;
+      }
+      final translationService = DataTranslationService(widget.ref);
+      return translationService.smartTranslate(status);
     }
 
     Color _getPaymentStatusColor(String? status) {
@@ -1037,7 +1117,7 @@ print("🔥 TOTAL = ${detail.service.lineTotal - detail.voucherDiscount}");
                   ),
                   const SizedBox(width: 12),
                   Text(
-                    "Thông báo hoàn tiền",
+                    context.tr('refund_notification'),
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -1056,22 +1136,46 @@ print("🔥 TOTAL = ${detail.service.lineTotal - detail.voucherDiscount}");
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      "Lý do: ${detail.cancelReason}",
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: ThemeHelper.getTextColor(context),
-                        fontWeight: FontWeight.w500,
-                      ),
+                    Builder(
+                      builder: (context) {
+                        final cancelReasonText = detail.cancelReason;
+                        if (cancelReasonText == null) {
+                          return const SizedBox.shrink();
+                        }
+                        final locale = widget.ref.read(localeProvider);
+                        final isVietnamese = locale.languageCode == 'vi';
+                        final translationService = DataTranslationService(widget.ref);
+                        final translatedReason = isVietnamese 
+                            ? cancelReasonText 
+                            : translationService.smartTranslate(cancelReasonText);
+                        return Text(
+                          "${context.tr('reason')}: $translatedReason",
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: ThemeHelper.getTextColor(context),
+                            fontWeight: FontWeight.w500,
+                          ),
+                        );
+                      },
                     ),
                     if (detail.resolutionNote != null) ...[
                       const SizedBox(height: 8),
-                      Text(
-                        "Ghi chú: ${detail.resolutionNote}",
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: ThemeHelper.getSecondaryTextColor(context),
-                        ),
+                      Builder(
+                        builder: (context) {
+                          final locale = widget.ref.read(localeProvider);
+                          final isVietnamese = locale.languageCode == 'vi';
+                          final translationService = DataTranslationService(widget.ref);
+                          final resolutionNote = isVietnamese 
+                              ? detail.resolutionNote! 
+                              : translationService.smartTranslate(detail.resolutionNote!);
+                          return Text(
+                            "${context.tr('note')}: $resolutionNote",
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: ThemeHelper.getSecondaryTextColor(context),
+                            ),
+                          );
+                        },
                       ),
                     ],
                   ],
@@ -1094,7 +1198,61 @@ print("🔥 TOTAL = ${detail.service.lineTotal - detail.voucherDiscount}");
     final isCompletedOrServiceCompleted = isCompleted || isServiceCompleted;
     
     // Chỉ đơn Hoàn thành thật sự (không phải ServiceCompleted) mới được phép đánh giá
-    final canReview = isCompleted && !detail.hasReview;
+    var canReview = isCompleted && !detail.hasReview;
+    var canReport = isCompletedOrServiceCompleted;
+    
+    // Kiểm tra xem đã qua 7 ngày từ khi hoàn thành chưa
+    if (isCompletedOrServiceCompleted) {
+      DateTime? completedDate = detail.completedAt;
+      
+      // Nếu không có completedAt, thử lấy từ timeline
+      if (completedDate == null && detail.timeline.isNotEmpty) {
+        // Thử tìm event có code liên quan đến completed/check out
+        final possibleCodes = ["CHECK OUT", "Check Out", "CHECKOUT", "check out", 
+                              "COMPLETED", "Completed", "completed"];
+        
+        for (var code in possibleCodes) {
+          try {
+            final event = detail.timeline.firstWhere(
+              (e) => e.code.toUpperCase() == code.toUpperCase(),
+            );
+            if (event.time != null) {
+              completedDate = event.time;
+              break;
+            }
+          } catch (e) {
+            // Không tìm thấy event với code này, tiếp tục tìm
+            continue;
+          }
+        }
+        
+        // Nếu vẫn không tìm thấy, thử tìm event có code chứa "out" hoặc "complete"
+        if (completedDate == null) {
+          try {
+            final completedEvent = detail.timeline.firstWhere(
+              (e) => e.code.toUpperCase().contains("OUT") || 
+                     e.code.toUpperCase().contains("COMPLETE"),
+            );
+            if (completedEvent.time != null) {
+              completedDate = completedEvent.time;
+            }
+          } catch (e) {
+            // Không tìm thấy event, giữ completedDate = null
+          }
+        }
+      }
+      
+      // Tính số ngày từ khi hoàn thành
+      if (completedDate != null) {
+        final now = DateTime.now();
+        final daysSinceCompleted = now.difference(completedDate).inDays;
+        // Nếu đã qua 7 ngày (>= 7) thì không cho báo cáo và đánh giá nữa
+        final within7Days = daysSinceCompleted < 7;
+        canReport = within7Days;
+        canReview = canReview && within7Days; // Chỉ cho phép đánh giá nếu chưa qua 7 ngày
+      }
+      // Nếu không có thông tin về thời gian hoàn thành, vẫn cho phép báo cáo và đánh giá (fallback)
+    }
     
     return Column(
       children: [
@@ -1139,9 +1297,9 @@ print("🔥 TOTAL = ${detail.service.lineTotal - detail.voucherDiscount}");
                           child: CircularProgressIndicator(
                               strokeWidth: 2, color: Colors.white),
                         )
-                      : const Text(
-                          "Thanh toán ngay",
-                          style: TextStyle(
+                      : Text(
+                          context.tr('pay_now'),
+                          style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
                           ),
@@ -1153,7 +1311,7 @@ print("🔥 TOTAL = ${detail.service.lineTotal - detail.voucherDiscount}");
           }),
 
         // ==== ⭐ NÚT ĐÁNH GIÁ ====
-        // Chỉ hiển thị khi Completed (không phải Service Completed) và chưa đánh giá
+        // Chỉ hiển thị khi Completed (không phải Service Completed), chưa đánh giá và chưa qua 7 ngày
         if (canReview)
           Column(
             children: [
@@ -1170,9 +1328,9 @@ print("🔥 TOTAL = ${detail.service.lineTotal - detail.voucherDiscount}");
                   }
                 },
                 icon: const Icon(Icons.star_rounded),
-                label: const Text(
-                  "Đánh giá dịch vụ",
-                  style: TextStyle(
+                label: Text(
+                  context.tr('review_service'),
+                  style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
                   ),
@@ -1192,8 +1350,8 @@ print("🔥 TOTAL = ${detail.service.lineTotal - detail.voucherDiscount}");
           ),
 
         // ==== ⭐ NÚT BÁO CÁO ====
-        // Hiển thị khi Completed hoặc Service Completed
-        if (isCompletedOrServiceCompleted)
+        // Hiển thị khi Completed hoặc Service Completed và chưa qua 7 ngày
+        if (canReport)
           _ReportButton(
             bookingId: detail.bookingId,
             detail: detail,
@@ -1252,9 +1410,9 @@ print("🔥 TOTAL = ${detail.service.lineTotal - detail.voucherDiscount}");
             }
           },
           icon: const Icon(Icons.report_problem_rounded),
-          label: const Text(
-            "Báo cáo",
-            style: TextStyle(
+          label: Text(
+            context.tr('report'),
+            style: const TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w600,
             ),
@@ -1286,9 +1444,9 @@ print("🔥 TOTAL = ${detail.service.lineTotal - detail.voucherDiscount}");
                 }
               },
               icon: const Icon(Icons.report_problem_rounded),
-              label: const Text(
-                "Báo cáo",
-                style: TextStyle(
+              label: Text(
+                context.tr('report'),
+                style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
                 ),
@@ -1313,9 +1471,9 @@ print("🔥 TOTAL = ${detail.service.lineTotal - detail.voucherDiscount}");
                 );
               },
               icon: const Icon(Icons.visibility_rounded),
-              label: const Text(
-                "Xem báo cáo",
-                style: TextStyle(
+              label: Text(
+                context.tr('view_report'),
+                style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
                 ),

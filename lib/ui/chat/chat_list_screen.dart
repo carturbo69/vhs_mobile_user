@@ -10,8 +10,11 @@ import 'package:vhs_mobile_user/routing/routes.dart';
 import 'package:vhs_mobile_user/ui/chat/chat_list_viewmodel.dart';
 import 'package:vhs_mobile_user/ui/chat/chat_detail_screen.dart';
 import 'package:vhs_mobile_user/ui/core/theme_helper.dart';
+import 'package:vhs_mobile_user/l10n/extensions/localization_extension.dart';
+import 'package:vhs_mobile_user/providers/locale_provider.dart';
+import 'package:vhs_mobile_user/services/translation_cache_provider.dart';
+import 'package:vhs_mobile_user/services/notification_service.dart';
 
-// Màu xanh theo web - Sky blue palette
 const Color primaryBlue = Color(0xFF0284C7); // Sky-600
 
 class ChatListScreen extends ConsumerStatefulWidget {
@@ -22,38 +25,82 @@ class ChatListScreen extends ConsumerStatefulWidget {
 }
 
 class _ChatListScreenState extends ConsumerState<ChatListScreen> {
+  // Track last message timestamps to avoid duplicate notifications
+  final Map<String, DateTime?> _lastNotifiedMessageTime = {};
+
   @override
   void initState() {
     super.initState();
-    _connectSignalR();
+    _setupSignalRListener();
   }
 
-  Future<void> _connectSignalR() async {
+  Future<void> _setupSignalRListener() async {
     try {
-      final authDao = ref.read(authDaoProvider);
-      final auth = await authDao.getSavedAuth();
-      String? accountId = auth?['accountId'] as String?;
+      final signalRService = ref.read(signalRChatServiceProvider);
       
-      if (accountId == null || accountId.isEmpty) {
-        final token = await authDao.getToken();
-        if (token != null) {
-          accountId = JwtHelper.getAccountIdFromToken(token);
+      // Ensure connection (auto-connect should have already connected, but check just in case)
+      if (!signalRService.isConnected) {
+        final authDao = ref.read(authDaoProvider);
+        final auth = await authDao.getSavedAuth();
+        String? accountId = auth?['accountId'] as String?;
+
+        if (accountId == null || accountId.isEmpty) {
+          final token = await authDao.getToken();
+          if (token != null) {
+            accountId = JwtHelper.getAccountIdFromToken(token);
+          }
         }
-      }
-      
-      if (accountId != null && accountId.isNotEmpty) {
-        final signalRService = ref.read(signalRChatServiceProvider);
-        if (!signalRService.isConnected) {
+        if (accountId != null && accountId.isNotEmpty) {
           await signalRService.connect(accountId);
         }
-        
-        // Listen to conversation list updates
-        signalRService.listenToConversations().listen((updatedItem) {
-          ref.read(chatListProvider.notifier).updateConversationListItem(updatedItem);
-          // Refresh unread total when conversation is updated
-          ref.invalidate(unreadTotalProvider);
-        });
       }
+      
+      // Setup listener for conversation updates
+      signalRService.listenToConversations().listen((updatedItem) {
+          if (!mounted) return;
+          
+          // Check if there's a new message (unread count increased or new lastMessageAt)
+          final currentList = ref.read(chatListProvider).value;
+          if (currentList != null && updatedItem.lastMessageAt != null) {
+            final existingConversation = currentList.firstWhere(
+              (item) => item.conversationId == updatedItem.conversationId,
+              orElse: () => updatedItem,
+            );
+            
+            // Get the last notified time for this conversation
+            final lastNotifiedTime = _lastNotifiedMessageTime[updatedItem.conversationId];
+            
+            // Show notification if:
+            // 1. There's a new message (lastMessageAt is newer than last notified time)
+            // 2. unreadCount > 0 (there are unread messages)
+            // 3. The message is actually new (not already notified)
+            final hasNewMessage = updatedItem.unreadCount > 0 &&
+                (lastNotifiedTime == null ||
+                    updatedItem.lastMessageAt!.isAfter(lastNotifiedTime));
+            
+            if (hasNewMessage) {
+              // Update last notified time
+              _lastNotifiedMessageTime[updatedItem.conversationId] = updatedItem.lastMessageAt;
+              
+              // Show notification (non-blocking)
+              final notificationService = ref.read(notificationServiceProvider);
+              notificationService.showChatMessageNotification(
+                senderName: updatedItem.title,
+                messageBody: updatedItem.lastMessageSnippet,
+                conversationId: updatedItem.conversationId,
+                imageUrl: updatedItem.lastMessageSnippet?.contains('[Hình ảnh]') == true ||
+                         updatedItem.lastMessageSnippet?.contains('[Image]') == true
+                    ? 'has_image'
+                    : null,
+              ).catchError((error) {
+                print("❌ Error showing chat notification: $error");
+              });
+            }
+          }
+          
+          ref.read(chatListProvider.notifier).handleRealtimeUpdate(updatedItem);
+          ref.refresh(unreadTotalProvider);
+        });
     } catch (e) {
       print('Error connecting SignalR: $e');
     }
@@ -61,6 +108,10 @@ class _ChatListScreenState extends ConsumerState<ChatListScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Watch locale và translation cache để rebuild khi đổi ngôn ngữ
+    ref.watch(localeProvider);
+    ref.watch(translationCacheProvider);
+    
     final chatListAsync = ref.watch(chatListProvider);
     final unreadTotalAsync = ref.watch(unreadTotalProvider);
 
@@ -80,33 +131,15 @@ class _ChatListScreenState extends ConsumerState<ChatListScreen> {
           ),
         ),
         backgroundColor: Colors.transparent,
-        title: const Text(
-          'Tin nhắn',
-          style: TextStyle(
+        title: Text(
+          context.tr('messages'),
+          style: const TextStyle(
             fontWeight: FontWeight.bold,
             fontSize: 20,
             color: Colors.white,
           ),
         ),
         iconTheme: const IconThemeData(color: Colors.white),
-        actions: [
-          Container(
-            margin: const EdgeInsets.only(right: 8),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
-              shape: BoxShape.circle,
-            ),
-            child: IconButton(
-              icon: const Icon(Icons.refresh),
-              onPressed: () {
-                ref.read(chatListProvider.notifier).refresh();
-                // Refresh unread total when manually refreshing
-                ref.invalidate(unreadTotalProvider);
-              },
-              tooltip: 'Làm mới',
-            ),
-          ),
-        ],
       ),
       body: Column(
         children: [
@@ -124,7 +157,7 @@ class _ChatListScreenState extends ConsumerState<ChatListScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text(
-                'Lỗi: $e',
+                '${context.tr('error')}: $e',
                 style: TextStyle(color: ThemeHelper.getTextColor(context)),
               ),
               const SizedBox(height: 16),
@@ -133,7 +166,7 @@ class _ChatListScreenState extends ConsumerState<ChatListScreen> {
                         ref.read(chatListProvider.notifier).refresh();
                         ref.invalidate(unreadTotalProvider);
                       },
-                child: const Text('Thử lại'),
+                child: Text(context.tr('try_again')),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: ThemeHelper.getPrimaryColor(context),
                 ),
@@ -162,7 +195,7 @@ class _ChatListScreenState extends ConsumerState<ChatListScreen> {
                         ),
                         const SizedBox(height: 24),
                   Text(
-                    'Chưa có tin nhắn nào',
+                    context.tr('no_messages_yet'),
                           style: TextStyle(
                             color: ThemeHelper.getSecondaryTextColor(context),
                             fontSize: 18,
@@ -171,7 +204,7 @@ class _ChatListScreenState extends ConsumerState<ChatListScreen> {
                   ),
                   const SizedBox(height: 8),
                         Text(
-                          'Bắt đầu trò chuyện với chúng tôi',
+                          context.tr('start_chatting_with_us'),
                           style: TextStyle(
                             color: ThemeHelper.getTertiaryTextColor(context),
                             fontSize: 14,
@@ -180,7 +213,7 @@ class _ChatListScreenState extends ConsumerState<ChatListScreen> {
                         const SizedBox(height: 24),
                         ElevatedButton.icon(
                     icon: const Icon(Icons.support_agent),
-                    label: const Text('Chat với Admin'),
+                    label: Text(context.tr('chat_with_admin')),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: ThemeHelper.getPrimaryColor(context),
                             foregroundColor: Colors.white,
@@ -209,7 +242,6 @@ class _ChatListScreenState extends ConsumerState<ChatListScreen> {
           return RefreshIndicator(
             onRefresh: () async {
               await ref.read(chatListProvider.notifier).refresh();
-                    // Refresh unread total when pull-to-refresh
                     ref.invalidate(unreadTotalProvider);
             },
                   child: ListView.builder(
@@ -241,13 +273,13 @@ class _ChatListScreenState extends ConsumerState<ChatListScreen> {
           }
         },
         child: const Icon(Icons.chat),
-        tooltip: 'Chat với Admin',
+        tooltip: context.tr('chat_with_admin'),
       ),
     );
   }
 }
 
-class _ConversationListItem extends StatelessWidget {
+class _ConversationListItem extends ConsumerWidget {
   final ConversationListItemModel conversation;
   final VoidCallback onTap;
 
@@ -257,19 +289,18 @@ class _ConversationListItem extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Watch locale và translation cache để rebuild khi đổi ngôn ngữ
+    ref.watch(localeProvider);
+    ref.watch(translationCacheProvider);
     final baseUrl = 'http://apivhs.cuahangkinhdoanh.com';
     String? avatarUrl;
-    
-    // Xử lý avatarUrl giống như trong chat_detail_screen
     final rawAvatarUrl = conversation.avatarUrl;
     if (rawAvatarUrl != null && rawAvatarUrl.trim().isNotEmpty) {
       final trimmed = rawAvatarUrl.trim();
-      // Nếu đã là absolute URL (backend đã xử lý), dùng trực tiếp
       if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
         avatarUrl = trimmed;
       } else {
-        // Nếu là relative path, thêm base URL
         final path = trimmed.startsWith('/') ? trimmed : '/$trimmed';
         avatarUrl = '$baseUrl$path';
       }
@@ -417,7 +448,7 @@ class _ConversationListItem extends StatelessWidget {
                       if (conversation.lastMessageAt != null) ...[
                         const SizedBox(width: 8),
                         Text(
-                          _formatTime(conversation.lastMessageAt!),
+                          _formatTime(context, conversation.lastMessageAt!),
                           style: TextStyle(
                             fontSize: 12,
                             color: ThemeHelper.getTertiaryTextColor(context),
@@ -483,45 +514,24 @@ class _ConversationListItem extends StatelessWidget {
     );
   }
 
-  String _formatTime(DateTime time) {
-    // Convert từ UTC sang giờ Việt Nam (UTC+7) - giống logic FE
-    // Đảm bảo time là UTC trước khi convert
-    final utcTime = time.isUtc ? time : time.toUtc();
-    final vietnamTime = utcTime.add(const Duration(hours: 7));
-    
-    // Lấy thời gian hiện tại ở giờ Việt Nam để so sánh
-    final nowUtc = DateTime.now().toUtc();
-    final nowVietnam = nowUtc.add(const Duration(hours: 7));
-    
-    // So sánh ngày tháng (chỉ lấy phần date, bỏ qua time)
-    final timeDate = DateTime(vietnamTime.year, vietnamTime.month, vietnamTime.day);
-    final nowDate = DateTime(nowVietnam.year, nowVietnam.month, nowVietnam.day);
-    final daysDiff = nowDate.difference(timeDate).inDays;
+  String _formatTime(BuildContext context, DateTime time) {
+    final vnTime = time.toUtc().add(const Duration(hours: 7));
+    final nowVn = DateTime.now().toUtc().add(const Duration(hours: 7));
 
-    // Cùng ngày: chỉ hiển thị giờ:phút
-    if (daysDiff == 0) {
-      return '${vietnamTime.hour.toString().padLeft(2, '0')}:${vietnamTime.minute.toString().padLeft(2, '0')}';
+    if (vnTime.year == nowVn.year && vnTime.month == nowVn.month && vnTime.day == nowVn.day) {
+      return '${vnTime.hour.toString().padLeft(2, '0')}:${vnTime.minute.toString().padLeft(2, '0')}';
     }
-    
-    // Hôm qua
-    if (daysDiff == 1) {
-      return 'Hôm qua ${vietnamTime.hour.toString().padLeft(2, '0')}:${vietnamTime.minute.toString().padLeft(2, '0')}';
+
+    final yesterdayVn = nowVn.subtract(const Duration(days: 1));
+    if (vnTime.year == yesterdayVn.year && vnTime.month == yesterdayVn.month && vnTime.day == yesterdayVn.day) {
+      return context.tr('yesterday');
     }
-    
-    // Trong 7 ngày: hiển thị thứ và giờ (giống FE: Thứ 2-7, CN)
-    if (daysDiff < 7) {
-      final dayOfWeek = vietnamTime.weekday; // 1=Monday, 7=Sunday
-      final weekdays = ['', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7', 'CN'];
-      return '${weekdays[dayOfWeek]} ${vietnamTime.hour.toString().padLeft(2, '0')}:${vietnamTime.minute.toString().padLeft(2, '0')}';
+
+    final diff = nowVn.difference(vnTime);
+    if (diff.inDays < 7) {
+      return '${diff.inDays} ${context.tr('days_ago')}';
     }
-    
-    // Trong cùng năm: hiển thị ngày/tháng và giờ
-    if (vietnamTime.year == nowVietnam.year) {
-      return '${vietnamTime.day.toString().padLeft(2, '0')}/${vietnamTime.month.toString().padLeft(2, '0')} ${vietnamTime.hour.toString().padLeft(2, '0')}:${vietnamTime.minute.toString().padLeft(2, '0')}';
-    }
-    
-    // Khác năm: hiển thị đầy đủ
-    return '${vietnamTime.day.toString().padLeft(2, '0')}/${vietnamTime.month.toString().padLeft(2, '0')}/${vietnamTime.year} ${vietnamTime.hour.toString().padLeft(2, '0')}:${vietnamTime.minute.toString().padLeft(2, '0')}';
+    return '${vnTime.day}/${vnTime.month}/${vnTime.year}';
   }
 }
 

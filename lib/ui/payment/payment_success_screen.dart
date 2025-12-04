@@ -5,6 +5,12 @@ import 'package:vhs_mobile_user/routing/routes.dart';
 import 'package:vhs_mobile_user/ui/history/history_viewmodel.dart';
 import 'package:intl/intl.dart';
 import 'package:vhs_mobile_user/ui/core/theme_helper.dart';
+import 'package:vhs_mobile_user/l10n/extensions/localization_extension.dart';
+import 'package:vhs_mobile_user/providers/locale_provider.dart';
+import 'package:vhs_mobile_user/services/translation_cache_provider.dart';
+import 'package:vhs_mobile_user/services/data_translation_service.dart';
+import 'package:vhs_mobile_user/ui/notification/notification_viewmodel.dart';
+import 'package:vhs_mobile_user/services/notification_service.dart';
 
 class PaymentSuccessData {
   final String transactionId;
@@ -38,6 +44,26 @@ class PaymentSuccessScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Watch locale và translation cache để rebuild khi đổi ngôn ngữ hoặc có translation mới
+    ref.watch(localeProvider);
+    ref.watch(translationCacheProvider);
+    
+    // Refresh notification list when payment success screen is shown
+    // This ensures we get the latest notifications including payment success notification
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      try {
+        await ref.read(notificationListProvider.notifier).refresh();
+        print("✅ Đã refresh notification list sau payment success");
+        
+        // Wait a bit for the state to update, then check for new notifications
+        await Future.delayed(const Duration(milliseconds: 500));
+        final notificationService = ref.read(notificationServiceProvider);
+        await notificationService.checkAndShowNewNotifications();
+      } catch (e) {
+        print("❌ Error refreshing notifications: $e");
+      }
+    });
+    
     final theme = Theme.of(context);
     // Use transaction time from backend if available, otherwise use current time
     final timeToDisplay = data.transactionTime ?? DateTime.now();
@@ -64,9 +90,9 @@ class PaymentSuccessScreen extends ConsumerWidget {
             ),
           ),
         ),
-        title: const Text(
-          "Thanh toán thành công",
-          style: TextStyle(
+        title: Text(
+          context.tr('payment_success_title'),
+          style: const TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.bold,
             fontSize: 20,
@@ -153,7 +179,7 @@ class PaymentSuccessScreen extends ConsumerWidget {
                       style: TextStyle(fontSize: 32),
                     ),
                     TextSpan(
-                      text: 'Thanh toán thành công!',
+                      text: context.tr('payment_success_message'),
                       style: TextStyle(
                         color: Colors.green.shade400,
                         shadows: [
@@ -173,7 +199,7 @@ class PaymentSuccessScreen extends ConsumerWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8),
                 child: Text(
-                  'Cảm ơn bạn đã sử dụng dịch vụ của chúng tôi. Giao dịch của bạn đã được xử lý thành công.',
+                  context.tr('thank_you_message'),
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 15.5,
@@ -213,7 +239,7 @@ class PaymentSuccessScreen extends ConsumerWidget {
                     _buildInfoRow(
                       context: context,
                       icon: Icons.payment_rounded,
-                      label: 'Phương thức thanh toán',
+                      label: context.tr('payment_method'),
                       value: 'VNPay',
                       iconColor: ThemeHelper.getPrimaryColor(context),
                     ),
@@ -226,7 +252,7 @@ class PaymentSuccessScreen extends ConsumerWidget {
                     _buildInfoRow(
                       context: context,
                       icon: Icons.receipt_long_rounded,
-                      label: 'Mã giao dịch',
+                      label: context.tr('transaction_id'),
                       value: data.transactionId,
                       iconColor: Colors.purple.shade600,
                     ),
@@ -240,8 +266,8 @@ class PaymentSuccessScreen extends ConsumerWidget {
                       _buildInfoRow(
                         context: context,
                         icon: Icons.shopping_bag_rounded,
-                        label: 'Số lượng dịch vụ',
-                        value: '${data.bookingIds.length} booking',
+                        label: context.tr('number_of_services'),
+                        value: '${data.bookingIds.length} ${context.tr('booking_count')}',
                         iconColor: Colors.orange.shade600,
                       ),
                     ],
@@ -255,7 +281,7 @@ class PaymentSuccessScreen extends ConsumerWidget {
                       _buildInfoRow(
                         context: context,
                         icon: Icons.attach_money_rounded,
-                        label: 'Tổng thanh toán',
+                        label: context.tr('total_payment'),
                         value: '${NumberFormat('#,###').format(data.total!.toInt())}₫',
                         iconColor: Colors.green.shade600,
                         isHighlight: true,
@@ -270,7 +296,7 @@ class PaymentSuccessScreen extends ConsumerWidget {
                     _buildInfoRow(
                       context: context,
                       icon: Icons.access_time_rounded,
-                      label: 'Thời gian',
+                      label: context.tr('payment_time'),
                       value: formattedTime,
                       iconColor: Colors.teal.shade600,
                     ),
@@ -316,7 +342,7 @@ class PaymentSuccessScreen extends ConsumerWidget {
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(
-                          'Dịch vụ đã đặt thành công:',
+                          context.tr('services_booked_successfully'),
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             fontSize: 17,
@@ -335,10 +361,28 @@ class PaymentSuccessScreen extends ConsumerWidget {
                 ...data.bookingIds.asMap().entries.map((entry) {
                   final index = entry.key;
                   final bookingId = entry.value;
-                  final serviceName = data.serviceNames?[bookingId] ?? 
-                      'Dịch vụ số ${index + 1}';
                   
-                  return Container(
+                  return Builder(
+                    builder: (context) {
+                      // Dịch service name từ backend
+                      final locale = ref.read(localeProvider);
+                      final isVietnamese = locale.languageCode == 'vi';
+                      final translationService = DataTranslationService(ref);
+                      
+                      final rawServiceName = data.serviceNames?[bookingId];
+                      String serviceName;
+                      
+                      if (rawServiceName == null || rawServiceName.isEmpty) {
+                        // Fallback: Dịch vụ số X
+                        serviceName = '${context.tr('service_number')} ${index + 1}';
+                      } else {
+                        // Dịch service name từ backend
+                        serviceName = isVietnamese 
+                            ? rawServiceName 
+                            : translationService.smartTranslate(rawServiceName);
+                      }
+                      
+                      return Container(
                     margin: const EdgeInsets.only(bottom: 16),
                     decoration: BoxDecoration(
                       color: ThemeHelper.getCardBackgroundColor(context),
@@ -430,7 +474,7 @@ class PaymentSuccessScreen extends ConsumerWidget {
                                       ),
                                       const SizedBox(width: 6),
                                       Text(
-                                        '✓ Đã thanh toán',
+                                        '✓ ${context.tr('paid')}',
                                         style: TextStyle(
                                           fontSize: 12,
                                           fontWeight: FontWeight.bold,
@@ -446,6 +490,8 @@ class PaymentSuccessScreen extends ConsumerWidget {
                         ],
                       ),
                     ),
+                      );
+                    },
                   );
                 }).toList(),
               ],
@@ -495,7 +541,7 @@ class PaymentSuccessScreen extends ConsumerWidget {
                     const SizedBox(width: 16),
                     Expanded(
                       child: Text(
-                        'Nếu có bất kỳ thắc mắc nào, vui lòng liên hệ với chúng tôi qua hotline: 0337.868.575 hoặc email: vhsplatform700@gmail.com để được hỗ trợ.',
+                        context.tr('contact_support_message'),
                         style: TextStyle(
                           fontSize: 14.5,
                           color: ThemeHelper.getTextColor(context),
@@ -523,9 +569,9 @@ class PaymentSuccessScreen extends ConsumerWidget {
                         }
                       },
                       icon: const Icon(Icons.calendar_today_rounded, size: 20),
-                      label: const Text(
-                        'Xem lịch sử',
-                        style: TextStyle(
+                      label: Text(
+                        context.tr('view_history'),
+                        style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
                           letterSpacing: 0.2,
@@ -554,9 +600,9 @@ class PaymentSuccessScreen extends ConsumerWidget {
                         }
                       },
                       icon: const Icon(Icons.home_rounded, size: 20),
-                      label: const Text(
-                        'Về trang chủ',
-                        style: TextStyle(
+                      label: Text(
+                        context.tr('go_home'),
+                        style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
                           letterSpacing: 0.2,

@@ -7,6 +7,8 @@ import 'package:vhs_mobile_user/routing/routes.dart';
 import 'package:vhs_mobile_user/ui/profile/profile_viewmodel.dart';
 import 'package:vhs_mobile_user/data/models/user/profile_model.dart';
 import 'package:vhs_mobile_user/providers/theme_provider.dart';
+import 'package:vhs_mobile_user/providers/locale_provider.dart';
+import 'package:vhs_mobile_user/l10n/app_localizations.dart';
 
 class ProfileSummaryScreen extends ConsumerWidget {
   const ProfileSummaryScreen({super.key});
@@ -46,14 +48,16 @@ class ProfileSummaryScreen extends ConsumerWidget {
               onPressed: () {
                 ref.read(profileProvider.notifier).refresh();
               },
-              tooltip: "Làm mới",
+              tooltip: AppLocalizations.of(context).t('refresh'),
             ),
           ),
         ],
       ),
       body: asyncProfile.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, st) => Center(child: Text("Lỗi: $e")),
+        error: (e, st) => Center(
+          child: Text("${AppLocalizations.of(context).t('error')}: $e"),
+        ),
         data: (profile) => _ProfileSummaryView(profile: profile, ref: ref),
       ),
     );
@@ -87,13 +91,13 @@ class _ProfileSummaryView extends ConsumerWidget {
             child: Column(
               children: [
                 const SizedBox(height: 20),
-                _buildSectionTitle("Tùy chọn", context),
+                _buildSectionTitle(AppLocalizations.of(context).t('options'), context),
                 const SizedBox(height: 16),
                 // 3 nút: Đánh giá, Chế độ sáng-tối, Tiếng anh - Tiếng việt
                 _buildMenuButton(
                   context: context,
                   icon: Icons.star_outline,
-                  label: "Đánh giá",
+                  label: AppLocalizations.of(context).t('reviews'),
                   iconColor: Colors.amber,
                   onPressed: () {
                     if (kDebugMode) {
@@ -111,7 +115,9 @@ class _ProfileSummaryView extends ConsumerWidget {
                     return _buildMenuButton(
                       context: context,
                       icon: isDark ? Icons.dark_mode : Icons.light_mode,
-                      label: isDark ? "Chế độ tối" : "Chế độ sáng",
+                      label: isDark 
+                        ? AppLocalizations.of(context).t('dark_mode')
+                        : AppLocalizations.of(context).t('light_mode'),
                       iconColor: Colors.orange,
                       onPressed: () {
                         ref.read(themeModeProvider.notifier).toggleTheme();
@@ -120,13 +126,43 @@ class _ProfileSummaryView extends ConsumerWidget {
                   },
                 ),
                 const SizedBox(height: 12),
-                _buildMenuButton(
-                  context: context,
-                  icon: Icons.language_outlined,
-                  label: "Tiếng anh - Tiếng việt",
-                  iconColor: Colors.blue,
-                  onPressed: () {
-                    // TODO: Xử lý đổi ngôn ngữ
+                Consumer(
+                  builder: (context, ref, child) {
+                    final locale = ref.watch(localeProvider);
+                    final isVietnamese = locale.languageCode == 'vi';
+                    
+                    return _buildMenuButton(
+                      context: context,
+                      icon: Icons.language_outlined,
+                      // Hiển thị ngôn ngữ hiện tại đang dùng
+                      label: isVietnamese 
+                        ? "🇻🇳 Tiếng Việt"  // Đang dùng Tiếng Việt → Hiển thị Tiếng Việt
+                        : "🇬🇧 English",  // Đang dùng English → Hiển thị English
+                      iconColor: Colors.blue,
+                      onPressed: () async {
+                        await ref.read(localeProvider.notifier).toggleLocale();
+                        
+                        // Show snackbar để thông báo đã đổi ngôn ngữ
+                        if (context.mounted) {
+                          final newLocale = ref.read(localeProvider);
+                          final message = newLocale.languageCode == 'vi'
+                              ? "Đã chuyển sang Tiếng Việt"
+                              : "Changed to English";
+                          
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(message),
+                              duration: const Duration(seconds: 2),
+                              behavior: SnackBarBehavior.floating,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              margin: const EdgeInsets.all(16),
+                            ),
+                          );
+                        }
+                      },
+                    );
                   },
                 ),
                 const SizedBox(height: 20),

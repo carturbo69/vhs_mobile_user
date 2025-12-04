@@ -7,6 +7,8 @@ import 'package:vhs_mobile_user/data/models/user/user_address_update_model.dart'
 import 'package:vhs_mobile_user/routing/routes.dart';
 import 'package:vhs_mobile_user/ui/user_address/user_address_viewmodel.dart';
 import 'package:vhs_mobile_user/ui/core/theme_helper.dart';
+import 'package:vhs_mobile_user/l10n/extensions/localization_extension.dart';
+import 'package:vhs_mobile_user/providers/locale_provider.dart';
 
 class AddAddressPage extends ConsumerStatefulWidget {
   const AddAddressPage({super.key});
@@ -55,6 +57,9 @@ class _AddAddressPageState extends ConsumerState<AddAddressPage> {
 
   @override
   Widget build(BuildContext context) {
+    // Watch locale để rebuild khi đổi ngôn ngữ
+    ref.watch(localeProvider);
+    
     final isEditMode = _editingAddress != null;
     return Scaffold(
       appBar: AppBar(
@@ -75,7 +80,7 @@ class _AddAddressPageState extends ConsumerState<AddAddressPage> {
           ),
         ),
         title: Text(
-          isEditMode ? "Sửa địa chỉ" : "Thêm địa chỉ",
+          isEditMode ? context.tr('edit_address') : context.tr('add_address'),
           style: const TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.bold,
@@ -122,7 +127,7 @@ class _AddAddressPageState extends ConsumerState<AddAddressPage> {
                 ),
                 const SizedBox(width: 12),
                 Text(
-                  'Thông tin địa chỉ',
+                  context.tr('address_information'),
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
@@ -134,10 +139,10 @@ class _AddAddressPageState extends ConsumerState<AddAddressPage> {
             ),
           ),
           const SizedBox(height: 16),
-          _field("Tỉnh/Thành phố", _province, Icons.location_city),
-          _field("Quận/Huyện", _district, Icons.map),
-          _field("Phường/Xã", _ward, Icons.home),
-          _field("Đường/Số nhà", _street, Icons.signpost),
+          _field(context.tr('province_city'), _province, Icons.location_city),
+          _field(context.tr('district'), _district, Icons.map),
+          _field(context.tr('ward'), _ward, Icons.home),
+          _field(context.tr('street_house_number'), _street, Icons.signpost),
           
           const SizedBox(height: 24),
           
@@ -175,7 +180,7 @@ class _AddAddressPageState extends ConsumerState<AddAddressPage> {
                 ),
                 const SizedBox(width: 12),
                 Text(
-                  'Thông tin người đặt lịch',
+                  context.tr('recipient_information'),
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
@@ -187,8 +192,8 @@ class _AddAddressPageState extends ConsumerState<AddAddressPage> {
             ),
           ),
           const SizedBox(height: 16),
-          _field("Tên người đặt", _recipientName, Icons.person_outline),
-          _field("Số điện thoại người đặt", _recipientPhone, Icons.phone),
+          _field(context.tr('recipient_name'), _recipientName, Icons.person_outline),
+          _field(context.tr('recipient_phone'), _recipientPhone, Icons.phone),
           
           const SizedBox(height: 24),
           
@@ -239,7 +244,7 @@ class _AddAddressPageState extends ConsumerState<AddAddressPage> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            "Chọn vị trí trên bản đồ",
+                            context.tr('select_location_on_map'),
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
@@ -248,7 +253,7 @@ class _AddAddressPageState extends ConsumerState<AddAddressPage> {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            "Chọn vị trí để tự động điền địa chỉ",
+                            context.tr('select_location_to_auto_fill'),
                             style: TextStyle(
                               fontSize: 12,
                               color: ThemeHelper.getSecondaryTextColor(context),
@@ -326,7 +331,7 @@ class _AddAddressPageState extends ConsumerState<AddAddressPage> {
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  _editingAddress != null ? "Cập nhật địa chỉ" : "Lưu địa chỉ",
+                  _editingAddress != null ? context.tr('update_address') : context.tr('save_address'),
                   style: const TextStyle(
                     fontSize: 17,
                     fontWeight: FontWeight.w600,

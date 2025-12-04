@@ -29,7 +29,6 @@ class ChatDetailNotifier extends AsyncNotifier<ConversationModel> {
     final auth = await authDao.getSavedAuth();
     _accountId = auth?['accountId'] as String?;
 
-    // Nếu accountId từ database rỗng, thử lấy từ JWT token
     if (_accountId == null || _accountId!.isEmpty) {
       final token = await authDao.getToken();
       if (token != null) {
@@ -40,10 +39,22 @@ class ChatDetailNotifier extends AsyncNotifier<ConversationModel> {
     return _accountId;
   }
 
+
+
   @override
   Future<ConversationModel> build() async {
     _repo = ref.read(chatRepositoryProvider);
-    
+
+    final signalRService = ref.read(signalRChatServiceProvider);
+
+    final subscription = signalRService.listenToMessages(_conversationId).listen((message) {
+      addMessage(message);
+    });
+
+    ref.onDispose(() {
+      subscription.cancel();
+    });
+
     final accountId = await _getAccountId();
     if (accountId == null || accountId.isEmpty) {
       throw Exception('Chưa đăng nhập');
@@ -54,8 +65,8 @@ class ChatDetailNotifier extends AsyncNotifier<ConversationModel> {
       conversationId: _conversationId,
       accountId: accountId,
     );
-    
-    // Nếu conversation không có avatarUrl, lấy từ list item
+
+    ConversationModel finalConversation = conversation;
     if (conversation.avatarUrl == null || conversation.avatarUrl!.trim().isEmpty) {
       try {
         final listAsync = ref.read(chatListProvider);
@@ -65,18 +76,19 @@ class ChatDetailNotifier extends AsyncNotifier<ConversationModel> {
             (item) => item.conversationId == _conversationId,
             orElse: () => throw Exception('Not found'),
           );
-          
-          // Nếu list item có avatarUrl, dùng nó
+
           if (listItem.avatarUrl != null && listItem.avatarUrl!.trim().isNotEmpty) {
             return conversation.copyWith(avatarUrl: listItem.avatarUrl);
           }
         }
       } catch (e) {
-        // Nếu không tìm thấy trong list, giữ nguyên conversation
+
       }
     }
-    
-    return conversation;
+
+    final visibleMessages = finalConversation.getVisibleMessages(accountId);
+
+    return finalConversation.copyWith(messages: visibleMessages);
   }
 
   Future<void> refresh() async {
@@ -91,47 +103,6 @@ class ChatDetailNotifier extends AsyncNotifier<ConversationModel> {
     ));
   }
 
-  // Refresh ngầm không hiển thị loading state
-  Future<void> silentRefresh() async {
-    final accountId = await _getAccountId();
-    if (accountId == null || accountId.isEmpty) return;
-
-    _accountId = accountId;
-    try {
-      final conversation = await _repo.getConversationDetail(
-        conversationId: _conversationId,
-        accountId: accountId,
-      );
-      
-      // Nếu conversation không có avatarUrl, lấy từ list item
-      if (conversation.avatarUrl == null || conversation.avatarUrl!.trim().isEmpty) {
-        try {
-          final listAsync = ref.read(chatListProvider);
-          if (listAsync.hasValue) {
-            final listItems = listAsync.value!;
-            final listItem = listItems.firstWhere(
-              (item) => item.conversationId == _conversationId,
-              orElse: () => throw Exception('Not found'),
-            );
-            
-            if (listItem.avatarUrl != null && listItem.avatarUrl!.trim().isNotEmpty) {
-              state = AsyncValue.data(conversation.copyWith(avatarUrl: listItem.avatarUrl));
-              return;
-            }
-          }
-        } catch (e) {
-          // Ignore
-        }
-      }
-      
-      // Update state trực tiếp không qua AsyncLoading
-      state = AsyncValue.data(conversation);
-    } catch (e, st) {
-      // Nếu có lỗi, không update state để giữ nguyên data cũ
-      print('Silent refresh error: $e');
-    }
-  }
-
   Future<bool> sendMessage({
     String? body,
     File? image,
@@ -139,49 +110,11 @@ class ChatDetailNotifier extends AsyncNotifier<ConversationModel> {
   }) async {
     final accountId = await _getAccountId();
     if (accountId == null || accountId.isEmpty) return false;
-
     _accountId = accountId;
 
     try {
-      // Cập nhật UI ngay lập tức với message đang gửi (optimistic update)
-      final current = state.value;
-      String? tempMessageId;
-      if (current != null) {
-        // Tạo message tạm thời để hiển thị ngay
-        tempMessageId = 'temp-${DateTime.now().millisecondsSinceEpoch}';
-        // Nếu có ảnh, dùng file:// để hiển thị ảnh local
-        final tempImageUrl = image != null ? 'file://${image.path}' : null;
-        final tempMessage = MessageModel(
-          messageId: tempMessageId,
-          conversationId: _conversationId,
-          senderAccountId: accountId,
-          body: body,
-          messageType: image != null ? 'Image' : 'Text',
-          replyToMessageId: replyToMessageId,
-          imageUrl: tempImageUrl,
-          metadata: null,
-          createdAt: DateTime.now().toUtc(), // Dùng UTC để consistent
-          editedAt: null,
-          deletedAt: null,
-          sender: MessageAccountModel(
-            accountId: accountId,
-            accountName: 'Bạn',
-            avatarUrl: null, email: '', role: '',
-          ),
-          replyTo: null,
-          isMine: true,
-          status: 'Sending',
-        );
-        // Thêm message và sort lại từ cũ đến mới
-        final updatedMessages = [...current.messages, tempMessage];
-        updatedMessages.sort((a, b) => a.createdAt.compareTo(b.createdAt));
-        state = AsyncValue.data(
-          current.copyWith(messages: updatedMessages),
-        );
-      }
 
-      // Gửi message thực tế
-      final message = await _repo.sendMessage(
+      final messageFromServer = await _repo.sendMessage(
         conversationId: _conversationId,
         accountId: accountId,
         body: body,
@@ -189,18 +122,46 @@ class ChatDetailNotifier extends AsyncNotifier<ConversationModel> {
         replyToMessageId: replyToMessageId,
       );
 
-      // Cập nhật lại với message thực tế từ server
-      final updated = state.value;
-      if (updated != null) {
-        // Xóa message tạm và thêm message thực tế
-        final filteredMessages = updated.messages
-            .where((m) => !m.messageId.startsWith('temp-'))
-            .toList();
-        // Thêm message thực tế và sort lại từ cũ đến mới
-        final finalMessages = [...filteredMessages, message];
-        finalMessages.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+      final current = state.value;
+      if (current != null) {
+        MessageModel finalMessage = messageFromServer;
+
+        if (finalMessage.replyToMessageId != null && finalMessage.replyTo == null) {
+          try {
+            final originalMessage = current.messages.firstWhere(
+                  (m) => m.messageId == finalMessage.replyToMessageId,
+            );
+            finalMessage = finalMessage.copyWith(replyTo: originalMessage);
+          } catch (e) {
+
+          }
+        }
+
+        final index = current.messages.indexWhere((m) => m.messageId == finalMessage.messageId);
+
+        List<MessageModel> updatedMessages;
+
+        if (index != -1) {
+
+          final existingMessage = current.messages[index];
+
+          if (existingMessage.status == 'Seen') {
+            finalMessage = finalMessage.copyWith(status: 'Seen');
+          } else if (existingMessage.status == 'Delivered' && finalMessage.status == 'Sent') {
+            finalMessage = finalMessage.copyWith(status: 'Delivered');
+          }
+
+          updatedMessages = [...current.messages];
+          updatedMessages[index] = finalMessage;
+          print("API: Đã cập nhật message (giữ status: ${finalMessage.status})");
+        } else {
+          // Nếu chưa có thì thêm mới
+          updatedMessages = [...current.messages, finalMessage];
+          updatedMessages.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+        }
+
         state = AsyncValue.data(
-          updated.copyWith(messages: finalMessages),
+          current.copyWith(messages: updatedMessages),
         );
       } else {
         await refresh();
@@ -208,43 +169,31 @@ class ChatDetailNotifier extends AsyncNotifier<ConversationModel> {
 
       return true;
     } catch (e, st) {
-      // Nếu có lỗi, rollback optimistic update
-      final updated = state.value;
-      if (updated != null) {
-        final filteredMessages = updated.messages
-            .where((m) => !m.messageId.startsWith('temp-'))
-            .toList();
-        state = AsyncValue.data(
-          updated.copyWith(messages: filteredMessages),
-        );
-      }
       print('Error sending message: $e');
       return false;
     }
   }
 
-  Future<void> markAsRead() async {
+  Future<void> markAsRead({bool skipRefresh = false}) async {
     final accountId = await _getAccountId();
     if (accountId == null || accountId.isEmpty) return;
-
     _accountId = accountId;
     try {
       await _repo.markConversationRead(
         conversationId: _conversationId,
         viewerAccountId: accountId,
       );
-      await refresh();
-      // Refresh unread total when marking as read
-      ref.invalidate(unreadTotalProvider);
+      if (!skipRefresh) {
+        await refresh();
+      }
     } catch (e) {
-      // Ignore errors
+      print("Lỗi markAsRead: $e");
     }
   }
 
   Future<void> loadMoreMessages(DateTime before) async {
     final accountId = await _getAccountId();
     if (accountId == null || accountId.isEmpty) return;
-
     _accountId = accountId;
     try {
       final conversation = await _repo.getConversationDetail(
@@ -254,15 +203,13 @@ class ChatDetailNotifier extends AsyncNotifier<ConversationModel> {
         before: before,
         markAsRead: false,
       );
-
       final current = state.value;
       if (current != null) {
-        // Merge messages, tránh duplicate
+        final visibleIncomingMessages = conversation.getVisibleMessages(accountId);
         final existingIds = current.messages.map((m) => m.messageId).toSet();
-        final newMessages = conversation.messages
+        final newMessages = visibleIncomingMessages
             .where((m) => !existingIds.contains(m.messageId))
             .toList();
-        // Merge và sort lại từ cũ đến mới
         final mergedMessages = [...current.messages, ...newMessages];
         mergedMessages.sort((a, b) => a.createdAt.compareTo(b.createdAt));
         state = AsyncValue.data(
@@ -270,76 +217,191 @@ class ChatDetailNotifier extends AsyncNotifier<ConversationModel> {
         );
       }
     } catch (e) {
-      // Ignore errors
     }
   }
+
 
   void addMessage(MessageModel message) {
     final current = state.value;
-    if (current != null && message.conversationId == _conversationId) {
-      // Check if message already exists
-      final exists = current.messages.any((m) => m.messageId == message.messageId);
-      if (!exists) {
-        // Thêm message mới vào list
-        final updatedMessages = [...current.messages, message];
-        // Sắp xếp lại từ cũ đến mới (theo UTC để so sánh chính xác)
-        updatedMessages.sort((a, b) => a.createdAt.compareTo(b.createdAt));
-        state = AsyncValue.data(
-          current.copyWith(messages: updatedMessages),
-        );
+    if (current != null && message.conversationId.toLowerCase() == _conversationId.toLowerCase()) {
+      final index = current.messages.indexWhere((m) => m.messageId == message.messageId);
+      if (index != -1) return;
+      MessageModel finalMessage = message;
+      if (finalMessage.replyToMessageId != null && finalMessage.replyTo == null) {
+        try {
+          final originalMessage = current.messages.firstWhere(
+                (m) => m.messageId == finalMessage.replyToMessageId,
+          );
+          finalMessage = finalMessage.copyWith(replyTo: originalMessage);
+        } catch (e) {
+        }
       }
+
+      DateTime? updatedClearA = current.clearBeforeAtByA;
+      DateTime? updatedClearB = current.clearBeforeAtByB;
+      bool needUpdateClearTime = false;
+
+      if (_accountId != null) {
+        if (_accountId == current.participantA.accountId) {
+
+          if (updatedClearA != null && !finalMessage.createdAt.isAfter(updatedClearA)) {
+            updatedClearA = finalMessage.createdAt.subtract(const Duration(milliseconds: 1));
+            needUpdateClearTime = true;
+          }
+        } else if (_accountId == current.participantB.accountId) {
+
+          if (updatedClearB != null && !finalMessage.createdAt.isAfter(updatedClearB)) {
+            updatedClearB = finalMessage.createdAt.subtract(const Duration(milliseconds: 1));
+            needUpdateClearTime = true;
+          }
+        }
+      }
+
+      final newMessages = [...current.messages, finalMessage];
+      newMessages.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+
+      state = AsyncValue.data(
+        current.copyWith(
+          messages: newMessages,
+          clearBeforeAtByA: needUpdateClearTime ? updatedClearA : current.clearBeforeAtByA,
+          clearBeforeAtByB: needUpdateClearTime ? updatedClearB : current.clearBeforeAtByB,
+        ),
+      );
     }
   }
 
-  // Setup SignalR listener for real-time messages
+  void updateMessageStatus(String messageId, String newStatus) {
+    final current = state.value;
+    if (current != null) {
+      final updatedMessages = current.messages.map((m) {
+        if (m.messageId == messageId) {
+          return MessageModel(
+            messageId: m.messageId,
+            conversationId: m.conversationId,
+            senderAccountId: m.senderAccountId,
+            body: m.body,
+            messageType: m.messageType,
+            replyToMessageId: m.replyToMessageId,
+            imageUrl: m.imageUrl,
+            metadata: m.metadata,
+            createdAt: m.createdAt,
+            editedAt: m.editedAt,
+            deletedAt: m.deletedAt,
+            sender: m.sender,
+            replyTo: m.replyTo,
+            isMine: m.isMine,
+            status: newStatus,
+          );
+        }
+        return m;
+      }).toList();
+      state = AsyncValue.data(
+        current.copyWith(messages: updatedMessages),
+      );
+    }
+  }
+
+  // void markMessagesAsSeenUntil(DateTime lastReadAt) {
+  //   final current = state.value;
+  //   if (current != null) {
+  //     final cutoffTime = lastReadAt.add(const Duration(seconds: 1));
+  //     final updatedMessages = current.messages.map((m) {
+  //       if (m.isMine && m.status != 'Seen') {
+  //         if (m.createdAt.isBefore(cutoffTime) || m.createdAt.isAtSameMomentAs(cutoffTime)) {
+  //           return m.copyWith(status: 'Seen');
+  //         }
+  //       }
+  //       return m;
+  //     }).toList();
+  //     if (current.messages != updatedMessages) {
+  //       state = AsyncValue.data(current.copyWith(messages: updatedMessages));
+  //     }
+  //   }
+  // }
+
+  void markMessagesAsSeenUntil(DateTime lastReadAt, {String? lastReadMessageId}) {
+    final current = state.value;
+    if (current != null) {
+      final cutoffTime = lastReadAt.add(const Duration(seconds: 1));
+      final updatedMessages = current.messages.map((m) {
+        if (m.isMine && m.status != 'Seen') {
+          if (m.messageId == lastReadMessageId ||
+              m.createdAt.isBefore(cutoffTime) ||
+              m.createdAt.isAtSameMomentAs(cutoffTime)) {
+            return m.copyWith(status: 'Seen');
+          }
+        }
+        return m;
+      }).toList();
+
+      state = AsyncValue.data(current.copyWith(messages: updatedMessages));
+    }
+  }
+
   Stream<MessageModel> listenToMessages() {
     final signalRService = ref.read(signalRChatServiceProvider);
     return signalRService.listenToMessages(_conversationId);
   }
 
-  // Xóa cuộc trò chuyện (xóa tất cả tin nhắn của người dùng trước)
   Future<bool> deleteConversation() async {
     final accountId = await _getAccountId();
     if (accountId == null || accountId.isEmpty) return false;
 
     _accountId = accountId;
     try {
-      // Bước 1: Xóa tất cả tin nhắn của người dùng trong conversation
       try {
         await _repo.deleteAllMyMessages(
           conversationId: _conversationId,
           accountId: accountId,
         );
       } catch (e) {
-        // Nếu API xóa tất cả tin nhắn không tồn tại, thử xóa từng tin nhắn
-        print('Warning: Could not delete all messages at once, trying individual deletion: $e');
         final current = state.value;
         if (current != null) {
-          // Xóa từng tin nhắn của người dùng
           for (final message in current.messages) {
             if (message.isMine && message.senderAccountId == accountId) {
               try {
-                await _repo.deleteMessage(
-                  messageId: message.messageId,
-                  accountId: accountId,
-                );
-              } catch (e) {
-                print('Warning: Could not delete message ${message.messageId}: $e');
-                // Tiếp tục xóa các tin nhắn khác
-              }
+                await _repo.deleteMessage(messageId: message.messageId, accountId: accountId);
+              } catch (e) { }
             }
           }
         }
       }
 
-      // Bước 2: Xóa/ẩn conversation
       await _repo.clearConversation(
         conversationId: _conversationId,
         accountId: accountId,
-        hide: true, // Xóa hoàn toàn (ẩn khỏi danh sách)
+        hide: true,
       );
-      // Refresh unread total when deleting conversation
       ref.invalidate(unreadTotalProvider);
+
+      final current = state.value;
+      if (current != null) {
+        DateTime safeClearTime;
+        if (current.messages.isNotEmpty) {
+          final sortedMsgs = [...current.messages];
+          sortedMsgs.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+          safeClearTime = sortedMsgs.last.createdAt.add(const Duration(milliseconds: 1));
+        } else {
+          safeClearTime = DateTime.now().toUtc();
+        }
+        DateTime? newClearA = current.clearBeforeAtByA;
+        DateTime? newClearB = current.clearBeforeAtByB;
+
+        if (accountId == current.participantA.accountId) {
+          newClearA = safeClearTime;
+        } else if (accountId == current.participantB.accountId) {
+          newClearB = safeClearTime;
+        }
+
+        state = AsyncValue.data(
+          current.copyWith(
+            messages: [],
+            clearBeforeAtByA: newClearA,
+            clearBeforeAtByB: newClearB,
+          ),
+        );
+      }
+
       return true;
     } catch (e) {
       print('Error deleting conversation: $e');
@@ -364,6 +426,8 @@ extension ConversationModelExtension on ConversationModel {
     bool? isOnline,
     bool? isPinned,
     List<MessageModel>? messages,
+    DateTime? clearBeforeAtByA,
+    DateTime? clearBeforeAtByB,
   }) {
     return ConversationModel(
       conversationId: conversationId ?? this.conversationId,
@@ -380,6 +444,8 @@ extension ConversationModelExtension on ConversationModel {
       isOnline: isOnline ?? this.isOnline,
       isPinned: isPinned ?? this.isPinned,
       messages: messages ?? this.messages,
+      clearBeforeAtByA: clearBeforeAtByA ?? this.clearBeforeAtByA,
+      clearBeforeAtByB: clearBeforeAtByB ?? this.clearBeforeAtByB,
     );
   }
 }

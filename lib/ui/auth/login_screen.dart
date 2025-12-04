@@ -8,6 +8,7 @@ import 'package:vhs_mobile_user/routing/routes.dart';
 import 'package:vhs_mobile_user/ui/auth/auth_viewmodel.dart';
 import 'package:vhs_mobile_user/ui/auth/terms_and_policy_screen.dart';
 import 'package:vhs_mobile_user/ui/core/theme_helper.dart';
+import 'package:vhs_mobile_user/l10n/extensions/localization_extension.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({super.key});
@@ -183,7 +184,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
                         
                         // Title Section
                         Text(
-                          "Đăng nhập",
+                          context.tr('login_title'),
                           style: TextStyle(
                             fontSize: 30,
                             fontWeight: FontWeight.bold,
@@ -195,7 +196,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
                         ),
                         const SizedBox(height: 6),
                         Text(
-                          "Chào mừng bạn trở lại!",
+                          context.tr('login_subtitle'),
                           style: TextStyle(
                             fontSize: 14,
                             color: ThemeHelper.getSecondaryTextColor(context),
@@ -233,7 +234,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
                                     fontWeight: FontWeight.w500,
                                   ),
                                   decoration: InputDecoration(
-                                    labelText: "Tên đăng nhập hoặc email",
+                                    labelText: context.tr('username_or_email'),
                                     labelStyle: TextStyle(
                                       color: ThemeHelper.getSecondaryTextColor(context),
                                       fontSize: 15,
@@ -279,7 +280,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
                                   ),
                                   validator: (value) {
                                     if (value == null || value.isEmpty) {
-                                      return 'Vui lòng nhập tên đăng nhập';
+                                      return context.tr('field_required');
                                     }
                                     return null;
                                   },
@@ -310,7 +311,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
                                     fontWeight: FontWeight.w500,
                                   ),
                                   decoration: InputDecoration(
-                                    labelText: "Mật khẩu",
+                                    labelText: context.tr('password'),
                                     labelStyle: TextStyle(
                                       color: ThemeHelper.getSecondaryTextColor(context),
                                       fontSize: 15,
@@ -364,7 +365,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
                                   ),
                                   validator: (value) {
                                     if (value == null || value.isEmpty) {
-                                      return 'Vui lòng nhập mật khẩu';
+                                      return context.tr('field_required');
                                     }
                                     return null;
                                   },
@@ -382,7 +383,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
                                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                   ),
                                   child: Text(
-                                    "Quên mật khẩu?",
+                                    context.tr('forgot_password'),
                                     style: TextStyle(
                                       color: ThemeHelper.getPrimaryColor(context),
                                       fontSize: 14,
@@ -447,7 +448,9 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
                                               } catch (e) {
                                                 if (!mounted) return;
                                                 
-                                                String errorMessage = "Đăng nhập thất bại";
+                                                String errorTitle = "Đăng nhập thất bại";
+                                                String errorMessage = "";
+                                                IconData errorIcon = Icons.error_outline_rounded;
                                                 
                                                 if (e is DioException) {
                                                   if (e.response != null) {
@@ -455,36 +458,132 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
                                                     final data = e.response?.data;
                                                     
                                                     if (statusCode == 401) {
-                                                      errorMessage = "Tên đăng nhập hoặc mật khẩu không đúng";
+                                                      errorTitle = "Thông tin đăng nhập không chính xác";
+                                                      errorIcon = Icons.lock_outline_rounded;
+                                                      
+                                                      // Ưu tiên hiển thị message từ server nếu có
+                                                      if (data is Map && (data['message'] != null || data['Message'] != null)) {
+                                                        final serverMessage = (data['message'] ?? data['Message']).toString();
+                                                        errorMessage = serverMessage;
+                                                      } else {
+                                                        // Fallback message nếu server không trả về message cụ thể
+                                                        errorMessage = "• Tên đăng nhập hoặc email không tồn tại\n• Mật khẩu không đúng\n\nVui lòng kiểm tra lại thông tin đăng nhập của bạn.";
+                                                      }
+                                                    } else if (statusCode == 403) {
+                                                      errorTitle = "Tài khoản bị khóa";
+                                                      errorMessage = "Tài khoản của bạn đã bị khóa hoặc vô hiệu hóa. Vui lòng liên hệ quản trị viên để được hỗ trợ.";
+                                                      errorIcon = Icons.block_rounded;
+                                                    } else if (statusCode == 423) {
+                                                      errorTitle = "Tài khoản chưa được kích hoạt";
+                                                      errorMessage = "Vui lòng kiểm tra email để kích hoạt tài khoản trước khi đăng nhập.";
+                                                      errorIcon = Icons.mail_outline_rounded;
+                                                    } else if (statusCode == 400) {
+                                                      errorTitle = "Thông tin không hợp lệ";
+                                                      if (data is Map && (data['message'] != null || data['Message'] != null)) {
+                                                        errorMessage = (data['message'] ?? data['Message']).toString();
+                                                      } else {
+                                                        errorMessage = "Vui lòng kiểm tra lại thông tin đăng nhập.";
+                                                      }
+                                                      errorIcon = Icons.warning_amber_rounded;
+                                                    } else if (statusCode == 500 || statusCode == 502 || statusCode == 503) {
+                                                      errorTitle = "Lỗi máy chủ";
+                                                      errorMessage = "Server đang gặp sự cố. Vui lòng thử lại sau ít phút.";
+                                                      errorIcon = Icons.cloud_off_rounded;
                                                     } else if (data is Map && data['message'] != null) {
                                                       errorMessage = data['message'].toString();
                                                     } else if (data is Map && data['Message'] != null) {
                                                       errorMessage = data['Message'].toString();
                                                     } else {
-                                                      errorMessage = "Lỗi từ server: $statusCode";
+                                                      errorTitle = "Lỗi không xác định";
+                                                      errorMessage = "Mã lỗi: $statusCode\nVui lòng thử lại hoặc liên hệ hỗ trợ.";
                                                     }
                                                   } else if (e.type == DioExceptionType.connectionTimeout ||
                                                              e.type == DioExceptionType.receiveTimeout) {
-                                                    errorMessage = "Kết nối timeout. Vui lòng thử lại.";
+                                                    errorTitle = "Kết nối timeout";
+                                                    errorMessage = "Không thể kết nối đến server trong thời gian cho phép.\n\n• Kiểm tra kết nối mạng\n• Thử lại sau";
+                                                    errorIcon = Icons.timer_off_rounded;
                                                   } else if (e.type == DioExceptionType.connectionError) {
-                                                    errorMessage = "Không thể kết nối đến server. Vui lòng kiểm tra kết nối mạng.";
+                                                    errorTitle = "Lỗi kết nối";
+                                                    errorMessage = "Không thể kết nối đến server.\n\n• Kiểm tra kết nối internet\n• Kiểm tra cài đặt mạng\n• Thử lại sau";
+                                                    errorIcon = Icons.wifi_off_rounded;
                                                   } else {
-                                                    errorMessage = "Lỗi kết nối: ${e.message ?? e.toString()}";
+                                                    errorTitle = "Lỗi kết nối";
+                                                    errorMessage = e.message ?? "Có lỗi xảy ra khi kết nối đến server.";
                                                   }
                                                 } else {
                                                   errorMessage = e.toString();
                                                 }
                                                 
-                                                ScaffoldMessenger.of(context).showSnackBar(
-                                                  SnackBar(
-                                                    content: Text(errorMessage),
-                                                    duration: const Duration(seconds: 3),
-                                                    backgroundColor: Colors.red,
-                                                    behavior: SnackBarBehavior.floating,
+                                                // Hiển thị dialog với thông tin lỗi chi tiết
+                                                showDialog(
+                                                  context: context,
+                                                  builder: (context) => AlertDialog(
+                                                    backgroundColor: ThemeHelper.getDialogBackgroundColor(context),
                                                     shape: RoundedRectangleBorder(
-                                                      borderRadius: BorderRadius.circular(12),
+                                                      borderRadius: BorderRadius.circular(20),
                                                     ),
-                                                    margin: const EdgeInsets.all(16),
+                                                    title: Row(
+                                                      children: [
+                                                        Container(
+                                                          padding: const EdgeInsets.all(10),
+                                                          decoration: BoxDecoration(
+                                                            color: Colors.red.shade50,
+                                                            borderRadius: BorderRadius.circular(12),
+                                                          ),
+                                                          child: Icon(
+                                                            errorIcon,
+                                                            color: Colors.red.shade600,
+                                                            size: 28,
+                                                          ),
+                                                        ),
+                                                        const SizedBox(width: 12),
+                                                        Expanded(
+                                                          child: Text(
+                                                            errorTitle,
+                                                            style: TextStyle(
+                                                              fontSize: 19,
+                                                              fontWeight: FontWeight.bold,
+                                                              color: ThemeHelper.getTextColor(context),
+                                                            ),
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                    content: Column(
+                                                      mainAxisSize: MainAxisSize.min,
+                                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                                      children: [
+                                                        Text(
+                                                          errorMessage.isNotEmpty ? errorMessage : "Vui lòng thử lại.",
+                                                          style: TextStyle(
+                                                            fontSize: 15,
+                                                            height: 1.6,
+                                                            color: ThemeHelper.getSecondaryTextColor(context),
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                    actions: [
+                                                      TextButton(
+                                                        onPressed: () => Navigator.of(context).pop(),
+                                                        style: TextButton.styleFrom(
+                                                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                                                          backgroundColor: ThemeHelper.getPrimaryColor(context),
+                                                          foregroundColor: Colors.white,
+                                                          shape: RoundedRectangleBorder(
+                                                            borderRadius: BorderRadius.circular(12),
+                                                          ),
+                                                        ),
+                                                        child: const Text(
+                                                          "Đã hiểu",
+                                                          style: TextStyle(
+                                                            fontWeight: FontWeight.bold,
+                                                            fontSize: 15,
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    ],
+                                                    actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                                                   ),
                                                 );
                                               }
@@ -501,8 +600,8 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
                                                   size: 20,
                                                 ),
                                                 const SizedBox(width: 8),
-                                                const Text(
-                                                  "Đăng nhập",
+                                                Text(
+                                                  context.tr('login'),
                                                   style: TextStyle(
                                                     fontSize: 18,
                                                     fontWeight: FontWeight.bold,
@@ -531,12 +630,12 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
                                 fontSize: 15,
                               ),
                               children: [
-                                TextSpan(text: "Chưa có tài khoản? "),
+                                TextSpan(text: "${context.tr('dont_have_account')} "),
                                 WidgetSpan(
                                   child: GestureDetector(
                                     onTap: () => context.push(Routes.register),
                                     child: Text(
-                                      "Đăng ký",
+                                      context.tr('register'),
                                       style: TextStyle(
                                         color: ThemeHelper.getPrimaryColor(context),
                                         fontWeight: FontWeight.bold,
@@ -565,7 +664,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
                             Padding(
                               padding: const EdgeInsets.symmetric(horizontal: 16),
                               child: Text(
-                                "HOẶC",
+                                context.tr('or'),
                                 style: TextStyle(
                                   color: ThemeHelper.getTertiaryTextColor(context),
                                   fontSize: 13,
@@ -782,7 +881,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
                                     ),
                                     const SizedBox(width: 12),
                                     Text(
-                                      "Đăng nhập bằng Google",
+                                      context.tr('login_with_google'),
                                       style: TextStyle(
                                         fontSize: 16,
                                         fontWeight: FontWeight.w600,
@@ -831,7 +930,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
                                   ),
                                   const SizedBox(width: 6),
                                   Text(
-                                    "Điều khoản",
+                                    context.tr('terms_of_service'),
                                     style: TextStyle(
                                       color: ThemeHelper.getPrimaryColor(context),
                                       fontSize: 13,
@@ -874,7 +973,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
                                   ),
                                   const SizedBox(width: 6),
                                   Text(
-                                    "Bảo mật",
+                                    context.tr('privacy_policy'),
                                     style: TextStyle(
                                       color: ThemeHelper.getPrimaryColor(context),
                                       fontSize: 13,

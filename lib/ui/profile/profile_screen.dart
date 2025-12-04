@@ -10,12 +10,19 @@ import 'package:vhs_mobile_user/routing/routes.dart';
 import 'package:vhs_mobile_user/ui/profile/profile_viewmodel.dart';
 import 'package:vhs_mobile_user/ui/auth/auth_viewmodel.dart';
 import 'package:vhs_mobile_user/ui/core/theme_helper.dart';
+import 'package:vhs_mobile_user/l10n/extensions/localization_extension.dart';
+import 'package:vhs_mobile_user/providers/locale_provider.dart';
+import 'package:vhs_mobile_user/services/translation_cache_provider.dart';
 
 class ProfileDetailScreen extends ConsumerWidget {
   const ProfileDetailScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Watch locale và translation cache để rebuild khi đổi ngôn ngữ
+    ref.watch(localeProvider);
+    ref.watch(translationCacheProvider);
+    
     late final asyncProfile = ref.watch(profileProvider);
 
     return Scaffold(
@@ -34,9 +41,9 @@ class ProfileDetailScreen extends ConsumerWidget {
           ),
         ),
         backgroundColor: Colors.transparent,
-        title: const Text(
-          "Hồ sơ cá nhân",
-          style: TextStyle(
+        title: Text(
+          context.tr('personal_profile'),
+          style: const TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.bold,
             fontSize: 20,
@@ -64,7 +71,7 @@ class ProfileDetailScreen extends ConsumerWidget {
       ),
       body: asyncProfile.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, st) => Center(child: Text("Lỗi: $e")),
+        error: (e, st) => Center(child: Text("${context.tr('error')}: $e")),
         data: (profile) => _ProfileView(profile: profile, ref: ref),
       ),
     );
@@ -90,12 +97,12 @@ class _ProfileView extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildSectionTitle(context, "Thông tin cá nhân"),
+              _buildSectionTitle(context, context.tr('personal_information')),
               const SizedBox(height: 16),
               _buildInfoCard(
                 context,
                 Icons.person_outline,
-                "Tên tài khoản",
+                context.tr('account_name'),
                 profile.accountName,
                 Colors.blue,
               ),
@@ -103,7 +110,7 @@ class _ProfileView extends ConsumerWidget {
               _buildInfoCard(
                 context,
                 Icons.email_outlined,
-                "Email",
+                context.tr('email'),
                 profile.email,
                 Colors.green,
               ),
@@ -111,43 +118,43 @@ class _ProfileView extends ConsumerWidget {
               _buildInfoCard(
                 context,
                 Icons.badge_outlined,
-                "Họ và tên",
-                profile.fullName ?? "Chưa có",
+                context.tr('full_name'),
+                profile.fullName ?? context.tr('not_available_text'),
                 Colors.orange,
               ),
               const SizedBox(height: 12),
               _buildInfoCard(
                 context,
                 Icons.phone_outlined,
-                "Số điện thoại",
-                profile.phoneNumber ?? "Chưa có",
+                context.tr('phone_number'),
+                profile.phoneNumber ?? context.tr('not_available_text'),
                 Colors.purple,
               ),
               const SizedBox(height: 12),
               _buildInfoCard(
                 context,
                 Icons.location_on_outlined,
-                "Địa chỉ",
-                profile.address ?? "Chưa có",
+                context.tr('address'),
+                profile.address ?? context.tr('not_available_text'),
                 Colors.red,
               ),
               const SizedBox(height: 12),
               _buildInfoCard(
                 context,
                 Icons.calendar_today_outlined,
-                "Ngày tạo",
+                context.tr('created_date'),
                 profile.createdAt != null
                     ? "${profile.createdAt!.toLocal().day}/${profile.createdAt!.toLocal().month}/${profile.createdAt!.toLocal().year}"
-                    : "Không rõ",
+                    : context.tr('unknown'),
                 Colors.teal,
               ),
               const SizedBox(height: 32),
-              _buildSectionTitle(context, "Tùy chọn"),
+              _buildSectionTitle(context, context.tr('options')),
               const SizedBox(height: 16),
               _buildOptionButton(
                 context: context,
                 icon: Icons.edit_outlined,
-                label: "Chỉnh sửa hồ sơ",
+                label: context.tr('edit_profile'),
                 iconColor: Colors.blue,
                 onPressed: () {
                   context.push(Routes.editProfile, extra: profile);
@@ -157,7 +164,7 @@ class _ProfileView extends ConsumerWidget {
               _buildOptionButton(
                 context: context,
                 icon: Icons.lock_outline,
-                label: "Đổi mật khẩu",
+                label: context.tr('change_password'),
                 iconColor: Colors.orange,
                 onPressed: () {
                   context.push(Routes.changePassword);
@@ -167,7 +174,7 @@ class _ProfileView extends ConsumerWidget {
               _buildOptionButton(
                 context: context,
                 icon: Icons.email_outlined,
-                label: "Đổi email",
+                label: context.tr('change_email'),
                 iconColor: Colors.green,
                 onPressed: () {
                   context.push(Routes.changeEmail, extra: profile);
@@ -302,9 +309,9 @@ class _ProfileView extends ConsumerWidget {
                 const SizedBox(height: 16),
                 TextButton.icon(
                   icon: const Icon(Icons.delete_outline, size: 18),
-                  label: const Text(
-                    'Xóa ảnh đại diện',
-                    style: TextStyle(fontSize: 14),
+                  label: Text(
+                    context.tr('delete_avatar'),
+                    style: const TextStyle(fontSize: 14),
                   ),
                   style: TextButton.styleFrom(
                     foregroundColor: Colors.white,
@@ -338,17 +345,17 @@ class _ProfileView extends ConsumerWidget {
           children: [
             ListTile(
               leading: const Icon(Icons.camera_alt),
-              title: const Text('Chụp ảnh'),
+              title: Text(context.tr('take_photo')),
               onTap: () => Navigator.pop(context, ImageSource.camera),
             ),
             ListTile(
               leading: const Icon(Icons.photo_library),
-              title: const Text('Chọn từ thư viện'),
+              title: Text(context.tr('choose_from_gallery')),
               onTap: () => Navigator.pop(context, ImageSource.gallery),
             ),
             ListTile(
               leading: const Icon(Icons.cancel),
-              title: const Text('Hủy'),
+              title: Text(context.tr('cancel')),
               onTap: () => Navigator.pop(context),
             ),
           ],
@@ -370,12 +377,12 @@ class _ProfileView extends ConsumerWidget {
 
         if (success) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Tải ảnh lên thành công')),
+            SnackBar(content: Text(context.tr('upload_image_success'))),
           );
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Tải ảnh lên thất bại'),
+            SnackBar(
+              content: Text(context.tr('upload_image_failed')),
               backgroundColor: Colors.red,
             ),
           );
@@ -384,7 +391,7 @@ class _ProfileView extends ConsumerWidget {
     } catch (e) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Lỗi: $e'), backgroundColor: Colors.red),
+        SnackBar(content: Text("${context.tr('error')}: $e"), backgroundColor: Colors.red),
       );
     }
   }
@@ -393,16 +400,16 @@ class _ProfileView extends ConsumerWidget {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Xác nhận'),
-        content: const Text('Bạn có chắc chắn muốn xóa ảnh đại diện?'),
+        title: Text(context.tr('confirm')),
+        content: Text(context.tr('confirm_delete_avatar')),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Hủy'),
+            child: Text(context.tr('cancel')),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Xóa', style: TextStyle(color: Colors.red)),
+            child: Text(context.tr('delete'), style: const TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -416,11 +423,11 @@ class _ProfileView extends ConsumerWidget {
       if (success) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(const SnackBar(content: Text('Xóa ảnh thành công')));
+        ).showSnackBar(SnackBar(content: Text(context.tr('delete_avatar_success'))));
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Xóa ảnh thất bại'),
+          SnackBar(
+            content: Text(context.tr('delete_avatar_failed')),
             backgroundColor: Colors.red,
           ),
         );
@@ -435,7 +442,7 @@ class _ProfileView extends ConsumerWidget {
     String value,
     Color iconColor,
   ) {
-    final isEmpty = value == "Chưa có" || value == "Không rõ";
+    final isEmpty = value == context.tr('not_available_text') || value == context.tr('unknown');
     final isDark = ThemeHelper.isDarkMode(context);
     return Container(
       decoration: BoxDecoration(
@@ -630,22 +637,22 @@ class _ProfileView extends ConsumerWidget {
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
             ),
-            title: const Text(
-              "Xác nhận đăng xuất",
-              style: TextStyle(fontWeight: FontWeight.bold),
+            title: Text(
+              context.tr('confirm_logout_title'),
+              style: const TextStyle(fontWeight: FontWeight.bold),
             ),
-            content: const Text("Bạn có chắc chắn muốn đăng xuất không?"),
+            content: Text(context.tr('confirm_logout_message')),
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(false),
-                child: const Text("Hủy"),
+                child: Text(context.tr('cancel')),
               ),
               TextButton(
                 onPressed: () => Navigator.of(context).pop(true),
                 style: TextButton.styleFrom(foregroundColor: Colors.red),
-                child: const Text(
-                  "Đăng xuất",
-                  style: TextStyle(fontWeight: FontWeight.w600),
+                child: Text(
+                  context.tr('logout'),
+                  style: const TextStyle(fontWeight: FontWeight.w600),
                 ),
               ),
             ],
@@ -699,10 +706,10 @@ class _ProfileView extends ConsumerWidget {
               ),
             ),
             const SizedBox(width: 16),
-            const Expanded(
+            Expanded(
               child: Text(
-                "Đăng xuất",
-                style: TextStyle(
+                context.tr('logout'),
+                style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
                   color: Colors.red,

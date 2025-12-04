@@ -7,6 +7,10 @@ import 'package:vhs_mobile_user/ui/service_shop/service_shop_viewmodel.dart';
 import 'package:vhs_mobile_user/routing/routes.dart';
 import 'package:vhs_mobile_user/ui/chat/chat_list_viewmodel.dart';
 import 'package:vhs_mobile_user/ui/core/theme_helper.dart';
+import 'package:vhs_mobile_user/l10n/extensions/localization_extension.dart';
+import 'package:vhs_mobile_user/providers/locale_provider.dart';
+import 'package:vhs_mobile_user/services/translation_cache_provider.dart';
+import 'package:vhs_mobile_user/services/data_translation_service.dart';
 
 const Color primaryBlue = Color(0xFF0284C7);
 const Color darkBlue = Color(0xFF0369A1);
@@ -42,6 +46,10 @@ class _ServiceShopScreenState extends ConsumerState<ServiceShopScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Watch locale và translation cache để rebuild khi đổi ngôn ngữ
+    ref.watch(localeProvider);
+    ref.watch(translationCacheProvider);
+    
     final shopAsync = ref.watch(
       serviceShopProvider(_filterParams),
     );
@@ -67,9 +75,9 @@ class _ServiceShopScreenState extends ConsumerState<ServiceShopScreen> {
             ),
           ),
         ),
-        title: const Text(
-          "Shop Dịch Vụ",
-          style: TextStyle(
+        title: Text(
+          context.tr('service_shop'),
+          style: const TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.bold,
             fontSize: 20,
@@ -90,7 +98,7 @@ class _ServiceShopScreenState extends ConsumerState<ServiceShopScreen> {
               ),
               const SizedBox(height: 24),
               Text(
-                "Đang tải...",
+                context.tr('loading'),
                 style: TextStyle(
                   color: Colors.grey.shade700,
                   fontSize: 16,
@@ -120,7 +128,7 @@ class _ServiceShopScreenState extends ConsumerState<ServiceShopScreen> {
                 ),
                 const SizedBox(height: 24),
                 Text(
-                  'Đã xảy ra lỗi',
+                  context.tr('error_occurred'),
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
@@ -144,9 +152,9 @@ class _ServiceShopScreenState extends ConsumerState<ServiceShopScreen> {
                     ));
                   },
                   icon: const Icon(Icons.refresh_rounded, size: 20),
-                  label: const Text(
-                    'Thử lại',
-                    style: TextStyle(
+                  label: Text(
+                    context.tr('try_again'),
+                    style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
                     ),
@@ -309,7 +317,7 @@ class _ServiceShopScreenState extends ConsumerState<ServiceShopScreen> {
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            '${shopInfo.status} ${shopInfo.lastOnline}',
+                            '${_getLocalizedStatus(ref, shopInfo.status)} ${_getLocalizedLastOnline(ref, shopInfo.lastOnline)}',
                             style: TextStyle(
                               fontSize: 13,
                               color: ThemeHelper.getSecondaryTextColor(context),
@@ -337,15 +345,15 @@ class _ServiceShopScreenState extends ConsumerState<ServiceShopScreen> {
                   } catch (e) {
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Lỗi: $e')),
+                        SnackBar(content: Text('${context.tr('error_prefix')} $e')),
                       );
                     }
                   }
                 },
                 icon: const Icon(Icons.chat_bubble_outline_rounded, size: 18),
-                label: const Text(
-                  'Chat',
-                  style: TextStyle(
+                label: Text(
+                  context.tr('chat'),
+                  style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
                   ),
@@ -371,19 +379,19 @@ class _ServiceShopScreenState extends ConsumerState<ServiceShopScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
               Expanded(
-                child: _buildStatItem('Dịch Vụ', shopInfo.totalServices.toString()),
+                child: _buildStatItem(context.tr('services'), shopInfo.totalServices.toString()),
               ),
               Expanded(
                 child: _buildStatItem(
-                  'Đánh Giá',
+                  context.tr('reviews'),
                   shopInfo.rating > 0 && shopInfo.totalRatings > 0
                       ? '${shopInfo.rating.toStringAsFixed(1)} (${shopInfo.totalRatings})'
-                      : 'Chưa có đánh giá',
+                      : context.tr('no_reviews'),
                 ),
               ),
               Expanded(
                 child: _buildStatItem(
-                  'Tham Gia',
+                  context.tr('joined'),
                   shopInfo.joinDate.isNotEmpty && shopInfo.joinDate != '—'
                       ? shopInfo.joinDate
                       : '—',
@@ -477,7 +485,7 @@ class _ServiceShopScreenState extends ConsumerState<ServiceShopScreen> {
                 ),
                 const SizedBox(width: 12),
                 Text(
-                  'DỊCH VỤ NỔI BẬT',
+                  context.tr('bestselling_services').toUpperCase(),
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
@@ -525,7 +533,7 @@ class _ServiceShopScreenState extends ConsumerState<ServiceShopScreen> {
               padding: const EdgeInsets.only(right: 8),
               child: FilterChip(
                 label: Text(
-                  'Tất cả (${shop.shopInfo.totalServices})',
+                  '${context.tr('all_categories')} (${shop.shopInfo.totalServices})',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -562,7 +570,7 @@ class _ServiceShopScreenState extends ConsumerState<ServiceShopScreen> {
             padding: const EdgeInsets.only(right: 8),
             child: FilterChip(
               label: Text(
-                '${category.name} (${category.serviceCount})',
+                '${_getLocalizedCategoryName(ref, category.name)} (${category.serviceCount})',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -620,7 +628,7 @@ class _ServiceShopScreenState extends ConsumerState<ServiceShopScreen> {
               ),
               const SizedBox(height: 24),
               Text(
-                'Chưa có dịch vụ nào',
+                context.tr('no_services_found'),
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
@@ -629,7 +637,7 @@ class _ServiceShopScreenState extends ConsumerState<ServiceShopScreen> {
               ),
               const SizedBox(height: 8),
               Text(
-                'Vui lòng quay lại sau',
+                context.tr('please_come_back_later'),
                 style: TextStyle(
                   fontSize: 14,
                   color: ThemeHelper.getSecondaryTextColor(context),
@@ -728,7 +736,7 @@ class _ServiceShopScreenState extends ConsumerState<ServiceShopScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    service.name,
+                    _getLocalizedServiceName(ref, service.name),
                     style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
@@ -770,7 +778,7 @@ class _ServiceShopScreenState extends ConsumerState<ServiceShopScreen> {
                         ),
                       ] else
                         Text(
-                          'Chưa có đánh giá',
+                          context.tr('no_reviews'),
                           style: TextStyle(
                             fontSize: 12,
                             color: ThemeHelper.getSecondaryTextColor(context),
@@ -800,6 +808,95 @@ class _ServiceShopScreenState extends ConsumerState<ServiceShopScreen> {
       buffer.write(priceStr[i]);
     }
     return buffer.toString();
+  }
+  
+  /// Helper method để translate category name
+  String _getLocalizedCategoryName(WidgetRef ref, String categoryName) {
+    final locale = ref.read(localeProvider);
+    final isVietnamese = locale.languageCode == 'vi';
+    
+    if (isVietnamese) {
+      return categoryName;
+    }
+    
+    ref.watch(translationCacheProvider);
+    final translationService = DataTranslationService(ref);
+    return translationService.translateCategoryName(categoryName);
+  }
+  
+  /// Helper method để translate service name
+  String _getLocalizedServiceName(WidgetRef ref, String serviceName) {
+    final locale = ref.read(localeProvider);
+    final isVietnamese = locale.languageCode == 'vi';
+    
+    if (isVietnamese) {
+      return serviceName;
+    }
+    
+    ref.watch(translationCacheProvider);
+    final translationService = DataTranslationService(ref);
+    return translationService.translateServiceTitle(serviceName);
+  }
+  
+  /// Helper method để translate status
+  String _getLocalizedStatus(WidgetRef ref, String status) {
+    final locale = ref.read(localeProvider);
+    final isVietnamese = locale.languageCode == 'vi';
+    
+    if (isVietnamese) {
+      return status;
+    }
+    
+    // Translate common status values
+    if (status.toLowerCase() == 'online') {
+      return 'Online';
+    } else if (status.toLowerCase() == 'offline') {
+      return 'Offline';
+    }
+    
+    ref.watch(translationCacheProvider);
+    final translationService = DataTranslationService(ref);
+    return translationService.smartTranslate(status);
+  }
+  
+  /// Helper method để translate lastOnline text
+  String _getLocalizedLastOnline(WidgetRef ref, String lastOnline) {
+    final locale = ref.read(localeProvider);
+    final isVietnamese = locale.languageCode == 'vi';
+    
+    if (isVietnamese) {
+      return lastOnline;
+    }
+    
+    // Translate common lastOnline values
+    if (lastOnline.toLowerCase().contains('gần đây') || 
+        lastOnline.toLowerCase().contains('recently')) {
+      return 'Recently';
+    } else if (lastOnline.toLowerCase().contains('phút') || 
+               lastOnline.toLowerCase().contains('minute')) {
+      // Extract number and translate
+      final match = RegExp(r'(\d+)\s*(phút|minute)').firstMatch(lastOnline);
+      if (match != null) {
+        return '${match.group(1)} minute${match.group(1) != '1' ? 's' : ''} ago';
+      }
+    } else if (lastOnline.toLowerCase().contains('giờ') || 
+               lastOnline.toLowerCase().contains('hour')) {
+      final match = RegExp(r'(\d+)\s*(giờ|hour)').firstMatch(lastOnline);
+      if (match != null) {
+        return '${match.group(1)} hour${match.group(1) != '1' ? 's' : ''} ago';
+      }
+    } else if (lastOnline.toLowerCase().contains('ngày') || 
+               lastOnline.toLowerCase().contains('day')) {
+      final match = RegExp(r'(\d+)\s*(ngày|day)').firstMatch(lastOnline);
+      if (match != null) {
+        return '${match.group(1)} day${match.group(1) != '1' ? 's' : ''} ago';
+      }
+    }
+    
+    // Fallback: use translation service
+    ref.watch(translationCacheProvider);
+    final translationService = DataTranslationService(ref);
+    return translationService.smartTranslate(lastOnline);
   }
 }
 

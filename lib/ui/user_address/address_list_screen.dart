@@ -6,12 +6,17 @@ import 'package:vhs_mobile_user/data/models/user/user_address_model.dart';
 import 'package:vhs_mobile_user/routing/routes.dart';
 import 'package:vhs_mobile_user/ui/user_address/user_address_viewmodel.dart';
 import 'package:vhs_mobile_user/ui/core/theme_helper.dart';
+import 'package:vhs_mobile_user/l10n/extensions/localization_extension.dart';
+import 'package:vhs_mobile_user/providers/locale_provider.dart';
 
 class AddressListPage extends ConsumerWidget {
   const AddressListPage({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Watch locale để rebuild khi đổi ngôn ngữ
+    ref.watch(localeProvider);
+    
     final asyncData = ref.watch(userAddressProvider);
 
     return Scaffold(
@@ -32,9 +37,9 @@ class AddressListPage extends ConsumerWidget {
             ),
           ),
         ),
-        title: const Text(
-          "Địa chỉ của tôi",
-          style: TextStyle(
+        title: Text(
+          context.tr('my_addresses'),
+          style: const TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.bold,
             fontSize: 20,
@@ -51,7 +56,7 @@ class AddressListPage extends ConsumerWidget {
             child: IconButton(
               icon: const Icon(Icons.refresh_rounded),
               onPressed: () => ref.read(userAddressProvider.notifier).refresh(),
-              tooltip: 'Làm mới',
+              tooltip: context.tr('refresh'),
             ),
           ),
         ],
@@ -70,9 +75,9 @@ class AddressListPage extends ConsumerWidget {
         child: FloatingActionButton.extended(
           onPressed: () => context.push(Routes.addAddress),
           icon: const Icon(Icons.add_location_alt_rounded, size: 22),
-          label: const Text(
-            "Thêm địa chỉ",
-            style: TextStyle(
+          label: Text(
+            context.tr('add_address'),
+            style: const TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w600,
             ),
@@ -96,7 +101,7 @@ class AddressListPage extends ConsumerWidget {
               ),
               const SizedBox(height: 24),
               Text(
-                "Đang tải...",
+                context.tr('loading'),
                 style: TextStyle(
                   color: ThemeHelper.getSecondaryTextColor(context),
                   fontSize: 16,
@@ -130,7 +135,7 @@ class AddressListPage extends ConsumerWidget {
                   ),
                   const SizedBox(height: 24),
                   Text(
-                    'Đã xảy ra lỗi',
+                    context.tr('error_occurred'),
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
@@ -150,9 +155,9 @@ class AddressListPage extends ConsumerWidget {
                   ElevatedButton.icon(
                     onPressed: () => ref.read(userAddressProvider.notifier).refresh(),
                     icon: const Icon(Icons.refresh_rounded, size: 20),
-                    label: const Text(
-                      'Thử lại',
-                      style: TextStyle(
+                    label: Text(
+                      context.tr('try_again'),
+                      style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
                       ),
@@ -274,7 +279,7 @@ class _AddressCard extends ConsumerWidget {
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          "Người nhận: ${address.recipientName!}",
+                          "${context.tr('recipient')}: ${address.recipientName!}",
                           style: TextStyle(
                             fontSize: 13,
                             color: ThemeHelper.getSecondaryTextColor(context),
@@ -305,7 +310,7 @@ class _AddressCard extends ConsumerWidget {
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        "SĐT: ${address.recipientPhone!}",
+                        "${context.tr('phone')}: ${address.recipientPhone!}",
                         style: TextStyle(
                           fontSize: 13,
                           color: ThemeHelper.getSecondaryTextColor(context),
@@ -359,7 +364,7 @@ class _AddressCard extends ConsumerWidget {
                     ),
                     const SizedBox(width: 12),
                     Text(
-                      "Sửa",
+                      context.tr('edit'),
                       style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w500,
@@ -389,7 +394,7 @@ class _AddressCard extends ConsumerWidget {
                     ),
                     const SizedBox(width: 12),
                     Text(
-                      "Xóa",
+                      context.tr('delete'),
                       style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w500,
@@ -440,7 +445,7 @@ class _EmptyAddress extends StatelessWidget {
             ),
             const SizedBox(height: 24),
             Text(
-              "Bạn chưa có địa chỉ nào",
+              context.tr('no_addresses_yet'),
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
@@ -449,7 +454,7 @@ class _EmptyAddress extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              "Hãy thêm một địa chỉ mới",
+              context.tr('add_new_address'),
               style: TextStyle(
                 fontSize: 14,
                 color: ThemeHelper.getSecondaryTextColor(context),
@@ -462,9 +467,9 @@ class _EmptyAddress extends StatelessWidget {
                 context.push(Routes.addAddress);
               },
               icon: const Icon(Icons.add_location_alt_rounded, size: 20),
-              label: const Text(
-                "Thêm địa chỉ đầu tiên",
-                style: TextStyle(
+              label: Text(
+                context.tr('add_first_address'),
+                style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
                 ),

@@ -39,6 +39,7 @@ import 'package:vhs_mobile_user/ui/report/report_detail_screen.dart';
 import 'package:vhs_mobile_user/data/models/booking/booking_history_detail_model.dart';
 import 'package:vhs_mobile_user/data/models/review/review_list_item.dart';
 import 'package:vhs_mobile_user/ui/service_shop/service_shop_screen.dart';
+import 'package:vhs_mobile_user/ui/notification/notification_screen.dart';
 
 /// Helper class để refresh router khi auth state thay đổi
 class AuthStateNotifier extends ChangeNotifier {
@@ -286,7 +287,17 @@ final routerProvider = Provider<GoRouter>((ref) {
             ],
           ),
 
-          // ---------- TAB 2: CHAT LIST ----------
+          // ---------- TAB 2: NOTIFICATIONS ----------
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: Routes.notifications,
+                builder: (_, __) => const NotificationScreen(),
+              ),
+            ],
+          ),
+
+          // ---------- TAB 3: CHAT LIST ----------
           StatefulShellBranch(
             routes: [
               GoRoute(
@@ -296,7 +307,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             ],
           ),
 
-          // ---------- TAB 3: HISTORY ----------
+          // ---------- TAB 4: HISTORY ----------
           StatefulShellBranch(
             routes: [
               GoRoute(
@@ -306,7 +317,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             ],
           ),
 
-          // ---------- TAB 4: PROFILE ----------
+          // ---------- TAB 5: PROFILE ----------
           StatefulShellBranch(
             routes: [
               GoRoute(

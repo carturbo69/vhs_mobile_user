@@ -3,6 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:vhs_mobile_user/data/models/user/profile_model.dart';
 import 'package:vhs_mobile_user/ui/profile/profile_viewmodel.dart';
 import 'package:vhs_mobile_user/ui/core/theme_helper.dart';
+import 'package:vhs_mobile_user/l10n/extensions/localization_extension.dart';
+import 'package:vhs_mobile_user/providers/locale_provider.dart';
+import 'package:vhs_mobile_user/services/translation_cache_provider.dart';
 
 class EditProfileScreen extends ConsumerStatefulWidget {
   final ProfileModel profile;
@@ -70,13 +73,13 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
 
     if (success) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Cập nhật hồ sơ thành công')),
+        SnackBar(content: Text(context.tr('update_profile_success'))),
       );
       Navigator.of(context).pop();
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Cập nhật hồ sơ thất bại'),
+        SnackBar(
+          content: Text(context.tr('update_profile_failed')),
           backgroundColor: Colors.red,
         ),
       );
@@ -85,6 +88,10 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Watch locale và translation cache để rebuild khi đổi ngôn ngữ
+    ref.watch(localeProvider);
+    ref.watch(translationCacheProvider);
+    
     return Scaffold(
       appBar: AppBar(
         elevation: 0,
@@ -101,9 +108,9 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
           ),
         ),
         backgroundColor: Colors.transparent,
-        title: const Text(
-          'Chỉnh sửa hồ sơ',
-          style: TextStyle(
+        title: Text(
+          context.tr('edit_profile_title'),
+          style: const TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.bold,
             fontSize: 20,
@@ -118,71 +125,75 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildSectionTitle("Thông tin tài khoản"),
+              _buildSectionTitle(context.tr('account_information'), context),
               const SizedBox(height: 20),
               _buildTextField(
+                context: context,
                 controller: _accountNameController,
-                label: 'Tên tài khoản',
+                label: context.tr('account_name'),
                 icon: Icons.person_outline,
                 iconColor: Colors.blue,
                 isRequired: true,
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
-                    return 'Vui lòng nhập tên tài khoản';
+                    return context.tr('please_enter_account_name');
                   }
                   if (value.length > 100) {
-                    return 'Tên tài khoản không được vượt quá 100 ký tự';
+                    return context.tr('account_name_max_length');
                   }
                   return null;
                 },
               ),
               const SizedBox(height: 16),
               _buildTextField(
+                context: context,
                 controller: _emailController,
-                label: 'Email',
+                label: context.tr('email'),
                 icon: Icons.email_outlined,
                 iconColor: Colors.green,
                 isRequired: true,
                 keyboardType: TextInputType.emailAddress,
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
-                    return 'Vui lòng nhập email';
+                    return context.tr('please_enter_email');
                   }
                   if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
-                    return 'Email không hợp lệ';
+                    return context.tr('invalid_email');
                   }
                   return null;
                 },
               ),
               const SizedBox(height: 32),
-              _buildSectionTitle("Thông tin cá nhân"),
+              _buildSectionTitle(context.tr('personal_information'), context),
               const SizedBox(height: 20),
               _buildTextField(
+                context: context,
                 controller: _fullNameController,
-                label: 'Họ và tên',
+                label: context.tr('full_name'),
                 icon: Icons.badge_outlined,
                 iconColor: Colors.orange,
                 validator: (value) {
                   if (value != null && value.length > 100) {
-                    return 'Họ và tên không được vượt quá 100 ký tự';
+                    return context.tr('full_name_max_length');
                   }
                   return null;
                 },
               ),
               const SizedBox(height: 16),
               _buildTextField(
+                context: context,
                 controller: _phoneNumberController,
-                label: 'Số điện thoại',
+                label: context.tr('phone_number'),
                 icon: Icons.phone_outlined,
                 iconColor: Colors.purple,
                 keyboardType: TextInputType.phone,
                 validator: (value) {
                   if (value != null && value.isNotEmpty) {
                     if (value.length > 20) {
-                      return 'Số điện thoại không được vượt quá 20 ký tự';
+                      return context.tr('phone_number_max_length');
                     }
                     if (!RegExp(r'^[0-9+\-\s()]+$').hasMatch(value)) {
-                      return 'Số điện thoại không hợp lệ';
+                      return context.tr('invalid_phone_number');
                     }
                   }
                   return null;
@@ -190,14 +201,15 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
               ),
               const SizedBox(height: 16),
               _buildTextField(
+                context: context,
                 controller: _addressController,
-                label: 'Địa chỉ',
+                label: context.tr('address'),
                 icon: Icons.location_on_outlined,
                 iconColor: Colors.red,
                 maxLines: 3,
                 validator: (value) {
                   if (value != null && value.length > 500) {
-                    return 'Địa chỉ không được vượt quá 500 ký tự';
+                    return context.tr('address_max_length');
                   }
                   return null;
                 },
@@ -217,7 +229,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                         )
                       : const Icon(Icons.save_outlined, size: 20),
                   label: Text(
-                    _isLoading ? 'Đang lưu...' : 'Lưu thay đổi',
+                    _isLoading ? context.tr('saving') : context.tr('save_changes'),
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
@@ -243,7 +255,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     );
   }
 
-  Widget _buildSectionTitle(String title) {
+  Widget _buildSectionTitle(String title, BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
@@ -286,6 +298,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   }
 
   Widget _buildTextField({
+    required BuildContext context,
     required TextEditingController controller,
     required String label,
     required IconData icon,

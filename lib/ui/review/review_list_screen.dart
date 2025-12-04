@@ -8,12 +8,20 @@ import 'package:vhs_mobile_user/routing/routes.dart';
 import 'package:vhs_mobile_user/ui/review/review_list_viewmodel.dart';
 import 'package:vhs_mobile_user/ui/review/review_screen.dart';
 import 'package:vhs_mobile_user/ui/core/theme_helper.dart';
+import 'package:vhs_mobile_user/l10n/extensions/localization_extension.dart';
+import 'package:vhs_mobile_user/providers/locale_provider.dart';
+import 'package:vhs_mobile_user/services/translation_cache_provider.dart';
+import 'package:vhs_mobile_user/services/data_translation_service.dart';
 
 class ReviewListScreen extends ConsumerWidget {
   const ReviewListScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Watch locale và translation cache để rebuild khi đổi ngôn ngữ
+    ref.watch(localeProvider);
+    ref.watch(translationCacheProvider);
+    
     final asyncReviews = ref.watch(reviewListProvider);
 
     return Scaffold(
@@ -35,9 +43,9 @@ class ReviewListScreen extends ConsumerWidget {
             ),
           ),
         ),
-        title: const Text(
-          'Đánh giá dịch vụ của tôi',
-          style: TextStyle(
+        title: Text(
+          context.tr('my_reviews'),
+          style: const TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.bold,
             fontSize: 20,
@@ -58,7 +66,7 @@ class ReviewListScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 24),
               Text(
-                "Đang tải...",
+                context.tr('loading'),
                 style: TextStyle(
                   color: ThemeHelper.getSecondaryTextColor(context),
                   fontSize: 16,
@@ -90,7 +98,7 @@ class ReviewListScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 24),
                 Text(
-                  "Đã xảy ra lỗi",
+                  context.tr('error_occurred'),
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
@@ -110,9 +118,9 @@ class ReviewListScreen extends ConsumerWidget {
                 ElevatedButton.icon(
                   onPressed: () => ref.invalidate(reviewListProvider),
                   icon: const Icon(Icons.refresh_rounded, size: 20),
-                  label: const Text(
-                    "Thử lại",
-                    style: TextStyle(
+                  label: Text(
+                    context.tr('try_again'),
+                    style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
                     ),
@@ -158,7 +166,7 @@ class ReviewListScreen extends ConsumerWidget {
                     ),
                     const SizedBox(height: 24),
                     Text(
-                      'Chưa có đánh giá nào',
+                      context.tr('no_reviews_yet'),
                       style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
@@ -167,7 +175,7 @@ class ReviewListScreen extends ConsumerWidget {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Hãy mua dịch vụ và chia sẻ trải nghiệm của bạn!',
+                      context.tr('buy_service_and_share'),
                       style: TextStyle(
                         fontSize: 14,
                         color: ThemeHelper.getSecondaryTextColor(context),
@@ -188,7 +196,7 @@ class ReviewListScreen extends ConsumerWidget {
               padding: const EdgeInsets.all(16),
               itemCount: reviews.length,
               itemBuilder: (context, index) {
-                return _ReviewCard(
+                  return _ReviewCard(
                   review: reviews[index],
                   onEdit: () async {
                     // Navigate to edit review screen
@@ -206,13 +214,13 @@ class ReviewListScreen extends ConsumerWidget {
                       builder: (context) => AlertDialog(
                         backgroundColor: ThemeHelper.getDialogBackgroundColor(context),
                         title: Text(
-                          'Xác nhận',
+                          context.tr('confirm'),
                           style: TextStyle(
                             color: ThemeHelper.getTextColor(context),
                           ),
                         ),
                         content: Text(
-                          'Bạn có chắc chắn muốn xóa đánh giá này?',
+                          context.tr('confirm_delete_review'),
                           style: TextStyle(
                             color: ThemeHelper.getTextColor(context),
                           ),
@@ -221,7 +229,7 @@ class ReviewListScreen extends ConsumerWidget {
                           TextButton(
                             onPressed: () => Navigator.pop(context, false),
                             child: Text(
-                              'Hủy',
+                              context.tr('cancel'),
                               style: TextStyle(
                                 color: ThemeHelper.getSecondaryTextColor(context),
                               ),
@@ -232,7 +240,7 @@ class ReviewListScreen extends ConsumerWidget {
                             style: TextButton.styleFrom(
                               foregroundColor: Colors.red,
                             ),
-                            child: const Text('Xóa'),
+                            child: Text(context.tr('delete')),
                           ),
                         ],
                       ),
@@ -241,7 +249,7 @@ class ReviewListScreen extends ConsumerWidget {
                     if (confirm == true && context.mounted) {
                       // TODO: Implement delete review
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Tính năng xóa đang được phát triển')),
+                        SnackBar(content: Text(context.tr('delete_review_feature_under_development'))),
                       );
                     }
                   },
@@ -255,7 +263,7 @@ class ReviewListScreen extends ConsumerWidget {
   }
 }
 
-class _ReviewCard extends StatelessWidget {
+class _ReviewCard extends ConsumerWidget {
   final ReviewListItem review;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
@@ -267,13 +275,18 @@ class _ReviewCard extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Watch locale và translation cache để rebuild khi đổi ngôn ngữ
+    ref.watch(localeProvider);
+    ref.watch(translationCacheProvider);
+    
     final dateFormat = DateFormat('dd/MM/yyyy HH:mm');
     final createdAt = review.createdAt != null
         ? dateFormat.format(review.createdAt!.toLocal())
         : '';
 
     final isDark = ThemeHelper.isDarkMode(context);
+    final translationService = DataTranslationService(ref);
     
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -348,15 +361,24 @@ class _ReviewCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        review.serviceTitle,
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: ThemeHelper.getTextColor(context),
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
+                      Builder(
+                        builder: (context) {
+                          final locale = ref.read(localeProvider);
+                          final isVietnamese = locale.languageCode == 'vi';
+                          final title = isVietnamese 
+                              ? review.serviceTitle 
+                              : translationService.smartTranslate(review.serviceTitle);
+                          return Text(
+                            title,
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: ThemeHelper.getTextColor(context),
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          );
+                        },
                       ),
                       const SizedBox(height: 4),
                       Text(
@@ -468,12 +490,21 @@ class _ReviewCard extends StatelessWidget {
             // Comment
             if (review.comment.isNotEmpty) ...[
               const SizedBox(height: 12),
-              Text(
-                review.comment,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: ThemeHelper.getTextColor(context),
-                ),
+              Builder(
+                builder: (context) {
+                  final locale = ref.read(localeProvider);
+                  final isVietnamese = locale.languageCode == 'vi';
+                  final comment = isVietnamese 
+                      ? review.comment 
+                      : translationService.smartTranslate(review.comment);
+                  return Text(
+                    comment,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: ThemeHelper.getTextColor(context),
+                    ),
+                  );
+                },
               ),
             ],
 
@@ -569,7 +600,7 @@ class _ReviewCard extends StatelessWidget {
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          'Phản hồi từ Người bán',
+                          context.tr('reply_from_seller'),
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
@@ -579,12 +610,21 @@ class _ReviewCard extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: 8),
-                    Text(
-                      review.reply,
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: ThemeHelper.getTextColor(context),
-                      ),
+                    Builder(
+                      builder: (context) {
+                        final locale = ref.read(localeProvider);
+                        final isVietnamese = locale.languageCode == 'vi';
+                        final reply = isVietnamese 
+                            ? review.reply 
+                            : translationService.smartTranslate(review.reply);
+                        return Text(
+                          reply,
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: ThemeHelper.getTextColor(context),
+                          ),
+                        );
+                      },
                     ),
                   ],
                 ),
@@ -605,9 +645,9 @@ class _ReviewCard extends StatelessWidget {
                     OutlinedButton.icon(
                       onPressed: onEdit,
                       icon: const Icon(Icons.edit_rounded, size: 18),
-                      label: const Text(
-                        'Sửa',
-                        style: TextStyle(
+                      label: Text(
+                        context.tr('edit'),
+                        style: const TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
                         ),
@@ -629,9 +669,9 @@ class _ReviewCard extends StatelessWidget {
                     OutlinedButton.icon(
                       onPressed: onDelete,
                       icon: const Icon(Icons.delete_rounded, size: 18),
-                      label: const Text(
-                        'Xóa',
-                        style: TextStyle(
+                      label: Text(
+                        context.tr('delete'),
+                        style: const TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
                         ),

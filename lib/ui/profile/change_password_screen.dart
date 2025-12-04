@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:vhs_mobile_user/ui/profile/profile_viewmodel.dart';
 import 'package:vhs_mobile_user/ui/core/theme_helper.dart';
+import 'package:vhs_mobile_user/l10n/extensions/localization_extension.dart';
+import 'package:vhs_mobile_user/providers/locale_provider.dart';
+import 'package:vhs_mobile_user/services/translation_cache_provider.dart';
 
 class ChangePasswordScreen extends ConsumerStatefulWidget {
   const ChangePasswordScreen({super.key});
@@ -48,12 +51,12 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
 
     if (_otpRequested) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message ?? 'OTP đã được gửi')),
+        SnackBar(content: Text(message ?? context.tr('otp_sent'))),
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Không thể gửi OTP'),
+        SnackBar(
+          content: Text(context.tr('cannot_send_otp')),
           backgroundColor: Colors.red,
         ),
       );
@@ -80,13 +83,13 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
 
     if (success) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Đổi mật khẩu thành công')),
+        SnackBar(content: Text(context.tr('change_password_success'))),
       );
       Navigator.of(context).pop();
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Đổi mật khẩu thất bại'),
+        SnackBar(
+          content: Text(context.tr('change_password_failed')),
           backgroundColor: Colors.red,
         ),
       );
@@ -95,6 +98,10 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Watch locale và translation cache để rebuild khi đổi ngôn ngữ
+    ref.watch(localeProvider);
+    ref.watch(translationCacheProvider);
+    
     return Scaffold(
       appBar: AppBar(
         elevation: 0,
@@ -111,9 +118,9 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
           ),
         ),
         backgroundColor: Colors.transparent,
-        title: const Text(
-          'Đổi mật khẩu',
-          style: TextStyle(
+        title: Text(
+          context.tr('change_password_title'),
+          style: const TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.bold,
             fontSize: 20,
@@ -130,7 +137,7 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
             children: [
               _buildTextField(
                 controller: _currentPasswordController,
-                label: 'Mật khẩu hiện tại',
+                label: context.tr('current_password'),
                 icon: Icons.lock_outline,
                 iconColor: Colors.orange,
                 obscureText: _obscureCurrentPassword,
@@ -139,7 +146,7 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
                 },
                 validator: (value) {
                   if (value == null || value.isEmpty) {
-                    return 'Vui lòng nhập mật khẩu hiện tại';
+                    return context.tr('please_enter_current_password');
                   }
                   return null;
                 },
@@ -147,7 +154,7 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
               const SizedBox(height: 16),
               _buildTextField(
                 controller: _newPasswordController,
-                label: 'Mật khẩu mới',
+                label: context.tr('new_password'),
                 icon: Icons.lock_outline,
                 iconColor: Colors.green,
                 obscureText: _obscureNewPassword,
@@ -156,13 +163,13 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
                 },
                 validator: (value) {
                   if (value == null || value.isEmpty) {
-                    return 'Vui lòng nhập mật khẩu mới';
+                    return context.tr('please_enter_new_password');
                   }
                   if (value.length < 8) {
-                    return 'Mật khẩu phải có ít nhất 8 ký tự';
+                    return context.tr('password_min_length');
                   }
                   if (!RegExp(r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$').hasMatch(value)) {
-                    return 'Mật khẩu phải có chữ hoa, chữ thường và số';
+                    return context.tr('password_requirements');
                   }
                   return null;
                 },
@@ -170,7 +177,7 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
               const SizedBox(height: 16),
               _buildTextField(
                 controller: _confirmPasswordController,
-                label: 'Xác nhận mật khẩu mới',
+                label: context.tr('confirm_new_password'),
                 icon: Icons.lock_outline,
                 iconColor: Colors.purple,
                 obscureText: _obscureConfirmPassword,
@@ -179,10 +186,10 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
                 },
                 validator: (value) {
                   if (value == null || value.isEmpty) {
-                    return 'Vui lòng xác nhận mật khẩu';
+                    return context.tr('please_confirm_password');
                   }
                   if (value != _newPasswordController.text) {
-                    return 'Mật khẩu xác nhận không khớp';
+                    return context.tr('password_mismatch');
                   }
                   return null;
                 },
@@ -203,7 +210,7 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
                           )
                         : const Icon(Icons.send_outlined, size: 20),
                     label: Text(
-                      _isLoading ? 'Đang gửi...' : 'Gửi OTP',
+                      _isLoading ? context.tr('sending') : context.tr('send_otp'),
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
@@ -325,7 +332,7 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
   }
 }
 
-class VerifyOTPForPasswordChange extends StatefulWidget {
+class VerifyOTPForPasswordChange extends ConsumerStatefulWidget {
   final Future<void> Function(String otp) onVerified;
 
   const VerifyOTPForPasswordChange({
@@ -334,10 +341,10 @@ class VerifyOTPForPasswordChange extends StatefulWidget {
   });
 
   @override
-  State<VerifyOTPForPasswordChange> createState() => _VerifyOTPForPasswordChangeState();
+  ConsumerState<VerifyOTPForPasswordChange> createState() => _VerifyOTPForPasswordChangeState();
 }
 
-class _VerifyOTPForPasswordChangeState extends State<VerifyOTPForPasswordChange> {
+class _VerifyOTPForPasswordChangeState extends ConsumerState<VerifyOTPForPasswordChange> {
   final _otpController = TextEditingController();
   bool _isLoading = false;
 
@@ -350,8 +357,8 @@ class _VerifyOTPForPasswordChangeState extends State<VerifyOTPForPasswordChange>
   Future<void> _handleVerify() async {
     if (_otpController.text.length != 6) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('OTP phải có 6 chữ số'),
+        SnackBar(
+          content: Text(context.tr('otp_must_be_6_digits')),
           backgroundColor: Colors.red,
         ),
       );
@@ -365,6 +372,10 @@ class _VerifyOTPForPasswordChangeState extends State<VerifyOTPForPasswordChange>
 
   @override
   Widget build(BuildContext context) {
+    // Watch locale và translation cache để rebuild khi đổi ngôn ngữ
+    ref.watch(localeProvider);
+    ref.watch(translationCacheProvider);
+    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -386,16 +397,16 @@ class _VerifyOTPForPasswordChangeState extends State<VerifyOTPForPasswordChange>
                 color: Colors.blue.shade600,
               ),
               const SizedBox(height: 12),
-              const Text(
-                'Nhập mã OTP',
-                style: TextStyle(
+              Text(
+                context.tr('enter_otp'),
+                style: const TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
                 ),
               ),
               const SizedBox(height: 4),
               Text(
-                'Mã OTP đã được gửi đến email của bạn',
+                context.tr('otp_sent_to_email'),
                 style: TextStyle(
                   fontSize: 14,
                   color: Colors.grey.shade600,
@@ -425,8 +436,8 @@ class _VerifyOTPForPasswordChangeState extends State<VerifyOTPForPasswordChange>
           child: TextFormField(
             controller: _otpController,
             decoration: InputDecoration(
-              labelText: 'Mã OTP',
-              hintText: 'Nhập 6 chữ số',
+              labelText: context.tr('otp_code'),
+              hintText: context.tr('enter_6_digits'),
               prefixIcon: Container(
                 margin: const EdgeInsets.all(12),
                 padding: const EdgeInsets.all(8),
@@ -487,7 +498,7 @@ class _VerifyOTPForPasswordChangeState extends State<VerifyOTPForPasswordChange>
                   )
                 : const Icon(Icons.check_circle_outline, size: 20),
             label: Text(
-              _isLoading ? 'Đang xác nhận...' : 'Xác nhận đổi mật khẩu',
+              _isLoading ? context.tr('verifying') : context.tr('confirm_change_password'),
               style: const TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,

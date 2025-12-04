@@ -8,6 +8,10 @@ import 'package:vhs_mobile_user/ui/review/review_viewmodel.dart';
 import 'package:vhs_mobile_user/routing/routes.dart';
 import 'package:go_router/go_router.dart';
 import 'package:vhs_mobile_user/ui/core/theme_helper.dart';
+import 'package:vhs_mobile_user/l10n/extensions/localization_extension.dart';
+import 'package:vhs_mobile_user/providers/locale_provider.dart';
+import 'package:vhs_mobile_user/services/translation_cache_provider.dart';
+import 'package:vhs_mobile_user/services/data_translation_service.dart';
 
 class ReviewScreen extends ConsumerStatefulWidget {
   final HistoryBookingDetail? bookingDetail;
@@ -39,7 +43,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
   Future<void> _pickImages() async {
     if (_selectedImages.length >= 5) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Tối đa 5 hình ảnh")),
+        SnackBar(content: Text("${context.tr('max_5')} ${context.tr('attached_images').toLowerCase()}")),
       );
       return;
     }
@@ -58,7 +62,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Lỗi khi chọn ảnh: $e")),
+        SnackBar(content: Text("${context.tr('error_picking_image')}: $e")),
       );
     }
   }
@@ -73,8 +77,8 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
     // Validation
     if (_rating < 1 || _rating > 5) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Vui lòng chọn số sao đánh giá"),
+        SnackBar(
+          content: Text(context.tr('please_select_rating')),
           backgroundColor: Colors.red,
         ),
       );
@@ -86,8 +90,8 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(comment.isEmpty
-              ? "Vui lòng nhập nội dung đánh giá"
-              : "Nội dung đánh giá phải có ít nhất 10 ký tự"),
+              ? context.tr('please_enter_review_content')
+              : context.tr('review_content_min_length')),
           backgroundColor: Colors.red,
         ),
       );
@@ -101,8 +105,8 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
     try {
       if (widget.bookingDetail == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text("Không tìm thấy thông tin đặt dịch vụ"),
+          SnackBar(
+            content: Text(context.tr('booking_info_not_found')),
             backgroundColor: Colors.red,
           ),
         );
@@ -121,8 +125,8 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
       if (mounted) {
         if (success) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text("Đánh giá thành công!"),
+            SnackBar(
+              content: Text(context.tr('review_success')),
               backgroundColor: Colors.green,
             ),
           );
@@ -130,8 +134,8 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
           context.pop(true); // Return true để indicate success
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text("Đánh giá thất bại. Vui lòng thử lại."),
+            SnackBar(
+              content: Text(context.tr('review_failed')),
               backgroundColor: Colors.red,
             ),
           );
@@ -141,7 +145,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text("Lỗi: ${e.toString()}"),
+            content: Text("${context.tr('error')}: ${e.toString()}"),
             backgroundColor: Colors.red,
           ),
         );
@@ -168,17 +172,21 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Watch locale và translation cache để rebuild khi đổi ngôn ngữ
+    ref.watch(localeProvider);
+    ref.watch(translationCacheProvider);
+    
     // Nếu là edit mode, hiển thị thông báo tạm thời
     if (widget.reviewItem != null) {
       return Scaffold(
         appBar: AppBar(
-          title: const Text("Sửa đánh giá"),
+          title: Text(context.tr('edit_review')),
         ),
-        body: const Center(
+        body: Center(
           child: Padding(
-            padding: EdgeInsets.all(16.0),
+            padding: const EdgeInsets.all(16.0),
             child: Text(
-              "Tính năng sửa đánh giá đang được phát triển. Vui lòng quay lại sau.",
+              context.tr('edit_review_under_development'),
               textAlign: TextAlign.center,
             ),
           ),
@@ -188,6 +196,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
 
     // Create mode - bookingDetail should not be null here
     final bookingDetail = widget.bookingDetail!;
+    final translationService = DataTranslationService(ref);
     
     return Scaffold(
       appBar: AppBar(
@@ -207,9 +216,9 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
             ),
           ),
         ),
-        title: const Text(
-          "Đánh giá dịch vụ",
-          style: TextStyle(
+        title: Text(
+          context.tr('review_service'),
+          style: const TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.bold,
             fontSize: 20,
@@ -284,23 +293,41 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            bookingDetail.service.title,
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                              color: ThemeHelper.getTextColor(context),
-                            ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
+                          Builder(
+                            builder: (context) {
+                              final locale = ref.read(localeProvider);
+                              final isVietnamese = locale.languageCode == 'vi';
+                              final title = isVietnamese 
+                                  ? bookingDetail.service.title 
+                                  : translationService.smartTranslate(bookingDetail.service.title);
+                              return Text(
+                                title,
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                  color: ThemeHelper.getTextColor(context),
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              );
+                            },
                           ),
                           const SizedBox(height: 4),
-                          Text(
-                            bookingDetail.provider.providerName,
-                            style: TextStyle(
-                              color: ThemeHelper.getSecondaryTextColor(context),
-                              fontSize: 14,
-                            ),
+                          Builder(
+                            builder: (context) {
+                              final locale = ref.read(localeProvider);
+                              final isVietnamese = locale.languageCode == 'vi';
+                              final providerName = isVietnamese 
+                                  ? bookingDetail.provider.providerName 
+                                  : translationService.smartTranslate(bookingDetail.provider.providerName);
+                              return Text(
+                                providerName,
+                                style: TextStyle(
+                                  color: ThemeHelper.getSecondaryTextColor(context),
+                                  fontSize: 14,
+                                ),
+                              );
+                            },
                           ),
                         ],
                       ),
@@ -352,7 +379,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
                   ),
                   const SizedBox(width: 12),
                   Text(
-                    "Chất lượng dịch vụ *",
+                    "${context.tr('service_quality')} *",
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -389,7 +416,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
               Padding(
                 padding: const EdgeInsets.only(top: 8),
                 child: Text(
-                  "Vui lòng chọn số sao đánh giá",
+                  context.tr('please_select_rating'),
                   style: TextStyle(
                     color: Colors.red.shade400,
                     fontSize: 12,
@@ -433,7 +460,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
                   ),
                   const SizedBox(width: 12),
                   Text(
-                    "Nội dung đánh giá",
+                    context.tr('review_content'),
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -452,7 +479,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
               ),
               maxLines: 5,
               decoration: InputDecoration(
-                hintText: "Chia sẻ trải nghiệm của bạn về dịch vụ này...",
+                hintText: context.tr('share_experience_hint'),
                 hintStyle: TextStyle(
                   color: ThemeHelper.getTertiaryTextColor(context),
                 ),
@@ -488,7 +515,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
             ),
             const SizedBox(height: 4),
             Text(
-              "Đánh giá chi tiết sẽ giúp người khác hiểu rõ hơn về dịch vụ",
+              context.tr('detailed_review_help'),
               style: TextStyle(
                 color: ThemeHelper.getSecondaryTextColor(context),
                 fontSize: 12,
@@ -533,7 +560,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
                       ),
                       const SizedBox(width: 12),
                       Text(
-                        "Hình ảnh",
+                        context.tr('attached_images'),
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
@@ -544,7 +571,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
                     ],
                   ),
                   Text(
-                    "Tối đa 5",
+                    context.tr('max_5'),
                     style: TextStyle(
                       color: ThemeHelper.getSecondaryTextColor(context),
                       fontSize: 14,
@@ -659,7 +686,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
                       )
                     : const Icon(Icons.send_rounded, size: 20),
                 label: Text(
-                  _isSubmitting ? "Đang gửi..." : "Gửi đánh giá",
+                  _isSubmitting ? context.tr('sending_review') : context.tr('submit_review'),
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,

@@ -1,11 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:vhs_mobile_user/data/models/booking/booking_result_model.dart';
 import 'package:vhs_mobile_user/routing/routes.dart';
 import 'package:intl/intl.dart';
 import 'package:vhs_mobile_user/ui/core/theme_helper.dart';
+import 'package:vhs_mobile_user/l10n/extensions/localization_extension.dart';
+import 'package:vhs_mobile_user/providers/locale_provider.dart';
+import 'package:vhs_mobile_user/services/translation_cache_provider.dart';
+import 'package:vhs_mobile_user/services/data_translation_service.dart';
 
-class BookingResultScreen extends StatelessWidget {
+class BookingResultScreen extends ConsumerWidget {
   final BookingResultModel result;
   const BookingResultScreen({super.key, required this.result});
 
@@ -18,7 +23,11 @@ class BookingResultScreen extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Watch locale và translation cache để rebuild khi đổi ngôn ngữ hoặc có translation mới
+    ref.watch(localeProvider);
+    ref.watch(translationCacheProvider);
+    
     return Scaffold(
       backgroundColor: ThemeHelper.getScaffoldBackgroundColor(context),
       appBar: AppBar(
@@ -38,9 +47,9 @@ class BookingResultScreen extends StatelessWidget {
             ),
           ),
         ),
-        title: const Text(
-          "Kết quả đặt hàng",
-          style: TextStyle(
+        title: Text(
+          context.tr('booking_result_title'),
+          style: const TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.bold,
             fontSize: 20,
@@ -122,7 +131,7 @@ class BookingResultScreen extends StatelessWidget {
                   ),
                   children: [
                     TextSpan(
-                      text: 'Đơn hàng đang ',
+                      text: '${context.tr('order_pending_part1')} ',
                       style: TextStyle(
                         color: Colors.orange.shade400,
                         shadows: [
@@ -134,7 +143,7 @@ class BookingResultScreen extends StatelessWidget {
                       ),
                     ),
                     TextSpan(
-                      text: 'chờ xác nhận',
+                      text: context.tr('awaiting_confirmation'),
                       style: TextStyle(
                         color: Colors.teal.shade400,
                         shadows: [
@@ -156,7 +165,7 @@ class BookingResultScreen extends StatelessWidget {
                 child: Column(
                   children: [
                     Text(
-                      'Đơn hàng của bạn đã được tạo thành công và đang chờ nhà cung cấp xác nhận.',
+                      context.tr('order_created_pending_message'),
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 15.5,
@@ -167,7 +176,7 @@ class BookingResultScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 10),
                     Text(
-                      'Bạn sẽ nhận được email thông báo khi đơn hàng được xác nhận.',
+                      context.tr('order_confirmation_email_message'),
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 15.5,
@@ -224,7 +233,7 @@ class BookingResultScreen extends StatelessWidget {
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        'Danh sách dịch vụ đã đặt',
+                        context.tr('booked_services_list'),
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontSize: 17,
@@ -242,182 +251,9 @@ class BookingResultScreen extends StatelessWidget {
               // List services với design đẹp hơn
               // Lấy tên dịch vụ từ dữ liệu booking result (không hardcode)
               ...result.breakdown.map((item) {
-                // Lấy tên dịch vụ từ booking breakdown item
-                final serviceName = item.serviceName.isNotEmpty 
-                    ? item.serviceName 
-                    : 'Dịch vụ không xác định';
-                
-                return Container(
-                  margin: const EdgeInsets.only(bottom: 16),
-                  decoration: BoxDecoration(
-                    color: ThemeHelper.getCardBackgroundColor(context),
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: ThemeHelper.getShadowColor(context),
-                        blurRadius: 10,
-                        offset: const Offset(0, 4),
-                        spreadRadius: 0,
-                      ),
-                      BoxShadow(
-                        color: ThemeHelper.getShadowColor(context),
-                        blurRadius: 4,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(16),
-                      onTap: () {},
-                      child: Padding(
-                        padding: const EdgeInsets.all(20),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Container(
-                                  width: 10,
-                                  height: 10,
-                                  margin: const EdgeInsets.only(top: 6, right: 14),
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    gradient: LinearGradient(
-                                      colors: [
-                                        Colors.orange[400]!,
-                                        Colors.orange[600]!,
-                                      ],
-                                    ),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.orange.withOpacity(0.4),
-                                        blurRadius: 6,
-                                        spreadRadius: 1,
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                Expanded(
-                                  child: Text(
-                                    serviceName,
-                                    style: TextStyle(
-                                      fontSize: 17,
-                                      fontWeight: FontWeight.bold,
-                                      height: 1.3,
-                                      letterSpacing: -0.2,
-                                      color: ThemeHelper.getTextColor(context),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                                  decoration: BoxDecoration(
-                                    gradient: LinearGradient(
-                                      colors: ThemeHelper.isDarkMode(context)
-                                          ? [
-                                              Colors.orange.shade900.withOpacity(0.3),
-                                              Colors.orange.shade800.withOpacity(0.2),
-                                            ]
-                                          : [
-                                              Colors.orange.shade50,
-                                              Colors.orange.shade100,
-                                            ],
-                                    ),
-                                    borderRadius: BorderRadius.circular(24),
-                                    border: Border.all(
-                                      color: Colors.orange.shade400,
-                                      width: 1.5,
-                                    ),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.orange.withOpacity(0.15),
-                                        blurRadius: 8,
-                                        offset: const Offset(0, 2),
-                                      ),
-                                    ],
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(
-                                        Icons.hourglass_empty_rounded,
-                                        size: 16,
-                                        color: Colors.orange[700],
-                                      ),
-                                      const SizedBox(width: 6),
-                                      Text(
-                                        'Chờ xác nhận',
-                                        style: TextStyle(
-                                          fontSize: 12.5,
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.orange[700],
-                                          letterSpacing: 0.2,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-            const SizedBox(height: 16),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                              decoration: BoxDecoration(
-                                color: ThemeHelper.isDarkMode(context)
-                                    ? Colors.purple.shade900.withOpacity(0.3)
-                                    : Colors.purple.shade50,
-                                borderRadius: BorderRadius.circular(10),
-                                border: Border.all(
-                                  color: Colors.purple.shade400,
-                                  width: 1,
-                                ),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.purple.withOpacity(0.1),
-                                    blurRadius: 4,
-                                    offset: const Offset(0, 2),
-                                  ),
-                                ],
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.all(4),
-                                    decoration: BoxDecoration(
-                                      color: ThemeHelper.isDarkMode(context)
-                                          ? Colors.purple.shade800.withOpacity(0.5)
-                                          : Colors.purple.shade100,
-                                      borderRadius: BorderRadius.circular(6),
-                                    ),
-                                    child: Icon(
-                                      Icons.receipt_long_rounded,
-                                      size: 16,
-                                      color: Colors.purple.shade400,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    'Mã đơn: ${_formatBookingId(item.bookingId)}',
-                                    style: TextStyle(
-                                      fontSize: 14.5,
-                                      color: Colors.purple.shade400,
-                                      fontWeight: FontWeight.w600,
-                                      letterSpacing: 0.3,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
+                return _ServiceCard(
+                  item: item,
+                  formatBookingId: _formatBookingId,
                 );
               }).toList(),
               
@@ -466,7 +302,7 @@ class BookingResultScreen extends StatelessWidget {
                     const SizedBox(width: 16),
                     Expanded(
                       child: Text(
-                        'Lưu ý: Sau khi nhà cung cấp xác nhận đơn hàng, bạn sẽ nhận được email thông báo và có thể tiến hành thanh toán.',
+                        context.tr('booking_result_note'),
                         style: TextStyle(
                           fontSize: 14.5,
                           color: ThemeHelper.getTextColor(context),
@@ -490,9 +326,9 @@ class BookingResultScreen extends StatelessWidget {
                         context.go(Routes.history);
                       },
                       icon: const Icon(Icons.history_rounded, size: 20),
-                      label: const Text(
-                        'Xem lịch sử đặt',
-                        style: TextStyle(
+                      label: Text(
+                        context.tr('view_booking_history'),
+                        style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
                         ),
@@ -520,7 +356,7 @@ class BookingResultScreen extends StatelessWidget {
                         color: ThemeHelper.getPrimaryColor(context),
                       ),
                       label: Text(
-                        'Về trang chủ',
+                        context.tr('nav_home'),
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
@@ -543,6 +379,211 @@ class BookingResultScreen extends StatelessWidget {
               ),
               const SizedBox(height: 24),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Widget để hiển thị service card với translation
+class _ServiceCard extends ConsumerWidget {
+  final BookingBreakdownItem item;
+  final String Function(String) formatBookingId;
+  
+  const _ServiceCard({
+    required this.item,
+    required this.formatBookingId,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Watch locale và translation cache để rebuild khi đổi ngôn ngữ hoặc có translation mới
+    ref.watch(localeProvider);
+    ref.watch(translationCacheProvider);
+    
+    // Lấy tên dịch vụ và dịch nếu cần
+    final rawServiceName = item.serviceName.isNotEmpty 
+        ? item.serviceName 
+        : context.tr('unknown_service');
+    
+    // Sử dụng DataTranslationService để dịch serviceName như service_list
+    final locale = ref.read(localeProvider);
+    final translationService = DataTranslationService(ref);
+    
+    String serviceName = rawServiceName;
+    if (locale.languageCode != 'vi' && rawServiceName != context.tr('unknown_service')) {
+      serviceName = translationService.smartTranslate(rawServiceName);
+    }
+    
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: ThemeHelper.getCardBackgroundColor(context),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: ThemeHelper.getShadowColor(context),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+            spreadRadius: 0,
+          ),
+          BoxShadow(
+            color: ThemeHelper.getShadowColor(context),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: () {},
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: 10,
+                      height: 10,
+                      margin: const EdgeInsets.only(top: 6, right: 14),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: LinearGradient(
+                          colors: [
+                            Colors.orange[400]!,
+                            Colors.orange[600]!,
+                          ],
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.orange.withOpacity(0.4),
+                            blurRadius: 6,
+                            spreadRadius: 1,
+                          ),
+                        ],
+                      ),
+                    ),
+                    Expanded(
+                      child: Text(
+                        serviceName,
+                        style: TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.bold,
+                          height: 1.3,
+                          letterSpacing: -0.2,
+                          color: ThemeHelper.getTextColor(context),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: ThemeHelper.isDarkMode(context)
+                              ? [
+                                  Colors.orange.shade900.withOpacity(0.3),
+                                  Colors.orange.shade800.withOpacity(0.2),
+                                ]
+                              : [
+                                  Colors.orange.shade50,
+                                  Colors.orange.shade100,
+                                ],
+                        ),
+                        borderRadius: BorderRadius.circular(24),
+                        border: Border.all(
+                          color: Colors.orange.shade400,
+                          width: 1.5,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.orange.withOpacity(0.15),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.hourglass_empty_rounded,
+                            size: 16,
+                            color: Colors.orange[700],
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            context.tr('awaiting_confirmation_status'),
+                            style: TextStyle(
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.orange[700],
+                              letterSpacing: 0.2,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: ThemeHelper.isDarkMode(context)
+                        ? Colors.purple.shade900.withOpacity(0.3)
+                        : Colors.purple.shade50,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: Colors.purple.shade400,
+                      width: 1,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.purple.withOpacity(0.1),
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: ThemeHelper.isDarkMode(context)
+                              ? Colors.purple.shade800.withOpacity(0.5)
+                              : Colors.purple.shade100,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Icon(
+                          Icons.receipt_long_rounded,
+                          size: 16,
+                          color: Colors.purple.shade400,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        '${context.tr('order_code')}: ${formatBookingId(item.bookingId)}',
+                        style: TextStyle(
+                          fontSize: 14.5,
+                          color: Colors.purple.shade400,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 0.3,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

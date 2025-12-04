@@ -7,6 +7,9 @@ import 'package:vhs_mobile_user/data/repositories/booking_history_repository.dar
 import 'package:vhs_mobile_user/routing/routes.dart';
 import 'package:vhs_mobile_user/ui/payment/payment_success_screen.dart';
 import 'package:vhs_mobile_user/ui/core/theme_helper.dart';
+import 'package:vhs_mobile_user/l10n/extensions/localization_extension.dart';
+import 'package:vhs_mobile_user/providers/locale_provider.dart';
+import 'package:vhs_mobile_user/services/translation_cache_provider.dart';
 
 class PaymentWebViewScreen extends ConsumerStatefulWidget {
   final String paymentUrl;
@@ -19,7 +22,9 @@ class PaymentWebViewScreen extends ConsumerStatefulWidget {
 class _PaymentWebViewScreenState extends ConsumerState<PaymentWebViewScreen> {
   late final WebViewController controller;
 
-  String? errorMessage; // Lỗi sẽ hiển thị nếu VNPay fail hoặc callback fail
+  String? errorMessage; // Error key để dịch
+  String? errorUrl; // URL của error để hiển thị
+  String? errorDetail; // Chi tiết error từ response
   bool _isProcessingCallback = false; // Flag để ẩn WebView khi đang xử lý callback
   bool _hasProcessedCallback = false; // Flag để tránh xử lý callback nhiều lần
   bool _isLoading = true; // Flag để hiển thị loading khi WebView đang load
@@ -62,7 +67,8 @@ class _PaymentWebViewScreenState extends ConsumerState<PaymentWebViewScreen> {
                 url.contains("code=")) {
               if (mounted) {
                 setState(() {
-                  errorMessage = "VNPay báo lỗi khi thanh toán.\n\nURL: $url";
+                  errorMessage = 'vnpay_error';
+                  errorUrl = url;
                   _isLoading = false;
                 });
               }
@@ -310,15 +316,16 @@ class _PaymentWebViewScreenState extends ConsumerState<PaymentWebViewScreen> {
                   }
                 } else {
                   setState(() {
-                    errorMessage =
-                        "Xác nhận thanh toán thất bại:\n${response["message"]?.toString() ?? "Không xác định"}";
+                    errorMessage = 'payment_confirmation_failed';
+                    errorDetail = response["message"]?.toString();
                   });
                 }
               } catch (e, st) {
                 debugPrint("Error parsing payment response: $e");
                 debugPrint("Stack trace: $st");
                 setState(() {
-                  errorMessage = "Không thể đọc phản hồi từ máy chủ.\n$e";
+                  errorMessage = 'cannot_read_server_response';
+                  errorDetail = e.toString();
                 });
               }
             }
@@ -330,6 +337,10 @@ class _PaymentWebViewScreenState extends ConsumerState<PaymentWebViewScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Watch locale và translation cache để rebuild khi đổi ngôn ngữ hoặc có translation mới
+    ref.watch(localeProvider);
+    ref.watch(translationCacheProvider);
+    
     final hasError = errorMessage != null;
 
     return Scaffold(
@@ -350,9 +361,9 @@ class _PaymentWebViewScreenState extends ConsumerState<PaymentWebViewScreen> {
             ),
           ),
         ),
-        title: const Text(
-          "Thanh toán VNPay",
-          style: TextStyle(
+        title: Text(
+          context.tr('vnpay_payment'),
+          style: const TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.bold,
             fontSize: 20,
@@ -382,7 +393,7 @@ class _PaymentWebViewScreenState extends ConsumerState<PaymentWebViewScreen> {
                     ),
                     const SizedBox(height: 24),
                     Text(
-                      'Đang tải trang thanh toán...',
+                      context.tr('loading_payment_page'),
                       style: TextStyle(
                         fontSize: 16,
                         color: ThemeHelper.getSecondaryTextColor(context),
@@ -442,7 +453,7 @@ class _PaymentWebViewScreenState extends ConsumerState<PaymentWebViewScreen> {
                     ),
                     const SizedBox(height: 24),
                     Text(
-                      'Đang xử lý thanh toán...',
+                      context.tr('processing_payment'),
                       style: TextStyle(
                         fontSize: 18,
                         color: ThemeHelper.getTextColor(context),
@@ -451,7 +462,7 @@ class _PaymentWebViewScreenState extends ConsumerState<PaymentWebViewScreen> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Vui lòng đợi trong giây lát',
+                      context.tr('please_wait_moment'),
                       style: TextStyle(
                         fontSize: 14,
                         color: ThemeHelper.getSecondaryTextColor(context),
@@ -493,7 +504,7 @@ class _PaymentWebViewScreenState extends ConsumerState<PaymentWebViewScreen> {
               ),
               const SizedBox(height: 24),
               Text(
-                "Thanh toán thất bại",
+                context.tr('payment_failed_title'),
                 style: TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.bold,
@@ -511,23 +522,48 @@ class _PaymentWebViewScreenState extends ConsumerState<PaymentWebViewScreen> {
                     width: 1,
                   ),
                 ),
-                child: Text(
-                  errorMessage!,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: ThemeHelper.getTextColor(context),
-                    height: 1.5,
-                  ),
+                child: Builder(
+                  builder: (context) {
+                    String message = '';
+                    if (errorMessage == 'vnpay_error') {
+                      message = context.tr('vnpay_error');
+                      if (errorUrl != null) {
+                        message += '\n\nURL: $errorUrl';
+                      }
+                    } else if (errorMessage == 'payment_confirmation_failed') {
+                      message = context.tr('payment_confirmation_failed');
+                      if (errorDetail != null) {
+                        message += ':\n$errorDetail';
+                      } else {
+                        message += ':\n${context.tr('error_unknown')}';
+                      }
+                    } else if (errorMessage == 'cannot_read_server_response') {
+                      message = context.tr('cannot_read_server_response');
+                      if (errorDetail != null) {
+                        message += '\n$errorDetail';
+                      }
+                    } else if (errorMessage != null) {
+                      message = errorMessage!;
+                    }
+                    return Text(
+                      message,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: ThemeHelper.getTextColor(context),
+                        height: 1.5,
+                      ),
+                    );
+                  },
                 ),
               ),
             const SizedBox(height: 32),
             ElevatedButton.icon(
               onPressed: () => Navigator.pop(context, false),
               icon: const Icon(Icons.arrow_back_rounded, size: 20),
-              label: const Text(
-                "Đóng và quay lại",
-                style: TextStyle(
+              label: Text(
+                context.tr('close_and_return'),
+                style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
                 ),

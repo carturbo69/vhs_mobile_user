@@ -7,7 +7,10 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:vhs_mobile_user/data/models/service/service_detail.dart';
 import 'package:vhs_mobile_user/data/models/service/service_model.dart';
+import 'package:vhs_mobile_user/data/models/service/service_localization_extension.dart';
 import 'package:vhs_mobile_user/data/services/service_api.dart';
+import 'package:vhs_mobile_user/providers/locale_provider.dart';
+import 'package:vhs_mobile_user/l10n/extensions/localization_extension.dart';
 import 'package:vhs_mobile_user/routing/routes.dart';
 import 'package:vhs_mobile_user/ui/cart/cart_list_viewmodel.dart';
 import 'package:vhs_mobile_user/ui/service_detail/service_detail_viewmodel.dart';
@@ -27,6 +30,9 @@ class ServiceDetailPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Watch locale để rebuild khi đổi ngôn ngữ
+    ref.watch(localeProvider);
+    
     final asyncDetail = ref.watch(serviceDetailProvider(serviceId));
 
     return Scaffold(
@@ -48,8 +54,8 @@ class ServiceDetailPage extends ConsumerWidget {
             ),
           ),
         ),
-        title: const Text(
-          "Chi tiết dịch vụ",
+        title: Text(
+          context.tr('service_detail'),
           style: TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.bold,
@@ -88,7 +94,7 @@ class ServiceDetailPage extends ConsumerWidget {
                           context.go(Routes.cart, extra: {'previousRoute': currentLocation});
                         }
                       },
-                      tooltip: 'Giỏ hàng',
+                      tooltip: context.tr('cart_tooltip'),
                     ),
                   ),
                   if (cartCount > 0)
@@ -142,7 +148,7 @@ class ServiceDetailPage extends ConsumerWidget {
               icon: const Icon(Icons.refresh, color: Colors.white),
               onPressed: () =>
                   ref.read(serviceDetailProvider(serviceId).notifier).refresh(),
-              tooltip: 'Làm mới',
+              tooltip: context.tr('refresh'),
             ),
           ),
         ],
@@ -160,7 +166,7 @@ class ServiceDetailPage extends ConsumerWidget {
               ),
               const SizedBox(height: 24),
               Text(
-                "Đang tải...",
+                context.tr('loading'),
                 style: TextStyle(
                   color: ThemeHelper.getSecondaryTextColor(context),
                   fontSize: 16,
@@ -194,7 +200,7 @@ class ServiceDetailPage extends ConsumerWidget {
                 ),
                 const SizedBox(height: 24),
                 Text(
-                  "Đã xảy ra lỗi",
+                  context.tr('error_occurred'),
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
@@ -214,8 +220,8 @@ class ServiceDetailPage extends ConsumerWidget {
                 ElevatedButton.icon(
                   onPressed: () => ref.read(serviceDetailProvider(serviceId).notifier).refresh(),
                   icon: const Icon(Icons.refresh_rounded, size: 20),
-                  label: const Text(
-                    "Thử lại",
+                  label: Text(
+                    context.tr('try_again'),
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
@@ -270,12 +276,12 @@ class _DetailContent extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _buildImageSection(context, imageList),
-          _buildPriceSection(context),
-          _buildTitleSection(context),
+          _buildPriceSection(context, ref),
+          _buildTitleSection(context, ref),
           _buildRatingSection(context),
-          _buildOptionsSection(context),
+          _buildOptionsSection(context, ref),
           _buildProviderSection(context, ref),
-          _buildDescriptionSection(context),
+          _buildDescriptionSection(context, ref),
           _buildReviewSection(context),
           _buildRelatedServicesSection(context, ref),
           const SizedBox(height: 30),
@@ -304,7 +310,7 @@ class _DetailContent extends ConsumerWidget {
   }
 
   // ======================= PRICE ===============================
-  Widget _buildPriceSection(BuildContext context) {
+  Widget _buildPriceSection(BuildContext context, WidgetRef ref) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
@@ -338,7 +344,7 @@ class _DetailContent extends ConsumerWidget {
               border: Border.all(color: Colors.red[200]!, width: 1),
             ),
             child: Text(
-              "/ ${_translateUnitType(detail.unitType)}",
+              "/ ${detail.getLocalizedUnitType(ref)}",
               style: TextStyle(
                 color: Colors.red[700],
                 fontSize: 14,
@@ -366,52 +372,8 @@ class _DetailContent extends ConsumerWidget {
     return buffer.toString();
   }
 
-  String _translateUnitType(String unitType) {
-    final lowerUnitType = unitType.toLowerCase().trim();
-    
-    switch (lowerUnitType) {
-      case 'squaremeter':
-      case 'square meter':
-      case 'm²':
-      case 'm2':
-        return 'Mét vuông';
-      case 'visit':
-        return 'Lần';
-      case 'hour':
-      case 'hours':
-        return 'Giờ';
-      case 'day':
-      case 'days':
-        return 'Ngày';
-      case 'apartment':
-      case 'apartments':
-        return 'Căn';
-      case 'room':
-      case 'rooms':
-        return 'Phòng';
-      case 'person':
-      case 'persons':
-      case 'people':
-        return 'Người';
-      case 'package':
-      case 'packages':
-        return 'Gói';
-      case 'event':
-      case 'events':
-        return 'Sự kiện';
-      case 'week':
-      case 'weeks':
-        return 'Tuần';
-      case 'month':
-      case 'months':
-        return 'Tháng';
-      default:
-        return unitType;
-    }
-  }
-
   // ===================== TITLE ================================
-  Widget _buildTitleSection(BuildContext context) {
+  Widget _buildTitleSection(BuildContext context, WidgetRef ref) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -419,7 +381,7 @@ class _DetailContent extends ConsumerWidget {
         color: ThemeHelper.getCardBackgroundColor(context),
       ),
       child: Text(
-        detail.title,
+        detail.getLocalizedTitle(ref),
         style: TextStyle(
           fontSize: 20,
           fontWeight: FontWeight.bold,
@@ -470,7 +432,7 @@ class _DetailContent extends ConsumerWidget {
           ),
           const SizedBox(width: 12),
           Text(
-            "(${detail.totalReviews} đánh giá)",
+            "(${detail.totalReviews} ${context.tr('reviews_count')})",
             style: TextStyle(
               color: ThemeHelper.getTertiaryTextColor(context),
               fontSize: 14,
@@ -578,7 +540,7 @@ class _DetailContent extends ConsumerWidget {
                     ),
                     const SizedBox(width: 4),
                 Text(
-                      "${p.totalServices} dịch vụ",
+                      "${p.totalServices} ${context.tr('services_count')}",
                       style: TextStyle(
                         color: ThemeHelper.getTertiaryTextColor(context),
                         fontSize: 13,
@@ -620,8 +582,8 @@ class _DetailContent extends ConsumerWidget {
                   ),
                 ],
               ),
-              child: const Text(
-                "Xem shop",
+              child: Text(
+                context.tr('view_shop'),
                 style: TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.w600,
@@ -636,7 +598,7 @@ class _DetailContent extends ConsumerWidget {
   }
 
   // ================== OPTIONS SECTION ==========================
-  Widget _buildOptionsSection(BuildContext context) {
+  Widget _buildOptionsSection(BuildContext context, WidgetRef ref) {
     // Tách options thành 2 nhóm: regular và textarea/text (giống service_card.dart)
     final regularOptions = detail.serviceOptions
         .where((opt) => opt.type.toLowerCase() != 'textarea' && opt.type.toLowerCase() != 'text')
@@ -680,7 +642,7 @@ class _DetailContent extends ConsumerWidget {
               ),
               const SizedBox(width: 10),
               Text(
-                "TÙY CHỌN ĐÃ BAO GỒM",
+                context.tr('included_options'),
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 16,
@@ -714,7 +676,7 @@ class _DetailContent extends ConsumerWidget {
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      o.optionName,
+                      o.getLocalizedOptionName(ref),
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
@@ -752,7 +714,7 @@ class _DetailContent extends ConsumerWidget {
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(
-                          opt.optionName,
+                          opt.getLocalizedOptionName(ref),
                           style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
@@ -767,7 +729,7 @@ class _DetailContent extends ConsumerWidget {
                     Padding(
                       padding: const EdgeInsets.only(left: 30),
                       child: Text(
-                        opt.value!,
+                        opt.getLocalizedValue(ref) ?? '',
                         style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w400,
@@ -787,8 +749,9 @@ class _DetailContent extends ConsumerWidget {
   }
 
   // ================= DESCRIPTION ==============================
-  Widget _buildDescriptionSection(BuildContext context) {
-    if (detail.description == null || detail.description!.isEmpty) {
+  Widget _buildDescriptionSection(BuildContext context, WidgetRef ref) {
+    final description = detail.getLocalizedDescription(ref);
+    if (description == null || description.isEmpty) {
       return const SizedBox();
     }
 
@@ -825,7 +788,7 @@ class _DetailContent extends ConsumerWidget {
               ),
               const SizedBox(width: 10),
               Text(
-            "Mô tả dịch vụ",
+            context.tr('service_description'),
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 16,
@@ -846,7 +809,7 @@ class _DetailContent extends ConsumerWidget {
               ),
             ),
             child: Text(
-              detail.description!.replaceAll('\r\n', '\n').replaceAll('\r', '\n'),
+              description.replaceAll('\r\n', '\n').replaceAll('\r', '\n'),
               style: TextStyle(
                 fontSize: 14,
                 color: ThemeHelper.getSecondaryTextColor(context),
@@ -854,86 +817,6 @@ class _DetailContent extends ConsumerWidget {
               ),
               softWrap: true,
             ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ================= TAGS ==============================
-  Widget _buildTagsSection(BuildContext context) {
-    if (detail.tags.isEmpty) return const SizedBox();
-
-    return Container(
-      width: double.infinity,
-      margin: const EdgeInsets.only(top: 8),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: ThemeHelper.getCardBackgroundColor(context),
-        boxShadow: [
-          BoxShadow(
-            color: ThemeHelper.getShadowColor(context),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.label, color: Colors.orange.shade400, size: 20),
-              const SizedBox(width: 8),
-              Text(
-                "Thẻ",
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 18,
-                  color: ThemeHelper.getTextColor(context),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Wrap(
-        spacing: 8,
-            runSpacing: 8,
-        children: detail.tags
-            .map(
-              (t) {
-                final isDark = ThemeHelper.isDarkMode(context);
-                return Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                      colors: isDark
-                          ? [
-                              Colors.orange.shade900.withOpacity(0.3),
-                              Colors.orange.shade800.withOpacity(0.2),
-                            ]
-                          : [Colors.orange.shade50, Colors.orange.shade100],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: Colors.orange.shade400,
-                      width: 1,
-                    ),
-                    ),
-                    child: Text(
-                      t.name,
-                      style: TextStyle(
-                      color: Colors.orange.shade400,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                );
-              },
-            )
-            .toList(),
           ),
         ],
       ),
@@ -969,7 +852,7 @@ class _DetailContent extends ConsumerWidget {
               ),
               const SizedBox(width: 8),
               Text(
-                "Đánh giá dịch vụ",
+                context.tr('service_reviews'),
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 18,
@@ -984,7 +867,7 @@ class _DetailContent extends ConsumerWidget {
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 8),
               child: Text(
-                "Chưa có đánh giá",
+                context.tr('no_reviews'),
                 style: TextStyle(
                   fontSize: 14,
                   color: ThemeHelper.getSecondaryTextColor(context),
@@ -1067,7 +950,7 @@ class _DetailContent extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      r.fullName ?? "Người dùng ẩn",
+                      r.fullName ?? context.tr('anonymous_user'),
                       style: TextStyle(
                         fontWeight: FontWeight.w600,
                         fontSize: 15,
@@ -1199,7 +1082,7 @@ class _DetailContent extends ConsumerWidget {
                       ),
                       const SizedBox(width: 10),
                       Text(
-                        "Dịch vụ khác",
+                        context.tr('other_services'),
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 18,
@@ -1249,7 +1132,7 @@ class _DetailContent extends ConsumerWidget {
                           ),
                         ),
                         child: Text(
-                          "Xem thêm",
+                          context.tr('view_more'),
                           style: TextStyle(
                             color: ThemeHelper.getPrimaryColor(context),
                             fontSize: 14,
@@ -1278,14 +1161,17 @@ final _relatedServicesProvider = FutureProvider.family<List<ServiceModel>, Strin
 });
 
 // Compact Service Card cho related services (đơn giản như hình)
-class _CompactServiceCard extends StatelessWidget {
+class _CompactServiceCard extends ConsumerWidget {
   final ServiceModel service;
   final VoidCallback? onTap;
 
   const _CompactServiceCard({required this.service, this.onTap});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Watch locale để rebuild khi đổi ngôn ngữ
+    ref.watch(localeProvider);
+    
     final images = service.imageList;
     final img = images.isNotEmpty ? images.first : null;
     final isDark = ThemeHelper.isDarkMode(context);
@@ -1353,7 +1239,7 @@ class _CompactServiceCard extends StatelessWidget {
                 children: [
                   // Title
                   Text(
-                    service.title,
+                    service.getLocalizedTitle(ref),
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 13,
@@ -1382,7 +1268,7 @@ class _CompactServiceCard extends StatelessWidget {
                       const SizedBox(width: 4),
                       Flexible(
                         child: Text(
-                          "${service.averageRating.toStringAsFixed(1)}/5 (${service.totalReviews})",
+                          "${service.averageRating.toStringAsFixed(1)}/5 (${service.totalReviews} ${context.tr('reviews_count')})",
                           style: TextStyle(
                             fontSize: 10,
                             color: ThemeHelper.getSecondaryTextColor(context),
@@ -1396,7 +1282,7 @@ class _CompactServiceCard extends StatelessWidget {
                   const SizedBox(height: 6),
                   // Price
                   Text(
-                    "${_formatPrice(service.price)}₫/ ${_translateUnitType(service.unitType)}",
+                    "${_formatPrice(service.price)}₫/ ${service.getLocalizedUnitType(ref)}",
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
@@ -1427,50 +1313,6 @@ class _CompactServiceCard extends StatelessWidget {
     }
     
     return buffer.toString();
-  }
-
-  String _translateUnitType(String unitType) {
-    final lowerUnitType = unitType.toLowerCase().trim();
-    
-    switch (lowerUnitType) {
-      case 'squaremeter':
-      case 'square meter':
-      case 'm²':
-      case 'm2':
-        return 'Mét vuông';
-      case 'visit':
-        return 'Lần';
-      case 'hour':
-      case 'hours':
-        return 'Giờ';
-      case 'day':
-      case 'days':
-        return 'Ngày';
-      case 'apartment':
-      case 'apartments':
-        return 'Căn';
-      case 'room':
-      case 'rooms':
-        return 'Phòng';
-      case 'person':
-      case 'persons':
-      case 'people':
-        return 'Người';
-      case 'package':
-      case 'packages':
-        return 'Gói';
-      case 'event':
-      case 'events':
-        return 'Sự kiện';
-      case 'week':
-      case 'weeks':
-        return 'Tuần';
-      case 'month':
-      case 'months':
-        return 'Tháng';
-      default:
-        return unitType;
-    }
   }
 }
 
@@ -1711,8 +1553,8 @@ class _BottomActionBar extends ConsumerWidget {
                     context.push(Routes.chatDetailPath(conversationId));
                   } else if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text("Không thể tạo cuộc trò chuyện. Vui lòng thử lại."),
+                      SnackBar(
+                        content: Text(context.tr('chat_error')),
                         backgroundColor: Colors.red,
                       ),
                     );
@@ -1721,14 +1563,14 @@ class _BottomActionBar extends ConsumerWidget {
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: Text("Lỗi: $e"),
+                        content: Text("${context.tr('error_prefix')} $e"),
                         backgroundColor: Colors.red,
                       ),
                     );
                   }
                 }
               },
-              tooltip: "Chat với ${detail.provider.providerName}",
+              tooltip: "${context.tr('chat_with_provider')} ${detail.provider.providerName}",
             ),
           ),
 
@@ -1761,10 +1603,10 @@ class _BottomActionBar extends ConsumerWidget {
                     // Hiển thị thông báo thành công
                     if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text("Đã thêm vào giỏ"),
+                        SnackBar(
+                          content: Text(context.tr('added_to_cart')),
                           backgroundColor: Colors.green,
-                          duration: Duration(seconds: 2),
+                          duration: const Duration(seconds: 2),
                         ),
                   );
                     }
@@ -1773,8 +1615,8 @@ class _BottomActionBar extends ConsumerWidget {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
                           content: Text(e.toString().contains('đã có trong giỏ hàng') 
-                              ? "Dịch vụ này đã có trong giỏ hàng" 
-                              : "Lỗi: $e"),
+                              ? context.tr('service_already_in_cart')
+                              : "${context.tr('error_prefix')} $e"),
                           backgroundColor: Colors.red,
                         ),
                       );
@@ -1801,7 +1643,7 @@ class _BottomActionBar extends ConsumerWidget {
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      "Thêm vào giỏ",
+                      context.tr('add_to_cart'),
                       style: TextStyle(
                         color: ThemeHelper.getPrimaryColor(context),
                         fontSize: 16,
@@ -1840,9 +1682,9 @@ class _BottomActionBar extends ConsumerWidget {
                   children: [
                     const Icon(Icons.shopping_bag_rounded, size: 20),
                     const SizedBox(width: 8),
-                    const Text(
-                      "Đặt ngay",
-                      style: TextStyle(
+                    Text(
+                      context.tr('order_now'),
+                      style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
                       ),

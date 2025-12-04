@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:vhs_mobile_user/ui/core/theme_helper.dart';
+import 'package:vhs_mobile_user/l10n/extensions/localization_extension.dart';
 
 class LocationPickerScreen extends StatefulWidget {
   const LocationPickerScreen({super.key});
@@ -34,9 +35,9 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
             ),
           ),
         ),
-        title: const Text(
-          "Chọn vị trí",
-          style: TextStyle(
+        title: Text(
+          context.tr('select_location'),
+          style: const TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.bold,
             fontSize: 20,
@@ -217,9 +218,9 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
                           });
                         },
                   icon: const Icon(Icons.check_circle_rounded, size: 24),
-                  label: const Text(
-                    "Chọn vị trí",
-                    style: TextStyle(
+                  label: Text(
+                    context.tr('select_location'),
+                    style: const TextStyle(
                       fontSize: 17,
                       fontWeight: FontWeight.w600,
                       letterSpacing: 0.5,

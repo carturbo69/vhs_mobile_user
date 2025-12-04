@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:vhs_mobile_user/routing/router.dart';
 import 'package:vhs_mobile_user/providers/theme_provider.dart';
+import 'package:vhs_mobile_user/providers/locale_provider.dart';
+import 'package:vhs_mobile_user/l10n/app_localizations.dart';
+import 'package:vhs_mobile_user/services/notification_service.dart';
+import 'package:vhs_mobile_user/data/services/signalr_chat_service.dart';
 
 void main() {
   runApp(const AppRoot());
@@ -38,17 +43,81 @@ final appResetProvider = Provider<VoidCallback>((ref) {
   throw UnimplementedError("resetProviders not set yet");
 });
 
-class MyApp extends ConsumerWidget {
+class MyApp extends ConsumerStatefulWidget {
   final VoidCallback resetProviders;
   const MyApp({super.key, required this.resetProviders});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends ConsumerState<MyApp> {
+  @override
+  void initState() {
+    super.initState();
+    // Initialize notification service and connect SignalR when app starts
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      try {
+        // Initialize and connect notification SignalR
+        print('🚀 Initializing notification service...');
+        final notificationService = ref.read(notificationServiceProvider);
+        await notificationService.initialize();
+        await notificationService.connectSignalR();
+        print('✅ Notification SignalR connected');
+        
+        // Auto-connect chat SignalR with retry
+        print('🚀 Auto-connecting chat SignalR...');
+        final chatSignalRService = ref.read(signalRChatServiceProvider);
+        
+        // Retry up to 3 times with delay
+        int retries = 0;
+        const maxRetries = 3;
+        while (retries < maxRetries && !chatSignalRService.isConnected) {
+          await chatSignalRService.autoConnect();
+          if (chatSignalRService.isConnected) {
+            print('✅ Chat SignalR auto-connect successful on attempt ${retries + 1}');
+            break;
+          }
+          retries++;
+          if (retries < maxRetries) {
+            print('⚠️ Chat SignalR auto-connect failed, retrying in 2 seconds... (attempt $retries/$maxRetries)');
+            await Future.delayed(const Duration(seconds: 2));
+          }
+        }
+        
+        if (!chatSignalRService.isConnected) {
+          print('⚠️ Chat SignalR auto-connect failed after $maxRetries attempts');
+        } else {
+          print('✅ Chat SignalR auto-connect completed');
+          
+          // Setup global chat listeners to receive messages even when not on chat screen
+          final globalChatService = ref.read(globalChatServiceProvider);
+          await globalChatService.setupListeners();
+          print('✅ Global chat listeners setup completed');
+        }
+      } catch (e, stackTrace) {
+        print('❌ Error initializing SignalR services: $e');
+        print('Stack trace: $stackTrace');
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final router = ref.watch(routerProvider);
     final themeMode = ref.watch(themeModeProvider);
+    final locale = ref.watch(localeProvider);
 
     return MaterialApp.router(
-      title: 'VHS Mobile User',
+      title: 'Dịch vụ gia đình Việt',
+      locale: locale,
+      supportedLocales: AppLocalizations.supportedLocales,
+      localizationsDelegates: const [
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
       theme: ThemeData(
         useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(

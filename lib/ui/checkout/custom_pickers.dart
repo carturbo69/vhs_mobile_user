@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:vhs_mobile_user/data/models/provider/provider_availability_model.dart';
 import 'package:vhs_mobile_user/ui/core/theme_helper.dart';
+import 'package:vhs_mobile_user/l10n/extensions/localization_extension.dart';
+import 'package:vhs_mobile_user/providers/locale_provider.dart';
 
 // Custom Date Picker với lịch đẹp
-class CustomDatePicker extends StatefulWidget {
+class CustomDatePicker extends ConsumerStatefulWidget {
   final DateTime initialDate;
   final Future<bool> Function(DateTime) onCheckAvailability;
 
@@ -14,10 +17,10 @@ class CustomDatePicker extends StatefulWidget {
   });
 
   @override
-  State<CustomDatePicker> createState() => _CustomDatePickerState();
+  ConsumerState<CustomDatePicker> createState() => _CustomDatePickerState();
 }
 
-class _CustomDatePickerState extends State<CustomDatePicker> {
+class _CustomDatePickerState extends ConsumerState<CustomDatePicker> {
   late DateTime _selectedDate;
   late DateTime _currentMonth;
   final Map<DateTime, bool> _availabilityCache = {};
@@ -56,6 +59,7 @@ class _CustomDatePickerState extends State<CustomDatePicker> {
 
   @override
   Widget build(BuildContext context) {
+    ref.watch(localeProvider); // Rebuild when language changes
     final days = _getDaysInMonth(_currentMonth);
     final today = DateTime.now();
     final lastDate = today.add(const Duration(days: 60));
@@ -150,7 +154,15 @@ class _CustomDatePickerState extends State<CustomDatePicker> {
                   const SizedBox(height: 16),
                   // Tên các ngày trong tuần
                   Row(
-                    children: ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7']
+                    children: [
+                      context.tr('weekday_sun'),
+                      context.tr('weekday_mon'),
+                      context.tr('weekday_tue'),
+                      context.tr('weekday_wed'),
+                      context.tr('weekday_thu'),
+                      context.tr('weekday_fri'),
+                      context.tr('weekday_sat'),
+                    ]
                         .map((day) => Expanded(
                               child: Center(
                                 child: Text(
@@ -265,9 +277,9 @@ class _CustomDatePickerState extends State<CustomDatePicker> {
                       OutlinedButton.icon(
                         onPressed: () => Navigator.pop(context),
                         icon: const Icon(Icons.close_rounded, size: 18),
-                        label: const Text(
-                          'Hủy',
-                          style: TextStyle(
+                        label: Text(
+                          context.tr('cancel'),
+                          style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
                           ),
@@ -291,9 +303,9 @@ class _CustomDatePickerState extends State<CustomDatePicker> {
                       ElevatedButton.icon(
                         onPressed: () => Navigator.pop(context, _selectedDate),
                         icon: const Icon(Icons.check_rounded, size: 18),
-                        label: const Text(
-                          'Chọn',
-                          style: TextStyle(
+                        label: Text(
+                          context.tr('select'),
+                          style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
                           ),
@@ -324,7 +336,7 @@ class _CustomDatePickerState extends State<CustomDatePicker> {
 }
 
 // Custom Time Picker với kéo cuộn (scrollable columns)
-class CustomTimePicker extends StatefulWidget {
+class CustomTimePicker extends ConsumerStatefulWidget {
   final TimeOfDay initialTime;
   final DateTime date;
   final Future<ProviderAvailabilityModel> Function(DateTime date, TimeOfDay time) onCheckTime;
@@ -337,10 +349,10 @@ class CustomTimePicker extends StatefulWidget {
   });
 
   @override
-  State<CustomTimePicker> createState() => _CustomTimePickerState();
+  ConsumerState<CustomTimePicker> createState() => _CustomTimePickerState();
 }
 
-class _CustomTimePickerState extends State<CustomTimePicker> {
+class _CustomTimePickerState extends ConsumerState<CustomTimePicker> {
   late int _selectedHour;
   late int _selectedMinute;
   final Map<String, bool> _availabilityCache = {};
@@ -401,6 +413,7 @@ class _CustomTimePickerState extends State<CustomTimePicker> {
 
   @override
   Widget build(BuildContext context) {
+    ref.watch(localeProvider); // Rebuild when language changes
     final hours = List.generate(24, (index) => index + 1); // 1-24
     final minutes = List.generate(60, (index) => index); // 0-59 phút
 
@@ -456,9 +469,9 @@ class _CustomTimePickerState extends State<CustomTimePicker> {
                     ),
                   ),
                   const SizedBox(width: 12),
-                  const Text(
-                    'Chọn giờ',
-                    style: TextStyle(
+                  Text(
+                    context.tr('select_time'),
+                    style: const TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
                       color: Colors.white,
@@ -538,7 +551,7 @@ class _CustomTimePickerState extends State<CustomTimePicker> {
                             ),
                             const SizedBox(width: 6),
                             Text(
-                              available ? 'Có sẵn' : 'Không có sẵn',
+                              available ? context.tr('available') : context.tr('not_available'),
                               style: TextStyle(
                                 color: available
                                     ? Colors.green.shade700
@@ -711,9 +724,9 @@ class _CustomTimePickerState extends State<CustomTimePicker> {
                       OutlinedButton.icon(
                         onPressed: () => Navigator.pop(context),
                         icon: const Icon(Icons.close_rounded, size: 18),
-                        label: const Text(
-                          'Hủy',
-                          style: TextStyle(
+                        label: Text(
+                          context.tr('cancel'),
+                          style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
                           ),
@@ -743,16 +756,16 @@ class _CustomTimePickerState extends State<CustomTimePicker> {
                           } else if (context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
-                                content: const Text('Khung giờ này không có sẵn'),
+                                content: Text(context.tr('time_slot_not_available')),
                                 backgroundColor: Colors.orange.shade400, // Accent color, keep as is
                               ),
                             );
                           }
                         },
                         icon: const Icon(Icons.check_rounded, size: 18),
-                        label: const Text(
-                          'Chọn',
-                          style: TextStyle(
+                        label: Text(
+                          context.tr('select'),
+                          style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
                           ),

@@ -20,6 +20,10 @@ import 'package:vhs_mobile_user/data/models/cart/cart_item_model.dart';
 import 'package:vhs_mobile_user/data/models/service/service_detail.dart';
 import 'package:flutter_html/flutter_html.dart';
 import 'package:vhs_mobile_user/ui/core/theme_helper.dart';
+import 'package:vhs_mobile_user/l10n/extensions/localization_extension.dart';
+import 'package:vhs_mobile_user/providers/locale_provider.dart';
+import 'package:vhs_mobile_user/services/translation_cache_provider.dart';
+import 'package:vhs_mobile_user/services/data_translation_service.dart';
 
 class CheckoutScreen extends ConsumerStatefulWidget {
   const CheckoutScreen({super.key, this.selectedItemIds, this.serviceId});
@@ -103,6 +107,29 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     return items.fold(0.0, (sum, item) => sum + item.subtotal);
   }
 
+  // Helper method để dịch tên dịch vụ
+  String _getLocalizedServiceName(String serviceName) {
+    final locale = ref.read(localeProvider);
+    if (locale.languageCode == 'vi') {
+      return serviceName;
+    }
+    // Sử dụng translation cache để dịch
+    final cache = ref.read(translationCacheProvider.notifier);
+    return cache.getTranslationSync(serviceName);
+  }
+
+  // Helper method để dịch nội dung HTML (Terms of Service)
+  Future<String> _getLocalizedHtmlContent(String htmlContent) async {
+    final locale = ref.read(localeProvider);
+    if (locale.languageCode == 'vi') {
+      return htmlContent;
+    }
+    // Sử dụng translation cache để dịch HTML content
+    // Google Translate có thể xử lý HTML và giữ nguyên tags
+    final cache = ref.read(translationCacheProvider.notifier);
+    return await cache.getTranslation(htmlContent);
+  }
+
   // Helper: Convert ServiceDetail to CartItemModel để dùng chung UI
   CartItemModel _serviceDetailToCartItem(ServiceDetail detail) {
     // Convert ServiceOptionDetail to CartOptionModel
@@ -144,6 +171,8 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.watch(localeProvider); // Rebuild when language changes
+    ref.watch(translationCacheProvider); // Rebuild when translations are updated
     final addresses = ref.watch(userAddressProvider);
     
     // Nếu có serviceId, tạo virtual cart item từ service detail
@@ -168,9 +197,9 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
               ),
             ),
           ),
-          title: const Text(
-            'Đặt lịch',
-            style: TextStyle(
+          title: Text(
+            context.tr('booking'),
+            style: const TextStyle(
               color: Colors.white,
               fontWeight: FontWeight.bold,
               fontSize: 20,
@@ -193,7 +222,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                 ),
                 const SizedBox(height: 24),
                 Text(
-                  "Đang tải...",
+                  context.tr('loading'),
                   style: TextStyle(
                       color: ThemeHelper.getSecondaryTextColor(context),
                     fontSize: 16,
@@ -228,7 +257,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                   ),
                   const SizedBox(height: 24),
                   Text(
-                    'Đã xảy ra lỗi',
+                    context.tr('error_occurred'),
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
@@ -290,9 +319,9 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             ),
           ),
         ),
-        title: const Text(
-          'Đặt lịch',
-          style: TextStyle(
+        title: Text(
+          context.tr('booking'),
+          style: const TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.bold,
             fontSize: 20,
@@ -315,7 +344,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
               ),
               const SizedBox(height: 24),
               Text(
-                "Đang tải...",
+                context.tr('loading'),
                 style: TextStyle(
                     color: ThemeHelper.getSecondaryTextColor(context),
                   fontSize: 16,
@@ -350,7 +379,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                 ),
                 const SizedBox(height: 24),
                 Text(
-                  'Đã xảy ra lỗi',
+                  context.tr('error_occurred'),
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
@@ -398,7 +427,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                     ),
                     const SizedBox(height: 24),
                     Text(
-                      'Không có dịch vụ nào được chọn',
+                      context.tr('no_services_selected'),
                       style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
@@ -407,7 +436,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Vui lòng chọn dịch vụ từ giỏ hàng',
+                      context.tr('please_select_services_from_cart'),
                       style: TextStyle(
                         fontSize: 14,
                         color: ThemeHelper.getSecondaryTextColor(context),
@@ -418,9 +447,9 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                     ElevatedButton.icon(
                       onPressed: () => context.pop(),
                       icon: const Icon(Icons.arrow_back_rounded, size: 20),
-                      label: const Text(
-                        'Quay lại giỏ hàng',
-                        style: TextStyle(
+                      label: Text(
+                        context.tr('back_to_cart'),
+                        style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
                         ),
@@ -504,19 +533,19 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                     ref.read(authStateProvider.notifier).logout();
                   }
                 });
-                return const Center(
+                return Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      CircularProgressIndicator(),
-                      SizedBox(height: 16),
+                      const CircularProgressIndicator(),
+                      const SizedBox(height: 16),
                       Text(
-                        'Phiên đăng nhập đã hết hạn',
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        context.tr('login_session_expired'),
+                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                       ),
-                      SizedBox(height: 8),
+                      const SizedBox(height: 8),
                       Text(
-                        'Đang chuyển đến trang đăng nhập...',
+                        context.tr('redirecting_to_login'),
                         textAlign: TextAlign.center,
                       ),
                     ],
@@ -546,7 +575,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                       ),
                       const SizedBox(height: 24),
                       Text(
-                        'Đã xảy ra lỗi',
+                        context.tr('error_occurred'),
                         style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
@@ -555,7 +584,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Lỗi địa chỉ: $e',
+                        '${context.tr('address_error')}: $e',
                         style: TextStyle(
                           fontSize: 14,
                           color: ThemeHelper.getSecondaryTextColor(context),
@@ -566,9 +595,9 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                       ElevatedButton.icon(
                         onPressed: () => context.pop(),
                         icon: const Icon(Icons.arrow_back_rounded, size: 20),
-                        label: const Text(
-                          'Quay lại',
-                          style: TextStyle(
+                        label: Text(
+                          context.tr('back'),
+                          style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
                           ),
@@ -784,7 +813,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                         const SizedBox(width: 12),
                         Expanded(
                           child: Text(
-                            'Địa chỉ đặt lịch',
+                            context.tr('booking_address'),
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
@@ -863,7 +892,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                         const SizedBox(width: 12),
                         Expanded(
                           child: Text(
-                            'Chọn ngày và giờ cho dịch vụ',
+                            context.tr('select_date_time_for_service'),
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
@@ -933,7 +962,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                                   const SizedBox(width: 10),
                                   Expanded(
                                     child: Text(
-                                      item.serviceName,
+                                      _getLocalizedServiceName(item.serviceName),
                                       style: TextStyle(
                                         fontSize: 16,
                                         fontWeight: FontWeight.w600,
@@ -1076,9 +1105,9 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                               height: 1.5,
                             ),
                             children: [
-                              const TextSpan(text: 'Tôi đã đọc và đồng ý '),
+                              TextSpan(text: '${context.tr('i_have_read_and_agree')} '),
                               TextSpan(
-                                text: 'Điều khoản dịch vụ',
+                                text: context.tr('terms_of_service'),
                                 style: TextStyle(
                                   color: Theme.of(context).colorScheme.primary,
                                   fontWeight: FontWeight.w600,
@@ -1089,7 +1118,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                                     _showTermsDialog(context);
                                   },
                               ),
-                              const TextSpan(text: ' của nhà cung cấp này.'),
+                              TextSpan(text: ' ${context.tr('of_this_provider')}.'),
                             ],
                           ),
                         ),
@@ -1157,7 +1186,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                         const SizedBox(width: 12),
                         Expanded(
                           child: Text(
-                            'Voucher',
+                            context.tr('voucher'),
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
@@ -1230,7 +1259,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                                     Text(
                                       selectedVoucher != null 
                                           ? selectedVoucher.code 
-                                          : 'Chọn voucher',
+                                          : context.tr('select_voucher_text'),
                                       style: TextStyle(
                                         fontSize: 15,
                                         fontWeight: FontWeight.w600,
@@ -1241,7 +1270,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                                     ),
                                     if (selectedVoucher != null)
                                       Text(
-                                        'Đã áp dụng',
+                                        context.tr('applied'),
                                         style: TextStyle(
                                           fontSize: 12,
                                           color: Colors.green[600],
@@ -1305,7 +1334,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                         const SizedBox(width: 12),
                         Expanded(
                           child: Text(
-                            'Phương thức thanh toán',
+                            context.tr('payment_method'),
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
@@ -1402,7 +1431,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
-                                  'QR/ATM/Thẻ',
+                                  context.tr('qr_atm_card'),
                                   style: TextStyle(
                                     fontSize: 13,
                                     color: ThemeHelper.getSecondaryTextColor(context),
@@ -1477,7 +1506,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                       // Kiểm tra địa chỉ
                       if (selectedAddress == null) {
                         setState(() {
-                          _addressError = 'Vui lòng chọn địa chỉ giao hàng';
+                          _addressError = context.tr('please_select_delivery_address');
                           hasError = true;
                         });
                       } else {
@@ -1490,7 +1519,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                       final dateErrors = <String, String>{};
                       for (final item in items) {
                         if (selectedDates[item.cartItemId] == null) {
-                          dateErrors[item.cartItemId] = 'Vui lòng chọn ngày cho ${item.serviceName}';
+                          dateErrors[item.cartItemId] = '${context.tr('please_select_date_for')} ${_getLocalizedServiceName(item.serviceName)}';
                           hasError = true;
                         }
                       }
@@ -1502,7 +1531,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                       final timeErrors = <String, String>{};
                       for (final item in items) {
                         if (selectedTimes[item.cartItemId] == null) {
-                          timeErrors[item.cartItemId] = 'Vui lòng chọn khung giờ cho ${item.serviceName}';
+                          timeErrors[item.cartItemId] = '${context.tr('please_select_time_slot_for')} ${_getLocalizedServiceName(item.serviceName)}';
                           hasError = true;
                         }
                       }
@@ -1513,7 +1542,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                       // Kiểm tra đã đồng ý điều khoản chưa
                       if (!_agreedToTerms) {
                         setState(() {
-                          _termsError = 'Vui lòng đồng ý với Điều khoản dịch vụ để tiếp tục';
+                          _termsError = context.tr('please_agree_to_terms');
                           hasError = true;
                         });
                       } else {
@@ -1525,7 +1554,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                       // Kiểm tra đã chọn phương thức thanh toán chưa
                       if (_selectedPaymentMethod == null) {
                         setState(() {
-                          _paymentError = 'Vui lòng chọn phương thức thanh toán';
+                          _paymentError = context.tr('please_select_payment_method');
                           hasError = true;
                         });
                       } else {
@@ -1617,8 +1646,8 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                             _isSubmitting = false;
                           });
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text("Đặt lịch thất bại"),
+                                SnackBar(
+                                  content: Text(context.tr('booking_failed')),
                             ),
                           );
                         }
@@ -1629,7 +1658,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                         });
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
-                            content: Text("Lỗi: ${e.toString()}"),
+                            content: Text("${context.tr('error')}: ${e.toString()}"),
                             backgroundColor: Colors.red,
                                 ),
                               );
@@ -1662,9 +1691,9 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                                 ),
                               ),
                               const SizedBox(width: 12),
-                              const Text(
-                                'Đang xử lý...',
-                                style: TextStyle(
+                              Text(
+                                context.tr('processing'),
+                                style: const TextStyle(
                                   fontSize: 17,
                                   fontWeight: FontWeight.w600,
                                   letterSpacing: 0.5,
@@ -1677,9 +1706,9 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                             children: [
                               const Icon(Icons.check_circle_outline_rounded, size: 22),
                               const SizedBox(width: 8),
-                              const Text(
-                                'Đặt lịch',
-                                style: TextStyle(
+                              Text(
+                                context.tr('booking'),
+                                style: const TextStyle(
                                   fontSize: 17,
                                   fontWeight: FontWeight.w600,
                                   letterSpacing: 0.5,
@@ -1747,102 +1776,137 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     showDialog(
       context: context,
       barrierColor: Colors.black.withOpacity(0.5),
-      builder: (context) => Dialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(24),
-        ),
-        elevation: 0,
-        backgroundColor: Colors.transparent,
-        child: Container(
-          constraints: BoxConstraints(
-            maxHeight: MediaQuery.of(context).size.height * 0.85,
-            maxWidth: MediaQuery.of(context).size.width * 0.9,
-          ),
-          decoration: BoxDecoration(
-            color: ThemeHelper.getDialogBackgroundColor(context),
-            borderRadius: BorderRadius.circular(24),
-            boxShadow: [
-              BoxShadow(
-                color: ThemeHelper.getShadowColor(context),
-                blurRadius: 30,
-                spreadRadius: 5,
-                offset: const Offset(0, 10),
+      builder: (context) => Consumer(
+        builder: (context, ref, child) {
+          // Watch để rebuild khi translation cache cập nhật - giống như service_list
+          ref.watch(localeProvider);
+          final translationCache = ref.watch(translationCacheProvider);
+          
+          // Lấy localized content - sử dụng DataTranslationService như service_list
+          String? displayTermDescription = termDescription;
+          if (termDescription != null && termDescription!.isNotEmpty) {
+            final locale = ref.read(localeProvider);
+            
+            if (locale.languageCode != 'vi') {
+              // Tạo cache key từ HTML content
+              final cacheKey = termDescription!;
+              
+              // Kiểm tra cache
+              if (translationCache.containsKey(cacheKey)) {
+                // Đã có trong cache, dùng luôn
+                displayTermDescription = translationCache[cacheKey];
+              } else {
+                // Chưa có trong cache, trigger async translation
+                // UI sẽ rebuild khi translation hoàn thành và cache được update
+                ref.read(translationCacheProvider.notifier).getTranslation(cacheKey).then((translated) {
+                  // Translation hoàn thành, cache đã được update
+                  // UI sẽ tự động rebuild vì đã watch translationCacheProvider
+                }).catchError((e) {
+                  print('⚠️ Error translating terms: $e');
+                });
+                
+                // Dùng text gốc tạm thời, sẽ được update khi translation hoàn thành
+                displayTermDescription = termDescription;
+              }
+            }
+          }
+          
+          return Dialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(24),
+            ),
+            elevation: 0,
+            backgroundColor: Colors.transparent,
+            child: Container(
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.of(context).size.height * 0.85,
+                maxWidth: MediaQuery.of(context).size.width * 0.9,
               ),
-            ],
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Header với gradient đẹp hơn
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      Colors.blue.shade400,
-                      Colors.blue.shade600,
-                    ],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
+              decoration: BoxDecoration(
+                color: ThemeHelper.getDialogBackgroundColor(context),
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: [
+                  BoxShadow(
+                    color: ThemeHelper.getShadowColor(context),
+                    blurRadius: 30,
+                    spreadRadius: 5,
+                    offset: const Offset(0, 10),
                   ),
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(24),
-                    topRight: Radius.circular(24),
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.blue.withOpacity(0.3),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.25),
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(
-                          color: Colors.white.withOpacity(0.3),
-                          width: 1.5,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: ThemeHelper.getShadowColor(context),
-                            blurRadius: 8,
-                            offset: const Offset(0, 2),
-                          ),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Header với gradient đẹp hơn
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          Colors.blue.shade400,
+                          Colors.blue.shade600,
                         ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
                       ),
-                      child: const Icon(
-                        Icons.description_rounded,
-                        color: Colors.white,
-                        size: 30,
+                      borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(24),
+                        topRight: Radius.circular(24),
                       ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.blue.withOpacity(0.3),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Điều khoản dịch vụ',
-                            style: TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                              letterSpacing: -0.5,
-                              shadows: [
-                                Shadow(
-                                  color: Colors.black26,
-                                  blurRadius: 4,
-                                  offset: Offset(0, 2),
-                                ),
-                              ],
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.25),
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(
+                              color: Colors.white.withOpacity(0.3),
+                              width: 1.5,
                             ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: ThemeHelper.getShadowColor(context),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
                           ),
+                          child: const Icon(
+                            Icons.description_rounded,
+                            color: Colors.white,
+                            size: 30,
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                context.tr('terms_of_service'),
+                                style: const TextStyle(
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                  letterSpacing: -0.5,
+                                  shadows: [
+                                    Shadow(
+                                      color: Colors.black26,
+                                      blurRadius: 4,
+                                      offset: Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                              ),
                           if (providerName != null && providerName!.isNotEmpty) ...[
                             const SizedBox(height: 6),
                             Container(
@@ -1871,50 +1935,50 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                         ],
                       ),
                     ),
-                    Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: Colors.white.withOpacity(0.3),
-                          width: 1.5,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: ThemeHelper.getShadowColor(context),
-                            blurRadius: 4,
-                            offset: const Offset(0, 2),
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.2),
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: Colors.white.withOpacity(0.3),
+                              width: 1.5,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: ThemeHelper.getShadowColor(context),
+                                blurRadius: 4,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
-                      child: IconButton(
-                        onPressed: () => Navigator.of(context).pop(),
-                        icon: const Icon(
-                          Icons.close_rounded,
-                          color: Colors.white,
-                          size: 22,
+                          child: IconButton(
+                            onPressed: () => Navigator.of(context).pop(),
+                            icon: const Icon(
+                              Icons.close_rounded,
+                              color: Colors.white,
+                              size: 22,
+                            ),
+                            padding: const EdgeInsets.all(8),
+                            constraints: const BoxConstraints(),
+                            tooltip: context.tr('close'),
+                          ),
                         ),
-                        padding: const EdgeInsets.all(8),
-                        constraints: const BoxConstraints(),
-                        tooltip: 'Đóng',
-                      ),
+                      ],
                     ),
-                  ],
-                ),
-              ),
-              // Content với background đẹp hơn
-              Expanded(
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: ThemeHelper.getScaffoldBackgroundColor(context),
                   ),
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.all(24),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Hiển thị Description từ TermOfService (hiển thị HTML đúng như database lưu)
-                        if (termDescription != null && termDescription!.isNotEmpty) ...[
+                  // Content với background đẹp hơn
+                  Expanded(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: ThemeHelper.getScaffoldBackgroundColor(context),
+                      ),
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.all(24),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Hiển thị Description từ TermOfService (hiển thị HTML đúng như database lưu)
+                            if (displayTermDescription != null && displayTermDescription!.isNotEmpty) ...[
                           Container(
                             padding: const EdgeInsets.all(20),
                             decoration: BoxDecoration(
@@ -1933,7 +1997,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                               ],
                             ),
                             child: Html(
-                              data: termDescription!,
+                              data: displayTermDescription!,
                               style: {
                                 "body": Style(
                                   fontSize: FontSize(15.5),
@@ -2006,15 +2070,17 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                         ],
               
                         // Nếu không có TermOfService, hiển thị điều khoản mặc định
-                        if (termDescription == null || termDescription!.isEmpty) ...[
+                        if (displayTermDescription == null || displayTermDescription!.isEmpty) ...[
                           _buildDefaultTermSection(
                             context,
+                            ref,
                             '1. Điều khoản chung',
                             'Khi sử dụng dịch vụ của chúng tôi, bạn đồng ý tuân thủ các điều khoản và điều kiện sau đây.',
                           ),
                           const SizedBox(height: 20),
                           _buildDefaultTermSection(
                             context,
+                            ref,
                             '2. Đặt lịch và thanh toán',
                             '• Bạn có thể đặt lịch dịch vụ thông qua ứng dụng.\n'
                             '• Thanh toán được thực hiện qua VNPay (QR/ATM/Thẻ).\n'
@@ -2023,6 +2089,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                           const SizedBox(height: 20),
                           _buildDefaultTermSection(
                             context,
+                            ref,
                             '3. Hủy và hoàn tiền',
                             '• Hủy đơn trước 24 giờ: Hoàn tiền 100%.\n'
                             '• Hủy đơn trong vòng 24 giờ: Hoàn tiền 50%.\n'
@@ -2031,6 +2098,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                           const SizedBox(height: 20),
                           _buildDefaultTermSection(
                             context,
+                            ref,
                             '4. Trách nhiệm',
                             '• Nhà cung cấp dịch vụ chịu trách nhiệm về chất lượng dịch vụ.\n'
                             '• Khách hàng cung cấp thông tin chính xác khi đặt lịch.\n'
@@ -2039,90 +2107,110 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                           const SizedBox(height: 20),
                           _buildDefaultTermSection(
                             context,
+                            ref,
                             '5. Bảo mật thông tin',
                             'Chúng tôi cam kết bảo mật thông tin cá nhân của bạn theo quy định của pháp luật.',
                           ),
                         ],
-                      ],
+                          ],
+                        ),
+                      ),
                     ),
                   ),
-                ),
-              ),
-              // Footer với nút đóng đẹp hơn
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: ThemeHelper.getCardBackgroundColor(context),
-                  borderRadius: const BorderRadius.only(
-                    bottomLeft: Radius.circular(24),
-                    bottomRight: Radius.circular(24),
-                  ),
-                  border: Border(
-                    top: BorderSide(
-                      color: ThemeHelper.getBorderColor(context),
-                      width: 1,
-                    ),
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: ThemeHelper.getShadowColor(context),
-                      blurRadius: 10,
-                      offset: const Offset(0, -2),
-                    ),
-                  ],
-                ),
-                child: SizedBox(
-                  width: double.infinity,
-                  child: Container(
+                  // Footer với nút đóng đẹp hơn
+                  Container(
+                    padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(14),
-                      gradient: LinearGradient(
-                        colors: [
-                          ThemeHelper.getPrimaryColor(context),
-                          ThemeHelper.getPrimaryDarkColor(context),
-                        ],
+                      color: ThemeHelper.getCardBackgroundColor(context),
+                      borderRadius: const BorderRadius.only(
+                        bottomLeft: Radius.circular(24),
+                        bottomRight: Radius.circular(24),
+                      ),
+                      border: Border(
+                        top: BorderSide(
+                          color: ThemeHelper.getBorderColor(context),
+                          width: 1,
+                        ),
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: ThemeHelper.getPrimaryColor(context).withOpacity(0.4),
-                          blurRadius: 12,
-                          offset: const Offset(0, 4),
+                          color: ThemeHelper.getShadowColor(context),
+                          blurRadius: 10,
+                          offset: const Offset(0, -2),
                         ),
                       ],
                     ),
-                    child: ElevatedButton.icon(
-                      onPressed: () => Navigator.of(context).pop(),
-                      icon: const Icon(Icons.check_rounded, size: 20),
-                      label: const Text(
-                        'Đóng',
-                        style: TextStyle(
-                          fontSize: 17,
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: 0.3,
-                        ),
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.transparent,
-                        shadowColor: Colors.transparent,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: Container(
+                        decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(14),
+                          gradient: LinearGradient(
+                            colors: [
+                              ThemeHelper.getPrimaryColor(context),
+                              ThemeHelper.getPrimaryDarkColor(context),
+                            ],
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: ThemeHelper.getPrimaryColor(context).withOpacity(0.4),
+                              blurRadius: 12,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
                         ),
-                        elevation: 0,
+                        child: ElevatedButton.icon(
+                          onPressed: () => Navigator.of(context).pop(),
+                          icon: const Icon(Icons.check_rounded, size: 20),
+                          label: Text(
+                            context.tr('close'),
+                            style: TextStyle(
+                              fontSize: 17,
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: 0.3,
+                            ),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.transparent,
+                            shadowColor: Colors.transparent,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            elevation: 0,
+                          ),
+                        ),
                       ),
                     ),
                   ),
-                ),
+                ],
               ),
-            ],
-          ),
-        ),
+            ),
+          );
+        },
       ),
     );
   }
 
-  Widget _buildDefaultTermSection(BuildContext context, String title, String content) {
+  Widget _buildDefaultTermSection(BuildContext context, WidgetRef ref, String title, String content) {
+    // Watch locale và translation cache để rebuild khi đổi ngôn ngữ hoặc có translation mới
+    ref.watch(localeProvider);
+    ref.watch(translationCacheProvider);
+    
+    // Dịch title và content nếu cần - sử dụng DataTranslationService như service_list
+    final locale = ref.read(localeProvider);
+    final translationService = DataTranslationService(ref);
+    
+    String localizedTitle = title;
+    String localizedContent = content;
+    
+    if (locale.languageCode != 'vi') {
+      // Sử dụng smartTranslate để dịch tự động
+      localizedTitle = translationService.smartTranslate(title);
+      localizedContent = translationService.smartTranslate(content);
+    }
+    
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -2164,7 +2252,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
-                  title,
+                  localizedTitle,
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 18,
@@ -2177,7 +2265,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
           ),
           const SizedBox(height: 16),
           Text(
-            content,
+            localizedContent,
             style: TextStyle(
               fontSize: 15.5,
               height: 1.7,
@@ -2308,18 +2396,18 @@ class _AddressManagerState extends ConsumerState<_AddressManager> {
                       final confirm = await showDialog<bool>(
                         context: context,
                         builder: (ctx) => AlertDialog(
-                          title: const Text('Xóa địa chỉ?'),
-                          content: const Text('Bạn có chắc chắn muốn xóa địa chỉ này?'),
+                          title: Text(context.tr('delete_address_question')),
+                          content: Text(context.tr('are_you_sure_delete_address')),
                           actions: [
                             TextButton(
                               onPressed: () => Navigator.pop(ctx, false),
-                              child: const Text('Hủy'),
+                              child: Text(context.tr('cancel')),
                             ),
                             TextButton(
                               onPressed: () => Navigator.pop(ctx, true),
-                              child: const Text(
-                                'Xóa',
-                                style: TextStyle(color: Colors.red),
+                              child: Text(
+                                context.tr('delete'),
+                                style: const TextStyle(color: Colors.red),
                               ),
                             ),
                           ],
@@ -2409,7 +2497,7 @@ class _AddressManagerState extends ConsumerState<_AddressManager> {
                   });
                 },
                 icon: const Icon(Icons.add_location_alt, size: 18),
-                label: const Text('Thêm địa chỉ'),
+                label: Text(context.tr('add_address')),
                 style: TextButton.styleFrom(
                   foregroundColor: Theme.of(context).colorScheme.primary,
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -2505,10 +2593,10 @@ class _AddressSelectionDialog extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 16),
-                  const Expanded(
+                  Expanded(
                     child: Text(
-                      'Chọn địa chỉ',
-                      style: TextStyle(
+                      context.tr('select_address'),
+                      style: const TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.bold,
                         color: Colors.white,
@@ -2722,9 +2810,9 @@ class _AddressSelectionDialog extends StatelessWidget {
                                         ),
                                       ),
                                       const SizedBox(width: 12),
-                                      const Text(
-                                        "Sửa",
-                                        style: TextStyle(
+                                      Text(
+                                        context.tr('edit'),
+                                        style: const TextStyle(
                                           fontSize: 15,
                                           fontWeight: FontWeight.w500,
                                         ),
@@ -2749,9 +2837,9 @@ class _AddressSelectionDialog extends StatelessWidget {
                                         ),
                                       ),
                                       const SizedBox(width: 12),
-                                      const Text(
-                                        "Xóa",
-                                        style: TextStyle(
+                                      Text(
+                                        context.tr('delete'),
+                                        style: const TextStyle(
                                           fontSize: 15,
                                           fontWeight: FontWeight.w500,
                                           color: Colors.red,
@@ -2785,9 +2873,9 @@ class _AddressSelectionDialog extends StatelessWidget {
                 child: ElevatedButton.icon(
                   onPressed: onAdd,
                   icon: const Icon(Icons.add_location_alt_rounded, size: 22),
-                  label: const Text(
-                    'Thêm địa chỉ mới',
-                    style: TextStyle(
+                  label: Text(
+                    context.tr('add_new_address'),
+                    style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
                     ),
@@ -2813,9 +2901,9 @@ class _AddressSelectionDialog extends StatelessWidget {
                 child: OutlinedButton.icon(
                   onPressed: () => Navigator.pop(context),
                   icon: const Icon(Icons.close_rounded, size: 18),
-                  label: const Text(
-                    'Hủy',
-                    style: TextStyle(
+                  label: Text(
+                    context.tr('cancel'),
+                    style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
                     ),
@@ -2852,10 +2940,18 @@ class _DateSelector extends ConsumerWidget {
     required this.onCheckAvailability,
   });
 
-  String _formatDate(DateTime date) {
-    const weekdays = ['Chủ nhật', 'Thứ hai', 'Thứ ba', 'Thứ tư', 'Thứ năm', 'Thứ sáu', 'Thứ bảy'];
+  String _formatDate(DateTime date, BuildContext context) {
+    final weekdays = [
+      context.tr('weekday_sunday'),
+      context.tr('weekday_monday'),
+      context.tr('weekday_tuesday'),
+      context.tr('weekday_wednesday'),
+      context.tr('weekday_thursday'),
+      context.tr('weekday_friday'),
+      context.tr('weekday_saturday'),
+    ];
     return '${weekdays[date.weekday % 7]}, ${date.day}/${date.month}/${date.year}';
-}
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -2894,8 +2990,8 @@ class _DateSelector extends ConsumerWidget {
                 onDaySelected(picked);
               } else if (context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Ngày này không có lịch trống'),
+                  SnackBar(
+                    content: Text(context.tr('this_date_no_schedule')),
                     backgroundColor: Colors.orange,
                   ),
                 );
@@ -2950,7 +3046,7 @@ class _DateSelector extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      _formatDate(selected),
+                      _formatDate(selected, context),
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
@@ -2960,7 +3056,7 @@ class _DateSelector extends ConsumerWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Chạm để chọn ngày khác',
+                      context.tr('tap_to_select_another_date'),
                       style: TextStyle(
                         fontSize: 12,
                         color: ThemeHelper.getSecondaryTextColor(context),
@@ -2999,10 +3095,10 @@ class _TimeSelector extends ConsumerWidget {
     required this.onCheckTime,
   });
 
-  String _formatTime(TimeOfDay? time) {
-    if (time == null) return 'Chưa chọn';
+  String _formatTime(TimeOfDay? time, BuildContext context) {
+    if (time == null) return context.tr('not_selected');
     return '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
-}
+  }
 
 
   @override
@@ -3043,8 +3139,8 @@ class _TimeSelector extends ConsumerWidget {
                 onTimeSelected(picked);
               } else if (context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Khung giờ này không có sẵn'),
+                  SnackBar(
+                    content: Text(context.tr('time_slot_not_available')),
                     backgroundColor: Colors.orange,
                   ),
                 );
@@ -3098,7 +3194,7 @@ class _TimeSelector extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      selected != null ? _formatTime(selected) : 'Chưa chọn giờ',
+                      selected != null ? _formatTime(selected, context) : context.tr('time_not_selected'),
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
@@ -3110,7 +3206,7 @@ class _TimeSelector extends ConsumerWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Chạm để chọn khung giờ',
+                      context.tr('tap_to_select_time_slot'),
                       style: TextStyle(
                         fontSize: 12,
                         color: ThemeHelper.getSecondaryTextColor(context),
@@ -3152,8 +3248,21 @@ class _OrderSummary extends ConsumerWidget {
     return buffer.toString();
   }
 
+  // Helper method để dịch tên dịch vụ
+  String _getLocalizedServiceName(String serviceName, WidgetRef ref) {
+    final locale = ref.read(localeProvider);
+    if (locale.languageCode == 'vi') {
+      return serviceName;
+    }
+    // Sử dụng translation cache để dịch
+    final cache = ref.read(translationCacheProvider.notifier);
+    return cache.getTranslationSync(serviceName);
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    ref.watch(localeProvider); // Rebuild when language changes
+    ref.watch(translationCacheProvider); // Rebuild when translations are updated
     // Tính tổng từ items
     final selectedTotal = items.fold(0.0, (sum, item) => sum + item.subtotal);
     
@@ -3201,7 +3310,7 @@ class _OrderSummary extends ConsumerWidget {
                 ),
                 const SizedBox(width: 12),
                 Text(
-                  'Tóm tắt đơn hàng',
+                  context.tr('order_summary'),
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
@@ -3219,7 +3328,7 @@ class _OrderSummary extends ConsumerWidget {
                   children: [
                     Expanded(
                       child: Text(
-                        i.serviceName,
+                        _getLocalizedServiceName(i.serviceName, ref),
                         style: TextStyle(
                           fontSize: 15,
                           color: ThemeHelper.getTextColor(context),
@@ -3261,7 +3370,7 @@ class _OrderSummary extends ConsumerWidget {
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        'Giảm giá (${selectedVoucher.code})',
+                        '${context.tr('discount')} (${selectedVoucher.code})',
                         style: TextStyle(
                           fontSize: 14,
                           color: Colors.green.shade700,
@@ -3302,7 +3411,7 @@ class _OrderSummary extends ConsumerWidget {
               child: Row(
                 children: [
                   Text(
-                    'Tổng cộng',
+                    context.tr('total'),
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 18,
