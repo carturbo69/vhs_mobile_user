@@ -16,14 +16,18 @@ class BookingOption {
     this.value,
   });
 
-  factory BookingOption.fromJson(Map<String, dynamic> j) => BookingOption(
-        optionId: j['optionId']?.toString() ?? '',
-        optionName: j['optionName'] ?? '',
-        tagId: j['tagId']?.toString(),
-        type: j['type'] ?? '',
-        family: j['family']?.toString(),
-        value: j['value']?.toString(),
-      );
+  factory BookingOption.fromJson(Map<String, dynamic> j) {
+    // Hỗ trợ cả camelCase và PascalCase
+    final getValue = (String camelKey, String pascalKey) => j[camelKey] ?? j[pascalKey];
+    return BookingOption(
+      optionId: (getValue('optionId', 'OptionId')?.toString() ?? '').trim(),
+      optionName: (getValue('optionName', 'OptionName')?.toString() ?? '').trim(),
+      tagId: getValue('tagId', 'TagId')?.toString(),
+      type: (getValue('type', 'Type')?.toString() ?? '').trim(),
+      family: getValue('family', 'Family')?.toString(),
+      value: getValue('value', 'Value')?.toString(),
+    );
+  }
 
   Map<String, dynamic> toJson() => {
         'optionId': optionId,
@@ -89,37 +93,58 @@ class BookingHistoryItem {
   });
 
   factory BookingHistoryItem.fromJson(Map<String, dynamic> j) {
-    final optionsJson = j['options'] as List<dynamic>?;
+    // Hỗ trợ cả camelCase và PascalCase
+    final getValue = (String camelKey, String pascalKey) => j[camelKey] ?? j[pascalKey];
+    
+    final optionsJson = getValue('options', 'Options');
+    List<BookingOption> parsedOptions = [];
+    
+    if (optionsJson != null) {
+      if (optionsJson is List) {
+        // Parse từng option trong list
+        for (var opt in optionsJson) {
+          if (opt is Map<String, dynamic>) {
+            try {
+              parsedOptions.add(BookingOption.fromJson(opt));
+            } catch (e) {
+              // Bỏ qua option lỗi và tiếp tục
+            }
+          }
+        }
+      }
+    }
+    
     return BookingHistoryItem(
-      bookingId: j['bookingId']?.toString() ?? '',
-      bookingTime: DateTime.parse(j['bookingTime']),
-      createdAt: j['createdAt'] != null ? DateTime.tryParse(j['createdAt']) : null,
-      status: j['status'] ?? '',
-      address: j['address'] ?? '',
-      providerId: j['providerId']?.toString() ?? '',
-      providerName: j['providerName'] ?? '',
-      providerImages: j['providerImages'],
-      serviceId: j['serviceId']?.toString() ?? '',
-      serviceTitle: j['serviceTitle'] ?? '',
-      servicePrice: (j['servicePrice'] is num) 
-          ? (j['servicePrice'] as num).toDouble() 
-          : double.tryParse(j['servicePrice']?.toString() ?? '') ?? 0.0,
-      serviceUnitType: j['serviceUnitType'] ?? '',
-      serviceImages: j['serviceImages'],
-      options: optionsJson != null
-          ? optionsJson.map((e) => BookingOption.fromJson(e as Map<String, dynamic>)).toList()
-          : [],
-      voucherDiscount: (j['voucherDiscount'] is num)
-          ? (j['voucherDiscount'] as num).toDouble()
-          : double.tryParse(j['voucherDiscount']?.toString() ?? '') ?? 0.0,
-      hasReview: j['hasReview'] as bool? ?? false,
-      paidAmount: j['paidAmount'] != null
-          ? ((j['paidAmount'] is num)
-              ? (j['paidAmount'] as num).toDouble()
-              : double.tryParse(j['paidAmount']?.toString() ?? ''))
+      bookingId: (getValue('bookingId', 'BookingId')?.toString() ?? ''),
+      bookingTime: DateTime.parse(getValue('bookingTime', 'BookingTime')?.toString() ?? ''),
+      createdAt: getValue('createdAt', 'CreatedAt') != null 
+          ? DateTime.tryParse(getValue('createdAt', 'CreatedAt')?.toString() ?? '') 
           : null,
-      paymentStatus: j['paymentStatus']?.toString(),
+      status: (getValue('status', 'Status')?.toString() ?? ''),
+      address: (getValue('address', 'Address')?.toString() ?? ''),
+      providerId: (getValue('providerId', 'ProviderId')?.toString() ?? ''),
+      providerName: (getValue('providerName', 'ProviderName')?.toString() ?? ''),
+      providerImages: getValue('providerImages', 'ProviderImages')?.toString(),
+      serviceId: (getValue('serviceId', 'ServiceId')?.toString() ?? ''),
+      serviceTitle: (getValue('serviceTitle', 'ServiceTitle')?.toString() ?? ''),
+      servicePrice: _parseDouble(getValue('servicePrice', 'ServicePrice')),
+      serviceUnitType: (getValue('serviceUnitType', 'ServiceUnitType')?.toString() ?? ''),
+      serviceImages: getValue('serviceImages', 'ServiceImages')?.toString(),
+      options: parsedOptions,
+      voucherDiscount: _parseDouble(getValue('voucherDiscount', 'VoucherDiscount'), defaultValue: 0.0),
+      hasReview: (getValue('hasReview', 'HasReview') as bool? ?? false),
+      paidAmount: getValue('paidAmount', 'PaidAmount') != null
+          ? _parseDouble(getValue('paidAmount', 'PaidAmount'))
+          : null,
+      paymentStatus: getValue('paymentStatus', 'PaymentStatus')?.toString(),
     );
+  }
+
+  static double _parseDouble(dynamic value, {double? defaultValue}) {
+    if (value == null) return defaultValue ?? 0.0;
+    if (value is num) return value.toDouble();
+    final parsed = double.tryParse(value.toString());
+    return parsed ?? defaultValue ?? 0.0;
   }
 
   Map<String, dynamic> toJson() => {
@@ -162,8 +187,8 @@ class BookingHistoryItem {
     final s = status.trim().toLowerCase();
     if (s == 'pending') return 'Chờ xác nhận';
     if (s == 'confirmed') return 'Đã xác nhận';
-    if (s == 'in progress') return 'Đang thực hiện';
-    if (s == 'service completed') return 'Dịch vụ hoàn thành';
+    if (s == 'in progress') return 'Bắt đầu làm việc';
+    if (s == 'service completed') return 'Xác nhận hoàn thành';
     if (s == 'completed') return 'Hoàn thành';
     if (s == 'cancelled') return 'Đã hủy';
     return status;

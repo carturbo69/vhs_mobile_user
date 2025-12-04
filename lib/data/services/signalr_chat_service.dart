@@ -1,183 +1,193 @@
+
 import 'dart:async';
-import 'dart:convert';
-import 'package:signalr_netcore/signalr_client.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:vhs_mobile_user/data/models/chat/message_model.dart';
+import 'package:signalr_netcore/hub_connection.dart';
+import 'package:signalr_netcore/hub_connection_builder.dart';
+import 'package:vhs_mobile_user/data/dao/auth_dao.dart';
 import 'package:vhs_mobile_user/data/models/chat/conversation_model.dart';
+import 'package:vhs_mobile_user/data/models/chat/message_model.dart';
+import 'package:vhs_mobile_user/helper/jwt_helper.dart';
+
+final signalRChatServiceProvider = Provider<SignalRChatService>((ref) {
+  return SignalRChatService(ref);
+});
 
 class SignalRChatService {
-  HubConnection? _connection;
-  final String _baseUrl;
+  final Ref _ref;
+  HubConnection? _hubConnection;
+  final String _serverUrl = "http://apivhs.cuahangkinhdoanh.com/chathub";
+
+  final _messageStreamController = StreamController<MessageModel>.broadcast();
+  final _conversationListStreamController = StreamController<ConversationListItemModel>.broadcast();
+  final _messageStatusStreamController = StreamController<Map<String, dynamic>>.broadcast();
+
+  bool get isConnected => _hubConnection?.state == HubConnectionState.Connected;
   String? _currentAccountId;
-  
-  // Stream controllers
-  final _messageController = StreamController<MessageModel>.broadcast();
-  final _conversationListController = StreamController<ConversationListItemModel>.broadcast();
-  final _readReceiptController = StreamController<Map<String, dynamic>>.broadcast();
-  
-  SignalRChatService({String? baseUrl}) 
-      : _baseUrl = baseUrl ?? 'http://apivhs.cuahangkinhdoanh.com';
 
-  // Getters for streams
-  Stream<MessageModel> get messageStream => _messageController.stream;
-  Stream<ConversationListItemModel> get conversationListStream => _conversationListController.stream;
-  Stream<Map<String, dynamic>> get readReceiptStream => _readReceiptController.stream;
+  SignalRChatService(this._ref);
 
-  // Check if connected
-  bool get isConnected => _connection?.state == HubConnectionState.Connected;
+  /// Auto-connect when app starts (gets accountId from auth)
+  Future<void> autoConnect() async {
+    try {
+      print('🔌 SignalR Chat: Starting auto-connect...');
+      final authDao = _ref.read(authDaoProvider);
+      final auth = await authDao.getSavedAuth();
+      String? accountId = auth?['accountId'] as String?;
 
-  // Connect to SignalR hub
-  Future<void> connect(String accountId) async {
-    if (_connection != null && _connection!.state == HubConnectionState.Connected) {
-      if (_currentAccountId == accountId) {
-        return; // Already connected with same account
+      if (accountId == null || accountId.isEmpty) {
+        print('🔍 SignalR Chat: accountId not in auth, trying token...');
+        final token = await authDao.getToken();
+        if (token != null) {
+          accountId = JwtHelper.getAccountIdFromToken(token);
+          print('✅ SignalR Chat: Got accountId from token: $accountId');
+        }
+      } else {
+        print('✅ SignalR Chat: Got accountId from auth: $accountId');
       }
+
+      if (accountId != null && accountId.isNotEmpty) {
+        print('🔌 SignalR Chat: Connecting with accountId: $accountId');
+        await connect(accountId);
+        print('✅ SignalR Chat: Auto-connect successful');
+      } else {
+        print('⚠️ SignalR Chat: No accountId found, skipping auto-connect');
+      }
+    } catch (e, stackTrace) {
+      print('❌ Error auto-connecting SignalR Chat: $e');
+      print('Stack trace: $stackTrace');
+    }
+  }
+
+  Future<void> connect(String accountId) async {
+    if (isConnected && _currentAccountId != accountId) {
       await disconnect();
     }
+    if (isConnected) {
+      print('✅ SignalR Chat already connected for account: $accountId');
+      return;
+    }
 
-    _currentAccountId = accountId;
-
-    // Backend SignalR hub endpoint
-    final hubUrl = '$_baseUrl/chatcustomerhub';
-    
-    _connection = HubConnectionBuilder()
-        .withUrl(hubUrl)
+    _hubConnection = HubConnectionBuilder()
+        .withUrl(_serverUrl)
         .withAutomaticReconnect()
         .build();
 
-    // Register event handlers
-    _connection!.on('message:created', (arguments) {
-      _handleMessageCreated(arguments);
+    (_hubConnection as dynamic).onclose(({error}) {
+      print("SignalR Closed. Error: $error");
     });
 
-    _connection!.on('conversationList:update', (arguments) {
-      _handleConversationListUpdate(arguments);
+    (_hubConnection as dynamic).onreconnected(({connectionId}) {
+      print("SignalR Reconnected. ID: $connectionId");
+      _register(accountId);
     });
 
-    _connection!.on('conversation:readUpTo', (arguments) {
-      _handleReadReceipt(arguments);
-    });
-
-    // Handle connection state changes
-    _connection!.onclose(({Exception? error}) {
-      // Connection closed
+    (_hubConnection as dynamic).onreconnecting(({error}) {
+      print("SignalR Reconnecting. Error: $error");
     });
 
     try {
-      await _connection!.start();
-      
-      // Register with accountId
-      await _connection!.invoke('Register', args: <Object>[accountId]);
+      await _hubConnection?.start();
+      print("SignalR Connected!");
+
+      // Lưu lại accountId
+      _currentAccountId = accountId;
+
+      await _register(accountId);
+      _registerEvents();
     } catch (e) {
-      rethrow;
+      print("SignalR Connection Error: $e");
     }
   }
 
-  void _handleMessageCreated(List<dynamic>? arguments) {
-    if (arguments == null || arguments.isEmpty) return;
-
+  Future<void> _register(String accountId) async {
     try {
-      final arg = arguments[0];
-      Map<String, dynamic> messageData;
-      if (arg is Map) {
-        messageData = Map<String, dynamic>.from(arg);
-      } else if (arg is String) {
-        messageData = jsonDecode(arg) as Map<String, dynamic>;
-      } else {
-        return;
+      if (_hubConnection?.state == HubConnectionState.Connected) {
+        await _hubConnection?.invoke("Register", args: [accountId]);
+        print("SignalR Registered: $accountId");
       }
-      final message = MessageModel.fromJson(messageData);
-      _messageController.add(message);
     } catch (e) {
-      // Ignore parsing errors
+      print("SignalR Register Failed: $e");
     }
   }
 
-  void _handleConversationListUpdate(List<dynamic>? arguments) {
-    if (arguments == null || arguments.isEmpty) return;
 
-    try {
-      final arg = arguments[0];
-      Map<String, dynamic> itemData;
-      if (arg is Map) {
-        itemData = Map<String, dynamic>.from(arg);
-      } else if (arg is String) {
-        itemData = jsonDecode(arg) as Map<String, dynamic>;
-      } else {
-        return;
-      }
-      final item = ConversationListItemModel.fromJson(itemData);
-      _conversationListController.add(item);
-    } catch (e) {
-      // Ignore parsing errors
-    }
-  }
+  void _registerEvents() {
+    if (_hubConnection == null) return;
 
-  void _handleReadReceipt(List<dynamic>? arguments) {
-    if (arguments == null || arguments.isEmpty) return;
-
-    try {
-      final arg = arguments[0];
-      Map<String, dynamic> data;
-      if (arg is Map) {
-        data = Map<String, dynamic>.from(arg);
-      } else if (arg is String) {
-        data = jsonDecode(arg) as Map<String, dynamic>;
-      } else {
-        return;
-      }
-      _readReceiptController.add(data);
-    } catch (e) {
-      // Ignore parsing errors
-    }
-  }
-
-  // Disconnect from SignalR
-  Future<void> disconnect() async {
-    if (_connection != null) {
-      if (_currentAccountId != null) {
+    _hubConnection!.on("message:created", (List<Object?>? args) {
+      if (args != null && args.isNotEmpty) {
         try {
-          await _connection!.invoke('Unregister', args: <Object>[_currentAccountId!]);
+          final rawData = args[0] as Map<dynamic, dynamic>;
+          final data = rawData.map((key, value) =>
+              MapEntry(key.toString(), value));
+          print("SignalR New Message: $data");
+          final message = MessageModel.fromJson(data);
+          _messageStreamController.add(message);
         } catch (e) {
-          // Ignore errors
+          print("Error parsing message:created - $e");
         }
       }
-      
-      await _connection!.stop();
-      _connection = null;
-      _currentAccountId = null;
+    });
+
+    _hubConnection!.on("conversationList:update", (List<Object?>? args) {
+      if (args != null && args.isNotEmpty) {
+        try {
+          final rawData = args[0] as Map;
+          final data = Map<String, dynamic>.from(rawData);
+
+          final conversation = ConversationListItemModel.fromJson(data);
+          _conversationListStreamController.add(conversation);
+        } catch (e) {
+          print("Error parsing conversationList:update - $e");
+        }
+      }
+    });
+
+    _hubConnection!.on("message:statusChanged", (List<Object?>? args) {
+      _handleStatusUpdate(args, "statusChanged");
+    });
+
+    _hubConnection!.on("conversation:readUpTo", (List<Object?>? args) {
+      _handleStatusUpdate(args, "readUpTo");
+    });
+  }
+
+  void _handleStatusUpdate(List<Object?>? args, String eventType) {
+    if (args != null && args.isNotEmpty) {
+      try {
+        final rawData = args[0] as Map<dynamic, dynamic>;
+        final data = rawData.map((key, value) => MapEntry(key.toString(), value));
+        data['eventType'] = eventType;
+        print("SignalR Status ($eventType): $data");
+        _messageStatusStreamController.add(data);
+      } catch (e) {
+        print("Error parsing status update: $e");
+      }
     }
   }
 
-  // Listen to new messages for a specific conversation
   Stream<MessageModel> listenToMessages(String conversationId) {
-    return messageStream.where((message) => message.conversationId == conversationId);
-  }
-
-  // Listen to conversation list updates
-  Stream<ConversationListItemModel> listenToConversations() {
-    return conversationListStream;
-  }
-
-  // Listen to read receipts
-  Stream<Map<String, dynamic>> listenToReadReceipts(String conversationId) {
-    return readReceiptStream.where((data) => 
-      data['ConversationId']?.toString() == conversationId ||
-      data['conversationId']?.toString() == conversationId
+    return _messageStreamController.stream.where(
+            (msg) {
+          return msg.conversationId.trim().toLowerCase() == conversationId.trim().toLowerCase();
+        }
     );
   }
 
-  // Dispose resources
-  void dispose() {
-    disconnect();
-    _messageController.close();
-    _conversationListController.close();
-    _readReceiptController.close();
+  Stream<ConversationListItemModel> listenToConversations() {
+    return _conversationListStreamController.stream;
+  }
+
+  Stream<Map<String, dynamic>> listenToMessageStatus(String conversationId) {
+    return _messageStatusStreamController.stream.where((data) {
+      final cIdRaw = data['conversationId'] ?? data['ConversationId'];
+      final cId = cIdRaw?.toString().trim().toLowerCase() ?? '';
+      return cId == conversationId.trim().toLowerCase();
+    });
+  }
+
+  Future<void> disconnect() async {
+    await _hubConnection?.stop();
+    _hubConnection = null;
   }
 }
-
-final signalRChatServiceProvider = Provider<SignalRChatService>((ref) {
-  final service = SignalRChatService();
-  ref.onDispose(() => service.dispose());
-  return service;
-});

@@ -9,6 +9,13 @@ import 'package:vhs_mobile_user/helper/jwt_helper.dart';
 import 'package:vhs_mobile_user/routing/routes.dart';
 import 'package:vhs_mobile_user/ui/chat/chat_list_viewmodel.dart';
 import 'package:vhs_mobile_user/ui/chat/chat_detail_screen.dart';
+import 'package:vhs_mobile_user/ui/core/theme_helper.dart';
+import 'package:vhs_mobile_user/l10n/extensions/localization_extension.dart';
+import 'package:vhs_mobile_user/providers/locale_provider.dart';
+import 'package:vhs_mobile_user/services/translation_cache_provider.dart';
+import 'package:vhs_mobile_user/services/notification_service.dart';
+
+const Color primaryBlue = Color(0xFF0284C7); // Sky-600
 
 class ChatListScreen extends ConsumerStatefulWidget {
   const ChatListScreen({super.key});
@@ -18,36 +25,82 @@ class ChatListScreen extends ConsumerStatefulWidget {
 }
 
 class _ChatListScreenState extends ConsumerState<ChatListScreen> {
+  // Track last message timestamps to avoid duplicate notifications
+  final Map<String, DateTime?> _lastNotifiedMessageTime = {};
+
   @override
   void initState() {
     super.initState();
-    _connectSignalR();
+    _setupSignalRListener();
   }
 
-  Future<void> _connectSignalR() async {
+  Future<void> _setupSignalRListener() async {
     try {
-      final authDao = ref.read(authDaoProvider);
-      final auth = await authDao.getSavedAuth();
-      String? accountId = auth?['accountId'] as String?;
+      final signalRService = ref.read(signalRChatServiceProvider);
       
-      if (accountId == null || accountId.isEmpty) {
-        final token = await authDao.getToken();
-        if (token != null) {
-          accountId = JwtHelper.getAccountIdFromToken(token);
+      // Ensure connection (auto-connect should have already connected, but check just in case)
+      if (!signalRService.isConnected) {
+        final authDao = ref.read(authDaoProvider);
+        final auth = await authDao.getSavedAuth();
+        String? accountId = auth?['accountId'] as String?;
+
+        if (accountId == null || accountId.isEmpty) {
+          final token = await authDao.getToken();
+          if (token != null) {
+            accountId = JwtHelper.getAccountIdFromToken(token);
+          }
         }
-      }
-      
-      if (accountId != null && accountId.isNotEmpty) {
-        final signalRService = ref.read(signalRChatServiceProvider);
-        if (!signalRService.isConnected) {
+        if (accountId != null && accountId.isNotEmpty) {
           await signalRService.connect(accountId);
         }
-        
-        // Listen to conversation list updates
-        signalRService.listenToConversations().listen((updatedItem) {
-          ref.read(chatListProvider.notifier).updateConversationListItem(updatedItem);
-        });
       }
+      
+      // Setup listener for conversation updates
+      signalRService.listenToConversations().listen((updatedItem) {
+          if (!mounted) return;
+          
+          // Check if there's a new message (unread count increased or new lastMessageAt)
+          final currentList = ref.read(chatListProvider).value;
+          if (currentList != null && updatedItem.lastMessageAt != null) {
+            final existingConversation = currentList.firstWhere(
+              (item) => item.conversationId == updatedItem.conversationId,
+              orElse: () => updatedItem,
+            );
+            
+            // Get the last notified time for this conversation
+            final lastNotifiedTime = _lastNotifiedMessageTime[updatedItem.conversationId];
+            
+            // Show notification if:
+            // 1. There's a new message (lastMessageAt is newer than last notified time)
+            // 2. unreadCount > 0 (there are unread messages)
+            // 3. The message is actually new (not already notified)
+            final hasNewMessage = updatedItem.unreadCount > 0 &&
+                (lastNotifiedTime == null ||
+                    updatedItem.lastMessageAt!.isAfter(lastNotifiedTime));
+            
+            if (hasNewMessage) {
+              // Update last notified time
+              _lastNotifiedMessageTime[updatedItem.conversationId] = updatedItem.lastMessageAt;
+              
+              // Show notification (non-blocking)
+              final notificationService = ref.read(notificationServiceProvider);
+              notificationService.showChatMessageNotification(
+                senderName: updatedItem.title,
+                messageBody: updatedItem.lastMessageSnippet,
+                conversationId: updatedItem.conversationId,
+                imageUrl: updatedItem.lastMessageSnippet?.contains('[Hình ảnh]') == true ||
+                         updatedItem.lastMessageSnippet?.contains('[Image]') == true
+                    ? 'has_image'
+                    : null,
+              ).catchError((error) {
+                print("❌ Error showing chat notification: $error");
+              });
+            }
+          }
+          
+          ref.read(chatListProvider.notifier).handleRealtimeUpdate(updatedItem);
+          ref.refresh(unreadTotalProvider);
+        });
     } catch (e) {
       print('Error connecting SignalR: $e');
     }
@@ -55,59 +108,123 @@ class _ChatListScreenState extends ConsumerState<ChatListScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Watch locale và translation cache để rebuild khi đổi ngôn ngữ
+    ref.watch(localeProvider);
+    ref.watch(translationCacheProvider);
+    
     final chatListAsync = ref.watch(chatListProvider);
-    final unreadTotalAsync = ref.watch(
-      FutureProvider((ref) => ref.read(chatListProvider.notifier).getUnreadTotal()),
-    );
+    final unreadTotalAsync = ref.watch(unreadTotalProvider);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Tin nhắn'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () {
-              ref.read(chatListProvider.notifier).refresh();
-            },
-          ),
-          if (unreadTotalAsync.hasValue && unreadTotalAsync.value! > 0)
-            Badge(
-              label: Text('${unreadTotalAsync.value}'),
-              child: const Icon(Icons.chat),
+        elevation: 0,
+        flexibleSpace: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Colors.blue.shade400,
+                Colors.blue.shade600,
+              ],
             ),
-        ],
+          ),
+        ),
+        backgroundColor: Colors.transparent,
+        title: Text(
+          context.tr('messages'),
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 20,
+            color: Colors.white,
+          ),
+        ),
+        iconTheme: const IconThemeData(color: Colors.white),
       ),
-      body: chatListAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+      body: Column(
+        children: [
+          Expanded(
+            child: chatListAsync.when(
+        loading: () => Center(
+          child: CircularProgressIndicator(
+            valueColor: AlwaysStoppedAnimation<Color>(
+              ThemeHelper.getPrimaryColor(context),
+            ),
+          ),
+        ),
         error: (e, st) => Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text('Lỗi: $e'),
+              Text(
+                '${context.tr('error')}: $e',
+                style: TextStyle(color: ThemeHelper.getTextColor(context)),
+              ),
               const SizedBox(height: 16),
               ElevatedButton(
-                onPressed: () => ref.read(chatListProvider.notifier).refresh(),
-                child: const Text('Thử lại'),
+                      onPressed: () {
+                        ref.read(chatListProvider.notifier).refresh();
+                        ref.invalidate(unreadTotalProvider);
+                      },
+                child: Text(context.tr('try_again')),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: ThemeHelper.getPrimaryColor(context),
+                ),
               ),
             ],
           ),
         ),
         data: (conversations) {
+          final isDark = ThemeHelper.isDarkMode(context);
           if (conversations.isEmpty) {
             return Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.chat_bubble_outline, size: 64, color: Colors.grey.shade400),
-                  const SizedBox(height: 16),
+                        Container(
+                          padding: const EdgeInsets.all(24),
+                          decoration: BoxDecoration(
+                            color: ThemeHelper.getLightBlueBackgroundColor(context),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            Icons.chat_bubble_outline,
+                            size: 64,
+                            color: ThemeHelper.getPrimaryColor(context),
+                          ),
+                        ),
+                        const SizedBox(height: 24),
                   Text(
-                    'Chưa có tin nhắn nào',
-                    style: TextStyle(color: Colors.grey.shade600),
+                    context.tr('no_messages_yet'),
+                          style: TextStyle(
+                            color: ThemeHelper.getSecondaryTextColor(context),
+                            fontSize: 18,
+                            fontWeight: FontWeight.w500,
+                          ),
                   ),
                   const SizedBox(height: 8),
-                  TextButton.icon(
+                        Text(
+                          context.tr('start_chatting_with_us'),
+                          style: TextStyle(
+                            color: ThemeHelper.getTertiaryTextColor(context),
+                            fontSize: 14,
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        ElevatedButton.icon(
                     icon: const Icon(Icons.support_agent),
-                    label: const Text('Chat với Admin'),
+                    label: Text(context.tr('chat_with_admin')),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: ThemeHelper.getPrimaryColor(context),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 24,
+                              vertical: 12,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
                     onPressed: () async {
                       final conversationId = await ref
                           .read(chatListProvider.notifier)
@@ -125,9 +242,11 @@ class _ChatListScreenState extends ConsumerState<ChatListScreen> {
           return RefreshIndicator(
             onRefresh: () async {
               await ref.read(chatListProvider.notifier).refresh();
+                    ref.invalidate(unreadTotalProvider);
             },
-            child: ListView.builder(
+                  child: ListView.builder(
               itemCount: conversations.length,
+              padding: const EdgeInsets.symmetric(vertical: 8),
               itemBuilder: (context, index) {
                 final conversation = conversations[index];
                 return _ConversationListItem(
@@ -140,6 +259,9 @@ class _ChatListScreenState extends ConsumerState<ChatListScreen> {
             ),
           );
         },
+            ),
+          ),
+        ],
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
@@ -151,13 +273,13 @@ class _ChatListScreenState extends ConsumerState<ChatListScreen> {
           }
         },
         child: const Icon(Icons.chat),
-        tooltip: 'Chat với Admin',
+        tooltip: context.tr('chat_with_admin'),
       ),
     );
   }
 }
 
-class _ConversationListItem extends StatelessWidget {
+class _ConversationListItem extends ConsumerWidget {
   final ConversationListItemModel conversation;
   final VoidCallback onTap;
 
@@ -167,116 +289,249 @@ class _ConversationListItem extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Watch locale và translation cache để rebuild khi đổi ngôn ngữ
+    ref.watch(localeProvider);
+    ref.watch(translationCacheProvider);
     final baseUrl = 'http://apivhs.cuahangkinhdoanh.com';
-    final avatarUrl = conversation.avatarUrl != null &&
-            !conversation.avatarUrl!.startsWith('http')
-        ? '$baseUrl${conversation.avatarUrl}'
-        : conversation.avatarUrl;
+    String? avatarUrl;
+    final rawAvatarUrl = conversation.avatarUrl;
+    if (rawAvatarUrl != null && rawAvatarUrl.trim().isNotEmpty) {
+      final trimmed = rawAvatarUrl.trim();
+      if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+        avatarUrl = trimmed;
+      } else {
+        final path = trimmed.startsWith('/') ? trimmed : '/$trimmed';
+        avatarUrl = '$baseUrl$path';
+      }
+    }
 
-    return ListTile(
-      leading: Stack(
-        children: [
-          CircleAvatar(
-            radius: 24,
-            backgroundImage: avatarUrl != null
-                ? CachedNetworkImageProvider(avatarUrl)
-                : null,
-            child: avatarUrl == null
-                ? const Icon(Icons.person)
-                : null,
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: ThemeHelper.getCardBackgroundColor(context),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: ThemeHelper.getBorderColor(context),
+            width: 1,
           ),
-          if (conversation.isOnline)
-            Positioned(
-              right: 0,
-              bottom: 0,
-              child: Container(
-                width: 12,
-                height: 12,
-                decoration: BoxDecoration(
-                  color: Colors.green,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white, width: 2),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(ThemeHelper.isDarkMode(context) ? 0.3 : 0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Stack(
+              children: [
+                Container(
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: ThemeHelper.getBorderColor(context),
+                      width: 2,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: ThemeHelper.getShadowColor(context),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: avatarUrl != null
+                      ? ClipOval(
+                          child: CachedNetworkImage(
+                            imageUrl: avatarUrl,
+                            width: 56,
+                            height: 56,
+                            fit: BoxFit.cover,
+                            placeholder: (context, url) => Container(
+                              width: 56,
+                              height: 56,
+                              decoration: BoxDecoration(
+                                color: ThemeHelper.getLightBackgroundColor(context),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Center(
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    ThemeHelper.getPrimaryColor(context),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            errorWidget: (context, url, error) => Container(
+                              width: 56,
+                              height: 56,
+                              decoration: BoxDecoration(
+                                color: ThemeHelper.getLightBackgroundColor(context),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                Icons.person,
+                                color: ThemeHelper.getSecondaryIconColor(context),
+                                size: 28,
+                              ),
+                            ),
+                          ),
+                        )
+                      : Container(
+                          width: 56,
+                          height: 56,
+                          decoration: BoxDecoration(
+                            color: ThemeHelper.getLightBackgroundColor(context),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            Icons.person,
+                            color: ThemeHelper.getSecondaryIconColor(context),
+                            size: 28,
+                          ),
+                        ),
                 ),
+                if (conversation.isOnline)
+                  Positioned(
+                    right: 0,
+                    bottom: 0,
+                    child: Container(
+                      width: 16,
+                      height: 16,
+                      decoration: BoxDecoration(
+                        color: Colors.green,
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: ThemeHelper.getCardBackgroundColor(context),
+                          width: 3,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.green.withOpacity(0.4),
+                            blurRadius: 6,
+                            spreadRadius: 1,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          conversation.title,
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: conversation.unreadCount > 0
+                                ? FontWeight.bold
+                                : FontWeight.w600,
+                            color: ThemeHelper.getTextColor(context),
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      if (conversation.lastMessageAt != null) ...[
+                        const SizedBox(width: 8),
+                        Text(
+                          _formatTime(context, conversation.lastMessageAt!),
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: ThemeHelper.getTertiaryTextColor(context),
+                            fontWeight: FontWeight.w400,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          conversation.lastMessageSnippet ?? '',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: ThemeHelper.getSecondaryTextColor(context),
+                            fontWeight: conversation.unreadCount > 0
+                                ? FontWeight.w500
+                                : FontWeight.normal,
+                          ),
+                        ),
+                      ),
+                      if (conversation.unreadCount > 0) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: ThemeHelper.getPrimaryColor(context),
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: [
+                              BoxShadow(
+                                color: ThemeHelper.getPrimaryColor(context).withOpacity(0.3),
+                                blurRadius: 6,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Text(
+                            '${conversation.unreadCount}',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ],
               ),
             ),
-        ],
-      ),
-      title: Text(
-        conversation.title,
-        style: TextStyle(
-          fontWeight: conversation.unreadCount > 0
-              ? FontWeight.bold
-              : FontWeight.normal,
+          ],
         ),
       ),
-      subtitle: Text(
-        conversation.lastMessageSnippet ?? '',
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-      ),
-      trailing: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          if (conversation.lastMessageAt != null)
-            Text(
-              _formatTime(conversation.lastMessageAt!),
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.grey.shade600,
-              ),
-            ),
-          if (conversation.unreadCount > 0)
-            Container(
-              margin: const EdgeInsets.only(top: 4),
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-              decoration: BoxDecoration(
-                color: Colors.blue,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Text(
-                '${conversation.unreadCount}',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-        ],
-      ),
-      onTap: onTap,
     );
   }
 
-  String _formatTime(DateTime time) {
-    // Convert UTC sang timezone Việt Nam (UTC+7)
-    DateTime vietnamTime;
-    if (time.isUtc) {
-      // Nếu là UTC, thêm 7 giờ để có giờ Việt Nam
-      vietnamTime = time.add(const Duration(hours: 7));
-    } else {
-      // Nếu không phải UTC, giả sử nó đã là UTC và convert
-      final utcTime = time.toUtc();
-      vietnamTime = utcTime.add(const Duration(hours: 7));
-    }
-    
-    // Lấy thời gian hiện tại ở VN (UTC+7)
-    final nowUtc = DateTime.now().toUtc();
-    final nowVietnam = nowUtc.add(const Duration(hours: 7));
-    final difference = nowVietnam.difference(vietnamTime);
+  String _formatTime(BuildContext context, DateTime time) {
+    final vnTime = time.toUtc().add(const Duration(hours: 7));
+    final nowVn = DateTime.now().toUtc().add(const Duration(hours: 7));
 
-    if (difference.inDays == 0) {
-      // Hôm nay: chỉ hiển thị giờ:phút
-      return '${vietnamTime.hour.toString().padLeft(2, '0')}:${vietnamTime.minute.toString().padLeft(2, '0')}';
-    } else if (difference.inDays == 1) {
-      return 'Hôm qua';
-    } else if (difference.inDays < 7) {
-      return '${difference.inDays} ngày trước';
-    } else {
-      return '${vietnamTime.day}/${vietnamTime.month}/${vietnamTime.year}';
+    if (vnTime.year == nowVn.year && vnTime.month == nowVn.month && vnTime.day == nowVn.day) {
+      return '${vnTime.hour.toString().padLeft(2, '0')}:${vnTime.minute.toString().padLeft(2, '0')}';
     }
+
+    final yesterdayVn = nowVn.subtract(const Duration(days: 1));
+    if (vnTime.year == yesterdayVn.year && vnTime.month == yesterdayVn.month && vnTime.day == yesterdayVn.day) {
+      return context.tr('yesterday');
+    }
+
+    final diff = nowVn.difference(vnTime);
+    if (diff.inDays < 7) {
+      return '${diff.inDays} ${context.tr('days_ago')}';
+    }
+    return '${vnTime.day}/${vnTime.month}/${vnTime.year}';
   }
 }
 

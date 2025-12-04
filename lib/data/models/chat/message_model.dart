@@ -53,7 +53,7 @@ class MessageModel {
   final MessageAccountModel sender;
   final MessageModel? replyTo;
   final bool isMine;
-  final String status; // Pending, Sent, Delivered, Seen
+  final String status;
 
   MessageModel({
     required this.messageId,
@@ -72,6 +72,8 @@ class MessageModel {
     required this.isMine,
     this.status = 'Sent',
   });
+
+
 
   factory MessageModel.fromJson(Map<String, dynamic> json) {
     return MessageModel(
@@ -99,8 +101,25 @@ class MessageModel {
           ? MessageModel.fromJson(json['replyTo'] ?? json['ReplyTo'])
           : null,
       isMine: json['isMine'] ?? json['IsMine'] ?? false,
-      status: json['status'] ?? json['Status'] ?? 'Sent',
+
+      status: _parseStatus(json['status'] ?? json['Status']),
     );
+  }
+
+  static String _parseStatus(dynamic status) {
+    if (status == null) return 'Sent';
+
+    if (status is int) {
+      switch (status) {
+        case 0: return 'Pending';
+        case 1: return 'Sent';
+        case 2: return 'Delivered';
+        case 3: return 'Seen';
+        default: return 'Sent';
+      }
+    }
+
+    return status.toString();
   }
 
   Map<String, dynamic> toJson() {
@@ -123,56 +142,63 @@ class MessageModel {
     };
   }
 
-  // Helper method để parse DateTime và giữ nguyên UTC (sẽ convert sang VN time khi hiển thị)
+  MessageModel copyWith({
+    String? messageId,
+    String? conversationId,
+    String? senderAccountId,
+    String? body,
+    String? messageType,
+    String? replyToMessageId,
+    String? imageUrl,
+    String? metadata,
+    DateTime? createdAt,
+    DateTime? editedAt,
+    DateTime? deletedAt,
+    MessageAccountModel? sender,
+    MessageModel? replyTo,
+    bool? isMine,
+    String? status,
+  }) {
+    return MessageModel(
+      messageId: messageId ?? this.messageId,
+      conversationId: conversationId ?? this.conversationId,
+      senderAccountId: senderAccountId ?? this.senderAccountId,
+      body: body ?? this.body,
+      messageType: messageType ?? this.messageType,
+      replyToMessageId: replyToMessageId ?? this.replyToMessageId,
+      imageUrl: imageUrl ?? this.imageUrl,
+      metadata: metadata ?? this.metadata,
+      createdAt: createdAt ?? this.createdAt,
+      editedAt: editedAt ?? this.editedAt,
+      deletedAt: deletedAt ?? this.deletedAt,
+      sender: sender ?? this.sender,
+      replyTo: replyTo ?? this.replyTo,
+      isMine: isMine ?? this.isMine,
+      status: status ?? this.status,
+    );
+  }
+
   static DateTime _parseDateTime(String dateTimeString) {
     try {
-      // Debug: In ra để kiểm tra format từ backend
-      print('Parsing DateTime string: $dateTimeString');
-      
-      // Parse DateTime từ string
-      DateTime parsed = DateTime.parse(dateTimeString);
-      
-      // Debug: In ra thông tin sau khi parse
-      print('Parsed DateTime: $parsed, isUtc: ${parsed.isUtc}');
-      
-      // Backend trả về UTC time (thường có 'Z' ở cuối hoặc không có timezone)
-      // Nếu có 'Z' ở cuối hoặc có timezone offset, DateTime.parse sẽ tự động parse đúng
-      // Nếu không có timezone info, giả sử là UTC
-      if (!parsed.isUtc) {
-        // Kiểm tra xem string có chứa timezone info không
-        // Tìm timezone offset trong string (ví dụ: +07:00, -05:00, Z)
-        final hasTimezone = dateTimeString.contains('+') || 
-                           dateTimeString.contains('-') || 
-                           dateTimeString.endsWith('Z') ||
-                           (dateTimeString.contains('T') && (dateTimeString.contains('+') || dateTimeString.contains('Z')));
-        
-        if (!hasTimezone) {
-          // Không có timezone info trong string
-          // Giả sử các giá trị trong string đã là UTC, tạo UTC DateTime
-          parsed = DateTime.utc(
-            parsed.year,
-            parsed.month,
-            parsed.day,
-            parsed.hour,
-            parsed.minute,
-            parsed.second,
-            parsed.millisecond,
-            parsed.microsecond,
-          );
-          print('No timezone info, created UTC: $parsed');
-        } else {
-          // Có timezone info, convert sang UTC
-          parsed = parsed.toUtc();
-          print('Has timezone info, converted to UTC: $parsed');
-        }
+      final s = dateTimeString.trim();
+      final tzPattern = RegExp(r'(Z|[+\-]\d{2}:\d{2})$', caseSensitive: false);
+      final parsed = DateTime.parse(s);
+
+      if (tzPattern.hasMatch(s)) {
+        return parsed.toUtc();
+      } else {
+        return DateTime.utc(
+          parsed.year,
+          parsed.month,
+          parsed.day,
+          parsed.hour,
+          parsed.minute,
+          parsed.second,
+          parsed.millisecond,
+          parsed.microsecond,
+        );
       }
-      
-      // Đảm bảo trả về UTC DateTime
-      final result = parsed.isUtc ? parsed : parsed.toUtc();
-      print('Final UTC DateTime: $result');
-      return result;
     } catch (e) {
-      // Nếu parse lỗi, trả về thời gian hiện tại (UTC)
       print('Error parsing DateTime: $dateTimeString, error: $e');
       return DateTime.now().toUtc();
     }

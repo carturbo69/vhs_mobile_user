@@ -24,24 +24,37 @@ class VoucherModel {
   });
 
   factory VoucherModel.fromJson(Map<String, dynamic> json) {
+    // Hỗ trợ cả PascalCase (backend) và camelCase
+    final voucherId = json['voucherId'] ?? json['VoucherId'];
+    final code = json['code'] ?? json['Code'] ?? '';
+    final description = json['description'] ?? json['Description'];
+    final discountPercent = json['discountPercent'] ?? json['DiscountPercent'];
+    final discountMaxAmount = json['discountMaxAmount'] ?? json['DiscountMaxAmount'];
+    final startDate = json['startDate'] ?? json['StartDate'];
+    final endDate = json['endDate'] ?? json['EndDate'];
+    final usageLimit = json['usageLimit'] ?? json['UsageLimit'];
+    final usedCount = json['usedCount'] ?? json['UsedCount'];
+    final isActive = json['isActive'] ?? json['IsActive'];
+    
     return VoucherModel(
-      voucherId: json['voucherId']?.toString() ?? '',
-      code: json['code'] ?? '',
-      description: json['description'],
-      discountPercent: json['discountPercent'] != null
-          ? (json['discountPercent'] as num).toDouble()
+      voucherId: voucherId?.toString() ?? '',
+      code: code.toString(),
+      description: description?.toString(),
+      discountPercent: discountPercent != null
+          ? (discountPercent as num).toDouble()
           : null,
-      discountMaxAmount: json['discountMaxAmount'] != null
-          ? (json['discountMaxAmount'] as num).toDouble()
+      discountMaxAmount: discountMaxAmount != null
+          ? (discountMaxAmount as num).toDouble()
           : null,
-      startDate: json['startDate'] != null
-          ? DateTime.tryParse(json['startDate'])
+      startDate: startDate != null
+          ? DateTime.tryParse(startDate.toString())
           : null,
-      endDate:
-          json['endDate'] != null ? DateTime.tryParse(json['endDate']) : null,
-      usageLimit: json['usageLimit'],
-      usedCount: json['usedCount'],
-      isActive: json['isActive'],
+      endDate: endDate != null
+          ? DateTime.tryParse(endDate.toString())
+          : null,
+      usageLimit: usageLimit != null ? (usageLimit as num).toInt() : null,
+      usedCount: usedCount != null ? (usedCount as num).toInt() : null,
+      isActive: isActive != null ? (isActive as bool) : null,
     );
   }
 

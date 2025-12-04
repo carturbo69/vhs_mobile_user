@@ -21,6 +21,8 @@ import 'package:vhs_mobile_user/ui/profile/edit_profile_screen.dart';
 import 'package:vhs_mobile_user/ui/history/history_detail_screen.dart';
 import 'package:vhs_mobile_user/ui/history/history_screen.dart';
 import 'package:vhs_mobile_user/ui/profile/profile_screen.dart';
+import 'package:vhs_mobile_user/ui/profile/profile_summary_screen.dart';
+import 'package:vhs_mobile_user/ui/profile/provider_registration_guide_screen.dart';
 import 'package:vhs_mobile_user/data/models/user/profile_model.dart';
 import 'package:vhs_mobile_user/ui/service_detail/service_detail_page.dart';
 import 'package:vhs_mobile_user/ui/service_list/service_list_screen.dart';
@@ -28,6 +30,17 @@ import 'package:vhs_mobile_user/ui/chat/chat_list_screen.dart';
 import 'package:vhs_mobile_user/ui/chat/chat_detail_screen.dart';
 import 'package:vhs_mobile_user/ui/user_address/address_add_screen.dart';
 import 'package:vhs_mobile_user/ui/user_address/address_list_screen.dart';
+import 'package:vhs_mobile_user/ui/user_address/location_picker_screen.dart';
+import 'package:vhs_mobile_user/ui/payment/payment_success_screen.dart';
+import 'package:vhs_mobile_user/ui/payment/payment_webview_screen.dart';
+import 'package:vhs_mobile_user/ui/review/review_screen.dart';
+import 'package:vhs_mobile_user/ui/review/review_list_screen.dart';
+import 'package:vhs_mobile_user/ui/report/report_screen.dart';
+import 'package:vhs_mobile_user/ui/report/report_detail_screen.dart';
+import 'package:vhs_mobile_user/data/models/booking/booking_history_detail_model.dart';
+import 'package:vhs_mobile_user/data/models/review/review_list_item.dart';
+import 'package:vhs_mobile_user/ui/service_shop/service_shop_screen.dart';
+import 'package:vhs_mobile_user/ui/notification/notification_screen.dart';
 
 /// Helper class để refresh router khi auth state thay đổi
 class AuthStateNotifier extends ChangeNotifier {
@@ -125,6 +138,13 @@ final routerProvider = Provider<GoRouter>((ref) {
         },
       ),
       GoRoute(
+        path: Routes.serviceShop,
+        builder: (context, state) {
+          final providerId = state.pathParameters['providerId']!;
+          return ServiceShopScreen(providerId: providerId);
+        },
+      ),
+      GoRoute(
         path: Routes.bookingDetail,
         builder: (context, state) {
           final booking = state.extra as BookingHistoryItem;
@@ -143,6 +163,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       // -------------------------
       // PROFILE ROUTES (ngoài shell)
       // -------------------------
+      GoRoute(
+        path: Routes.profileDetail,
+        builder: (_, __) => const ProfileDetailScreen(),
+      ),
       GoRoute(
         path: Routes.editProfile,
         builder: (context, state) {
@@ -163,6 +187,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           return ChangeEmailScreen(profile: profile);
         },
       ),
+      GoRoute(
+        path: Routes.providerRegistrationGuide,
+        builder: (context, state) => const ProviderRegistrationGuideScreen(),
+      ),
       // -------------------------
       // ADDRESS ROUTES
       // -------------------------
@@ -174,16 +202,74 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: Routes.addAddress,
         builder: (_, __) => const AddAddressPage(),
       ),
+      GoRoute(
+        path: Routes.locationPicker,
+        builder: (_, __) => const LocationPickerScreen(),
+      ),
 
       GoRoute(
         path: Routes.checkout,
-        builder: (context, state) => const CheckoutScreen(),
+        builder: (context, state) {
+          final extra = state.extra;
+          final selectedItemIds = extra is List<String> ? extra : null;
+          return CheckoutScreen(selectedItemIds: selectedItemIds);
+        },
       ),
       GoRoute(
         path: Routes.bookingResult,
         builder: (context, state) {
           final result = state.extra as BookingResultModel;
           return BookingResultScreen(result: result);
+        },
+      ),
+      GoRoute(
+        path: Routes.paymentWebView,
+        builder: (context, state) {
+          final paymentUrl = state.extra as String? ?? '';
+          return PaymentWebViewScreen(paymentUrl: paymentUrl);
+        },
+      ),
+      GoRoute(
+        path: Routes.paymentSuccess,
+        builder: (context, state) {
+          final data = state.extra as PaymentSuccessData;
+          return PaymentSuccessScreen(data: data);
+        },
+      ),
+      // Review routes - reviewList phải đứng trước review để tránh conflict
+      GoRoute(
+        path: Routes.reviewList,
+        builder: (context, state) {
+          return const ReviewListScreen();
+        },
+      ),
+      GoRoute(
+        path: Routes.review,
+        builder: (context, state) {
+          final extra = state.extra;
+          if (extra is HistoryBookingDetail) {
+            return ReviewScreen(bookingDetail: extra);
+          } else if (extra is ReviewListItem) {
+            // Edit mode
+            return ReviewScreen(reviewItem: extra);
+          }
+          return const Scaffold(
+            body: Center(child: Text('Invalid review data')),
+          );
+        },
+      ),
+      GoRoute(
+        path: Routes.report,
+        builder: (context, state) {
+          final detail = state.extra as HistoryBookingDetail;
+          return ReportScreen(bookingDetail: detail);
+        },
+      ),
+      GoRoute(
+        path: Routes.reportDetail,
+        builder: (context, state) {
+          final reportId = state.pathParameters['id']!;
+          return ReportDetailScreen(reportId: reportId);
         },
       ),
 
@@ -206,7 +292,17 @@ final routerProvider = Provider<GoRouter>((ref) {
             ],
           ),
 
-          // ---------- TAB 2: CHAT LIST ----------
+          // ---------- TAB 2: NOTIFICATIONS ----------
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: Routes.notifications,
+                builder: (_, __) => const NotificationScreen(),
+              ),
+            ],
+          ),
+
+          // ---------- TAB 3: CHAT LIST ----------
           StatefulShellBranch(
             routes: [
               GoRoute(
@@ -216,7 +312,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             ],
           ),
 
-          // ---------- TAB 3: HISTORY ----------
+          // ---------- TAB 4: HISTORY ----------
           StatefulShellBranch(
             routes: [
               GoRoute(
@@ -226,12 +322,12 @@ final routerProvider = Provider<GoRouter>((ref) {
             ],
           ),
 
-          // ---------- TAB 4: PROFILE ----------
+          // ---------- TAB 5: PROFILE ----------
           StatefulShellBranch(
             routes: [
               GoRoute(
                 path: Routes.profile,
-                builder: (_, __) => const ProfileScreen(),
+                builder: (_, __) => const ProfileSummaryScreen(),
               ),
             ],
           ),

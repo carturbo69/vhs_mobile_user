@@ -14,23 +14,32 @@ class CartApi {
 
   // GET /api/carts/account/{accountId}/items
  Future<List<CartItemModel>> getCartItems(String accountId) async {
-  final resp = await _dio.get('/api/carts/account/$accountId/items');
+  try {
+    final resp = await _dio.get('/api/carts/account/$accountId/items');
 
-  final data = resp.data;
+    final data = resp.data;
 
-  // Case 1: Backend trả trực tiếp List
-  if (data is List) {
-    return data.map((e) => CartItemModel.fromJson(e)).toList();
+    // Case 1: Backend trả trực tiếp List
+    if (data is List) {
+      return data.map((e) => CartItemModel.fromJson(e)).toList();
+    }
+
+    // Case 2: Backend trả Map có "data": List
+    if (data is Map && data['data'] is List) {
+      return (data['data'] as List)
+          .map((e) => CartItemModel.fromJson(e))
+          .toList();
+    }
+
+    return [];
+  } on DioException catch (e) {
+    // Nếu lỗi 404, có nghĩa là cart rỗng hoặc không tồn tại - đây là trạng thái hợp lệ
+    if (e.response?.statusCode == 404) {
+      return [];
+    }
+    // Các lỗi khác thì rethrow
+    rethrow;
   }
-
-  // Case 2: Backend trả Map có "data": List
-  if (data is Map && data['data'] is List) {
-    return (data['data'] as List)
-        .map((e) => CartItemModel.fromJson(e))
-        .toList();
-  }
-
-  return [];
 }
 
   // POST /api/carts/addtocart-items

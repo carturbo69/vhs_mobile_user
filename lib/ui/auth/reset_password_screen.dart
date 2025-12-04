@@ -212,14 +212,22 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> with Sing
                                       fontSize: 15,
                                       fontWeight: FontWeight.w500,
                                     ),
-                                    prefixIcon: Icon(
-                                      Icons.lock_outline,
-                                      color: primaryBlue,
-                                      size: 22,
+                                    prefixIcon: Container(
+                                      margin: const EdgeInsets.all(12),
+                                      padding: const EdgeInsets.all(8),
+                                      decoration: BoxDecoration(
+                                        color: primaryBlue.withOpacity(0.1),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Icon(
+                                        Icons.lock_outline_rounded,
+                                        color: primaryBlue,
+                                        size: 20,
+                                      ),
                                     ),
                                     suffixIcon: IconButton(
                                       icon: Icon(
-                                        _hide ? Icons.visibility_off : Icons.visibility,
+                                        _hide ? Icons.visibility_off_rounded : Icons.visibility_rounded,
                                         color: Colors.grey[600],
                                         size: 22,
                                       ),
@@ -297,14 +305,22 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> with Sing
                                       fontSize: 15,
                                       fontWeight: FontWeight.w500,
                                     ),
-                                    prefixIcon: Icon(
-                                      Icons.lock_outline,
-                                      color: primaryBlue,
-                                      size: 22,
+                                    prefixIcon: Container(
+                                      margin: const EdgeInsets.all(12),
+                                      padding: const EdgeInsets.all(8),
+                                      decoration: BoxDecoration(
+                                        color: primaryBlue.withOpacity(0.1),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Icon(
+                                        Icons.lock_outline_rounded,
+                                        color: primaryBlue,
+                                        size: 20,
+                                      ),
                                     ),
                                     suffixIcon: IconButton(
                                       icon: Icon(
-                                        _hideConfirm ? Icons.visibility_off : Icons.visibility,
+                                        _hideConfirm ? Icons.visibility_off_rounded : Icons.visibility_rounded,
                                         color: Colors.grey[600],
                                         size: 22,
                                       ),
@@ -474,15 +490,26 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> with Sing
                                             }
                                           },
                                           borderRadius: BorderRadius.circular(16),
-                                          child: const Center(
-                                            child: Text(
-                                              "Hoàn tất",
-                                              style: TextStyle(
-                                                fontSize: 18,
-                                                fontWeight: FontWeight.bold,
-                                                color: Colors.white,
-                                                letterSpacing: 1,
-                                              ),
+                                          child: Center(
+                                            child: Row(
+                                              mainAxisAlignment: MainAxisAlignment.center,
+                                              children: [
+                                                const Icon(
+                                                  Icons.check_circle_rounded,
+                                                  color: Colors.white,
+                                                  size: 20,
+                                                ),
+                                                const SizedBox(width: 8),
+                                                const Text(
+                                                  "Hoàn tất",
+                                                  style: TextStyle(
+                                                    fontSize: 18,
+                                                    fontWeight: FontWeight.bold,
+                                                    color: Colors.white,
+                                                    letterSpacing: 1,
+                                                  ),
+                                                ),
+                                              ],
                                             ),
                                           ),
                                         ),
@@ -501,12 +528,19 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> with Sing
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Icon(
-                                  Icons.arrow_back,
-                                  size: 16,
-                                  color: primaryBlue,
+                                Container(
+                                  padding: const EdgeInsets.all(4),
+                                  decoration: BoxDecoration(
+                                    color: primaryBlue.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Icon(
+                                    Icons.arrow_back_rounded,
+                                    size: 14,
+                                    color: primaryBlue,
+                                  ),
                                 ),
-                                const SizedBox(width: 4),
+                                const SizedBox(width: 6),
                                 Text(
                                   "Quay lại đăng nhập",
                                   style: TextStyle(

@@ -1,7 +1,14 @@
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:vhs_mobile_user/data/dao/cart_dao.dart';
 import 'package:vhs_mobile_user/data/models/cart/cart_item_model.dart';
 import 'package:vhs_mobile_user/data/repositories/cart_repository.dart';
 import 'package:vhs_mobile_user/data/models/cart/add_cart_item_request.dart'; // nhớ import
+
+// Error message constants - UI layer sẽ dịch các message này
+class CartErrorMessages {
+  static const String serviceAlreadyInCart = 'Dịch vụ này đã có trong giỏ hàng';
+}
 
 final cartProvider = AsyncNotifierProvider<CartNotifier, List<CartItemModel>>(
   CartNotifier.new,
@@ -23,7 +30,18 @@ class CartNotifier extends AsyncNotifier<List<CartItemModel>> {
     try {
       final remote = await _repo.fetchRemote();
       state = AsyncData(remote);
-    } catch (_) {}
+    } on DioException catch (e) {
+      // Nếu lỗi 404, coi như cart rỗng (hợp lệ)
+      if (e.response?.statusCode == 404) {
+        // Xóa local cart và set state thành empty list
+        final cartDao = ref.read(cartDaoProvider);
+        await cartDao.clearAll();
+        state = const AsyncData([]);
+      }
+      // Các lỗi khác thì bỏ qua và dùng local data
+    } catch (_) {
+      // Các lỗi khác thì bỏ qua và dùng local data
+    }
 
     return local;
   }
@@ -40,13 +58,13 @@ class CartNotifier extends AsyncNotifier<List<CartItemModel>> {
     final serviceExists = currentItems.any((item) => item.serviceId == req.serviceId);
     
     if (serviceExists) {
-      throw Exception('Dịch vụ này đã có trong giỏ hàng');
+      throw Exception(CartErrorMessages.serviceAlreadyInCart);
     }
     
     try {
       await _repo.addToCart(req); // map tới CartRepository
-      final local = await _repo.readLocal();
-      state = AsyncData(local);
+      // Refresh từ server để đảm bảo đồng bộ với tất cả màn hình
+      await refresh();
     } catch (e, st) {
       // Chỉ set error nếu là lỗi thực sự, không phải validation error
       // Giữ nguyên state hiện tại để không làm mất dữ liệu
@@ -57,23 +75,45 @@ class CartNotifier extends AsyncNotifier<List<CartItemModel>> {
   // =====================================================
   // 🔥 HÀM THUẬN TIỆN CHO UI SERVICE DETAIL
   // =====================================================
-  Future<void> addToCartFromDetail({required String serviceId}) async {
-    final req = AddCartItemRequest(serviceId: serviceId);
+  Future<void> addToCartFromDetail({
+    required String serviceId,
+    List<String> optionIds = const [],
+    Map<String, dynamic>? optionValues,
+  }) async {
+    final req = AddCartItemRequest(
+      serviceId: serviceId,
+      optionIds: optionIds,
+      optionValues: optionValues,
+    );
 
     await addCartItem(req); // reuse logic addCartItem
   }
 
   Future<void> refresh() async {
     state = const AsyncLoading();
-    state = await AsyncValue.guard(() => _repo.fetchRemote());
+    try {
+      final remote = await _repo.fetchRemote();
+      state = AsyncData(remote);
+    } catch (e, st) {
+      // Nếu lỗi 404, coi như cart rỗng (hợp lệ)
+      if (e is DioException && e.response?.statusCode == 404) {
+        // Xóa local cart và set state thành empty list
+        final cartDao = ref.read(cartDaoProvider);
+        await cartDao.clearAll();
+        state = const AsyncData([]);
+      } else {
+        // Các lỗi khác thì set error
+        state = AsyncError(e, st);
+      }
+    }
   }
 
   Future<void> remove(String cartItemId) async {
     state = const AsyncLoading();
     try {
       await _repo.removeItem(cartItemId);
-      final items = await _repo.readLocal();
-      state = AsyncData(items);
+      // Refresh từ server để đảm bảo đồng bộ với tất cả màn hình
+      await refresh();
     } catch (e, st) {
       state = AsyncError(e, st);
     }
@@ -83,7 +123,8 @@ class CartNotifier extends AsyncNotifier<List<CartItemModel>> {
     state = const AsyncLoading();
     try {
       await _repo.clearAll();
-      state = const AsyncData([]);
+      // Refresh từ server để đảm bảo đồng bảo với tất cả màn hình
+      await refresh();
     } catch (e, st) {
       state = AsyncError(e, st);
     }
@@ -91,7 +132,7 @@ class CartNotifier extends AsyncNotifier<List<CartItemModel>> {
 
   Future<void> updateQuantity(String cartItemId, int newQty) async {
     await _repo.updateQuantityLocal(cartItemId, newQty);
-    final items = await _repo.readLocal();
-    state = AsyncData(items);
+    // Refresh từ server để đảm bảo đồng bộ với tất cả màn hình
+    await refresh();
   }
 }

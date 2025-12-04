@@ -1,9 +1,10 @@
   import 'package:flutter/material.dart';
   import 'package:flutter_riverpod/flutter_riverpod.dart';
   import 'package:flutter_riverpod/legacy.dart';
+  import 'package:go_router/go_router.dart';
   import 'package:vhs_mobile_user/data/services/payment_api.dart';
+  import 'package:vhs_mobile_user/routing/routes.dart';
   import 'package:vhs_mobile_user/ui/history/history_detail_viewmodel.dart';
-  import 'package:vhs_mobile_user/ui/payment/payment_webview_screen.dart';
 
   final paymentViewModelProvider =
       StateNotifierProvider<PaymentViewModel, AsyncValue<void>>(
@@ -32,11 +33,9 @@
 
         state = const AsyncData(null);
 
-        final result = await Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => PaymentWebViewScreen(paymentUrl: url),
-          ),
+        final result = await context.push<bool>(
+          Routes.paymentWebView,
+          extra: url,
         );
 
         if (result == true) {

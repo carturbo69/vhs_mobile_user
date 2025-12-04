@@ -8,6 +8,9 @@ import 'package:vhs_mobile_user/ui/service_list/service_card.dart';
 import 'service_list_viewmodel.dart';
 import 'package:vhs_mobile_user/routing/routes.dart';
 import 'package:vhs_mobile_user/ui/cart/cart_list_viewmodel.dart';
+import 'package:vhs_mobile_user/ui/core/theme_helper.dart';
+import 'package:vhs_mobile_user/l10n/extensions/localization_extension.dart';
+import 'package:vhs_mobile_user/providers/locale_provider.dart';
 
 // Màu xanh theo web - Sky blue palette
 const Color primaryBlue = Color(0xFF0284C7); // Sky-600
@@ -88,20 +91,20 @@ class _ServiceListScreenState extends ConsumerState<ServiceListScreen> {
                     _showAll = true;
                   });
                 },
-                icon: const Icon(Icons.expand_more, size: 20),
+                icon: const Icon(Icons.expand_more_rounded, size: 22),
                 label: Text(
-                  "Xem thêm ${list.length - 20} dịch vụ",
+                  context.tr('view_more_services').replaceAll('{count}', '${list.length - 20}'),
                   style: const TextStyle(
-                    fontSize: 15,
+                    fontSize: 16,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: primaryBlue,
+                  backgroundColor: ThemeHelper.getPrimaryColor(context),
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(
                     horizontal: 24,
-                    vertical: 14,
+                    vertical: 16,
                   ),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -129,10 +132,15 @@ class _ServiceListScreenState extends ConsumerState<ServiceListScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Watch locale để rebuild khi đổi ngôn ngữ
+    ref.watch(localeProvider);
+    
     final asyncList = ref.watch(serviceListProvider);
 
+    final isDark = ThemeHelper.isDarkMode(context);
+    
     return Scaffold(
-      backgroundColor: Colors.grey[50],
+      backgroundColor: ThemeHelper.getScaffoldBackgroundColor(context),
       body: RefreshIndicator(
         onRefresh: () => ref.read(serviceListProvider.notifier).refresh(),
         color: primaryBlue,
@@ -144,10 +152,10 @@ class _ServiceListScreenState extends ConsumerState<ServiceListScreen> {
               floating: false,
               pinned: true,
               elevation: 0,
-              backgroundColor: primaryBlue,
+              backgroundColor: Colors.transparent,
               toolbarHeight: 56,
-              title: const Text(
-                "Danh sách dịch vụ",
+              title: Text(
+                context.tr('service_list_title'),
                 style: TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
@@ -159,11 +167,15 @@ class _ServiceListScreenState extends ConsumerState<ServiceListScreen> {
                   gradient: LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
-                    colors: [primaryBlue, darkBlue],
+                    colors: [
+                      Colors.blue.shade400,
+                      Colors.blue.shade600,
+                    ],
                   ),
                 ),
               ),
-              actions: [
+              iconTheme: const IconThemeData(color: Colors.white),
+        actions: [
                 // Nút giỏ hàng với badge số lượng
                 Consumer(
                   builder: (context, ref, child) {
@@ -177,31 +189,57 @@ class _ServiceListScreenState extends ConsumerState<ServiceListScreen> {
                     return Stack(
                       clipBehavior: Clip.none,
                       children: [
-                        IconButton(
-                          icon: const Icon(Icons.shopping_cart, color: Colors.white),
-                          onPressed: () => context.push(Routes.cart),
-                          tooltip: 'Giỏ hàng',
+                        Container(
+                          margin: const EdgeInsets.only(right: 8),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.2),
+                            shape: BoxShape.circle,
+                          ),
+                          child: IconButton(
+                            icon: const Icon(Icons.shopping_cart_outlined, color: Colors.white),
+                            onPressed: () {
+                              // Luôn dùng go để tránh duplicate keys với StatefulShellRoute
+                              // Lưu route hiện tại để có thể quay lại
+                              final currentLocation = GoRouterState.of(context).matchedLocation;
+                              if (currentLocation != Routes.cart) {
+                                // Lưu route hiện tại vào extra để có thể quay lại
+                                context.push(Routes.cart, extra: {'previousRoute': currentLocation});
+                              }
+                            },
+                            tooltip: context.tr('cart_tooltip'),
+                          ),
                         ),
                         if (cartCount > 0)
                           Positioned(
-                            right: 4,
-                            top: 4,
+                            right: 6,
+                            top: 6,
                             child: Container(
-                              padding: const EdgeInsets.all(4),
+                              padding: EdgeInsets.symmetric(
+                                horizontal: cartCount > 9 ? 6 : 5,
+                                vertical: 2,
+                              ),
                               decoration: BoxDecoration(
-                                color: Colors.red,
+                                color: Colors.red.shade600,
                                 shape: BoxShape.circle,
-                                border: Border.all(color: Colors.white, width: 1.5),
+                                border: Border.all(color: Colors.white, width: 2),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.red.withOpacity(0.4),
+                                    blurRadius: 6,
+                                    spreadRadius: 1,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
                               ),
                               constraints: const BoxConstraints(
-                                minWidth: 16,
-                                minHeight: 16,
+                                minWidth: 20,
+                                minHeight: 20,
                               ),
                               child: Text(
                                 cartCount > 99 ? '99+' : cartCount.toString(),
                                 style: const TextStyle(
                                   color: Colors.white,
-                                  fontSize: 10,
+                                  fontSize: 11,
                                   fontWeight: FontWeight.bold,
                                 ),
                                 textAlign: TextAlign.center,
@@ -212,31 +250,41 @@ class _ServiceListScreenState extends ConsumerState<ServiceListScreen> {
                     );
                   },
                 ),
-                IconButton(
-                  icon: const Icon(Icons.refresh, color: Colors.white),
-                  onPressed: () => ref.read(serviceListProvider.notifier).refresh(),
-                  tooltip: 'Làm mới',
+                Container(
+                  margin: const EdgeInsets.only(right: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    shape: BoxShape.circle,
+                  ),
+                  child: IconButton(
+                    icon: const Icon(Icons.refresh, color: Colors.white),
+                    onPressed: () => ref.read(serviceListProvider.notifier).refresh(),
+                    tooltip: context.tr('refresh'),
+                  ),
                 ),
-                const SizedBox(width: 8),
               ],
             ),
 
             // Search and Filter Section
             SliverToBoxAdapter(
               child: Container(
-                color: Colors.white,
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+                color: ThemeHelper.getCardBackgroundColor(context),
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
                 child: Row(
                   children: [
                     // Modern Search Box
                     Expanded(
                       child: Container(
                         decoration: BoxDecoration(
-                          color: Colors.grey[100],
-                          borderRadius: BorderRadius.circular(16),
+                          color: ThemeHelper.getCardBackgroundColor(context),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: ThemeHelper.getBorderColor(context),
+                            width: 1,
+                          ),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.05),
+                              color: ThemeHelper.getShadowColor(context),
                               blurRadius: 10,
                               offset: const Offset(0, 2),
                             ),
@@ -248,13 +296,32 @@ class _ServiceListScreenState extends ConsumerState<ServiceListScreen> {
                             _onSearchChanged();
                             setState(() {});
                           },
+                          style: TextStyle(color: ThemeHelper.getTextColor(context)),
                           decoration: InputDecoration(
-                            hintText: "Tìm kiếm dịch vụ...",
-                            hintStyle: TextStyle(color: Colors.grey[600]),
-                            prefixIcon: Icon(Icons.search, color: primaryBlue),
+                            hintText: context.tr('search_services'),
+                            hintStyle: TextStyle(color: ThemeHelper.getTertiaryTextColor(context)),
+                            prefixIcon: Container(
+                              margin: const EdgeInsets.all(10),
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: isDark 
+                                    ? Colors.blue.shade900.withOpacity(0.3)
+                                    : Colors.blue.shade50,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Icon(
+                                Icons.search,
+                                color: ThemeHelper.getPrimaryColor(context),
+                                size: 20,
+                              ),
+                            ),
                             suffixIcon: _searchController.text.isNotEmpty
                                 ? IconButton(
-                                    icon: Icon(Icons.clear, color: Colors.grey[600]),
+                                    icon: Icon(
+                                      Icons.clear,
+                                      color: ThemeHelper.getSecondaryIconColor(context),
+                                      size: 20,
+                                    ),
                                     onPressed: () {
                                       _searchController.clear();
                                       ref
@@ -265,22 +332,31 @@ class _ServiceListScreenState extends ConsumerState<ServiceListScreen> {
                                   )
                                 : null,
                             filled: true,
-                            fillColor: Colors.grey[50],
+                            fillColor: ThemeHelper.getInputBackgroundColor(context),
                             border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(16),
+                              borderRadius: BorderRadius.circular(12),
                               borderSide: BorderSide.none,
                             ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide.none,
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(
+                                color: ThemeHelper.getPrimaryColor(context),
+                                width: 2,
+                              ),
+                            ),
                             contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 20,
+                              horizontal: 16,
                               vertical: 16,
                             ),
                           ),
                         ),
                       ),
                     ),
-
                     const SizedBox(width: 12),
-
                     // Modern Filter Button
                     Builder(
                       builder: (context) {
@@ -303,21 +379,30 @@ class _ServiceListScreenState extends ConsumerState<ServiceListScreen> {
 
                         return Container(
                           decoration: BoxDecoration(
-                            color: _category != null ? primaryBlue : Colors.grey[100],
-                            borderRadius: BorderRadius.circular(16),
+                            color: _category != null 
+                                ? ThemeHelper.getPrimaryColor(context)
+                                : ThemeHelper.getCardBackgroundColor(context),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: _category != null 
+                                  ? ThemeHelper.getPrimaryColor(context)
+                                  : ThemeHelper.getBorderColor(context),
+                              width: 1,
+                            ),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withOpacity(0.05),
+                                color: ThemeHelper.getShadowColor(context),
                                 blurRadius: 10,
                                 offset: const Offset(0, 2),
                               ),
                             ],
                           ),
                           child: PopupMenuButton<String>(
-                            color: Colors.white,
+                            color: ThemeHelper.getPopupMenuBackgroundColor(context),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
                             ),
+                            elevation: 8,
                             onSelected: (value) {
                               setState(() {
                                 _category = value == "all" ? null : value;
@@ -330,13 +415,29 @@ class _ServiceListScreenState extends ConsumerState<ServiceListScreen> {
                             },
                             itemBuilder: (_) {
                               final items = <PopupMenuEntry<String>>[
-                                const PopupMenuItem(
+                                PopupMenuItem(
                                   value: "all",
                                   child: Row(
                                     children: [
-                                      Icon(Icons.clear_all, size: 20),
-                                      SizedBox(width: 12),
-                                      Text("Tất cả"),
+                                      Container(
+                                        padding: const EdgeInsets.all(6),
+                                        decoration: BoxDecoration(
+                                          color: isDark 
+                                              ? Colors.blue.shade900.withOpacity(0.3)
+                                              : Colors.blue.shade50,
+                                          borderRadius: BorderRadius.circular(6),
+                                        ),
+                                        child: Icon(
+                                          Icons.clear_all,
+                                          size: 18,
+                                          color: ThemeHelper.getPrimaryColor(context),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Text(
+                                        context.tr('all_categories'),
+                                        style: TextStyle(color: ThemeHelper.getTextColor(context)),
+                                      ),
                                     ],
                                   ),
                                 ),
@@ -349,11 +450,25 @@ class _ServiceListScreenState extends ConsumerState<ServiceListScreen> {
                                     value: entry.key,
                                     child: Row(
                                       children: [
-                                        Icon(Icons.category, size: 20, color: primaryBlue),
+                                        Container(
+                                          padding: const EdgeInsets.all(6),
+                                          decoration: BoxDecoration(
+                                            color: isDark 
+                                                ? Colors.blue.shade900.withOpacity(0.3)
+                                                : Colors.blue.shade50,
+                                            borderRadius: BorderRadius.circular(6),
+                                          ),
+                                          child: Icon(
+                                            Icons.category,
+                                            size: 18,
+                                            color: ThemeHelper.getPrimaryColor(context),
+                                          ),
+                                        ),
                                         const SizedBox(width: 12),
                                         Expanded(
                                           child: Text(
                                             entry.value,
+                                            style: TextStyle(color: ThemeHelper.getTextColor(context)),
                                             overflow: TextOverflow.ellipsis,
                                           ),
                                         ),
@@ -368,8 +483,11 @@ class _ServiceListScreenState extends ConsumerState<ServiceListScreen> {
                             child: Padding(
                               padding: const EdgeInsets.all(12),
                               child: Icon(
-                                Icons.tune,
-                                color: _category != null ? Colors.white : primaryBlue,
+                                Icons.tune_rounded,
+                                color: _category != null 
+                                    ? Colors.white 
+                                    : ThemeHelper.getPrimaryColor(context),
+                                size: 24,
                               ),
                             ),
                           ),
@@ -390,14 +508,18 @@ class _ServiceListScreenState extends ConsumerState<ServiceListScreen> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         CircularProgressIndicator(
-                          valueColor: AlwaysStoppedAnimation<Color>(primaryBlue),
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            ThemeHelper.getPrimaryColor(context),
+                          ),
+                          strokeWidth: 3,
                         ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 24),
                         Text(
-                          "Đang tải...",
+                          context.tr('loading'),
                           style: TextStyle(
-                            color: Colors.grey[600],
-                            fontSize: 14,
+                            color: ThemeHelper.getSecondaryTextColor(context),
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
                           ),
                         ),
                       ],
@@ -408,87 +530,119 @@ class _ServiceListScreenState extends ConsumerState<ServiceListScreen> {
               error: (e, _) => [
                 SliverFillRemaining(
                   child: Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.error_outline,
-                          size: 64,
-                          color: Colors.red[300],
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          "Đã xảy ra lỗi",
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.grey[800],
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          "$e",
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey[600],
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 24),
-                        ElevatedButton.icon(
-                          onPressed: () => ref.read(serviceListProvider.notifier).refresh(),
-                          icon: const Icon(Icons.refresh),
-                          label: const Text("Thử lại"),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: primaryBlue,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 24,
-                              vertical: 12,
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(24),
+                            decoration: BoxDecoration(
+                              color: isDark 
+                                  ? Colors.red.shade900.withOpacity(0.3)
+                                  : Colors.red.shade50,
+                              shape: BoxShape.circle,
                             ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
+                            child: Icon(
+                              Icons.error_outline_rounded,
+                              size: 64,
+                              color: Colors.red.shade400,
                             ),
                           ),
-                        ),
-                      ],
+                          const SizedBox(height: 24),
+                          Text(
+                            context.tr('error_occurred'),
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: ThemeHelper.getTextColor(context),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            "$e",
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: ThemeHelper.getSecondaryTextColor(context),
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 32),
+                          ElevatedButton.icon(
+                            onPressed: () => ref.read(serviceListProvider.notifier).refresh(),
+                            icon: const Icon(Icons.refresh_rounded, size: 20),
+                            label: Text(
+                              context.tr('try_again'),
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: ThemeHelper.getPrimaryColor(context),
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 24,
+                                vertical: 16,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              elevation: 2,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
               ],
-              data: (state) {
-                final list = state.filtered;
+        data: (state) {
+          final list = state.filtered;
 
-                if (list.isEmpty) {
+          if (list.isEmpty) {
                   return [
                     SliverFillRemaining(
                       child: Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.search_off,
-                              size: 80,
-                              color: Colors.grey[300],
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              "Không tìm thấy kết quả",
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.grey[800],
+                        child: Padding(
+                          padding: const EdgeInsets.all(24),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(24),
+                                decoration: BoxDecoration(
+                                  color: isDark 
+                                      ? Colors.blue.shade900.withOpacity(0.3)
+                                      : Colors.blue.shade50,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(
+                                  Icons.search_off_rounded,
+                                  size: 64,
+                                  color: ThemeHelper.getPrimaryColor(context),
+                                ),
                               ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              "Thử tìm kiếm với từ khóa khác",
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.grey[600],
+                              const SizedBox(height: 24),
+                              Text(
+                                context.tr('no_results_found'),
+                                style: TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                  color: ThemeHelper.getTextColor(context),
+                                ),
                               ),
-                            ),
-                          ],
+                              const SizedBox(height: 8),
+                              Text(
+                                context.tr('try_different_keyword'),
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: ThemeHelper.getSecondaryTextColor(context),
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),
@@ -496,8 +650,8 @@ class _ServiceListScreenState extends ConsumerState<ServiceListScreen> {
                 }
 
                 return _buildServiceListSlivers(list);
-              },
-            ),
+                },
+              ),
           ],
         ),
       ),

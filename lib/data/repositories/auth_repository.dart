@@ -30,6 +30,8 @@ class AuthRepository {
   }
 
   Future<bool> isLoggedIn() async {
+    // Giữ đăng nhập - chỉ kiểm tra xem có token trong DB không
+    // Không kiểm tra expiration để giữ trạng thái đăng nhập
     final saved = await dao.getSavedAuth();
     return saved != null;
   }

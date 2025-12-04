@@ -7,6 +7,8 @@ import 'package:vhs_mobile_user/helper/google_sign_in_helper.dart';
 import 'package:vhs_mobile_user/routing/routes.dart';
 import 'package:vhs_mobile_user/ui/auth/auth_viewmodel.dart';
 import 'package:vhs_mobile_user/ui/auth/terms_and_policy_screen.dart';
+import 'package:vhs_mobile_user/ui/core/theme_helper.dart';
+import 'package:vhs_mobile_user/l10n/extensions/localization_extension.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({super.key});
@@ -55,8 +57,10 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
   Widget build(BuildContext context) {
     final auth = ref.watch(authStateProvider);
     final size = MediaQuery.of(context).size;
+    final isDark = ThemeHelper.isDarkMode(context);
 
     return Scaffold(
+      backgroundColor: ThemeHelper.getScaffoldBackgroundColor(context),
       body: Container(
         width: double.infinity,
         height: double.infinity,
@@ -64,11 +68,17 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [
-              Colors.white,
-              lightBlue.withOpacity(0.3),
-              accentBlue.withOpacity(0.2),
-            ],
+            colors: isDark
+                ? [
+                    const Color(0xFF121212),
+                    Colors.blue.shade900.withOpacity(0.3),
+                    Colors.blue.shade800.withOpacity(0.2),
+                  ]
+                : [
+                    Colors.white,
+                    lightBlue.withOpacity(0.3),
+                    accentBlue.withOpacity(0.2),
+                  ],
             stops: const [0.0, 0.5, 1.0],
           ),
         ),
@@ -135,10 +145,10 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
                             height: 110,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
-                              color: Colors.white,
+                              color: ThemeHelper.getCardBackgroundColor(context),
                               boxShadow: [
                                 BoxShadow(
-                                  color: primaryBlue.withOpacity(0.2),
+                                  color: ThemeHelper.getPrimaryColor(context).withOpacity(0.2),
                                   blurRadius: 20,
                                   offset: const Offset(0, 8),
                                 ),
@@ -173,12 +183,12 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
                         const SizedBox(height: 28),
                         
                         // Title Section
-                        const Text(
-                          "Đăng nhập",
+                        Text(
+                          context.tr('login_title'),
                           style: TextStyle(
                             fontSize: 30,
                             fontWeight: FontWeight.bold,
-                            color: Color(0xFF1A1A1A),
+                            color: ThemeHelper.getTextColor(context),
                             letterSpacing: 0.5,
                             height: 1.2,
                           ),
@@ -186,10 +196,10 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
                         ),
                         const SizedBox(height: 6),
                         Text(
-                          "Chào mừng bạn trở lại!",
+                          context.tr('login_subtitle'),
                           style: TextStyle(
                             fontSize: 14,
-                            color: Colors.grey[600],
+                            color: ThemeHelper.getSecondaryTextColor(context),
                             fontWeight: FontWeight.w400,
                             letterSpacing: 0.3,
                           ),
@@ -206,11 +216,11 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
                               // Username Field
                               Container(
                                 decoration: BoxDecoration(
-                                  color: Colors.white,
+                                  color: ThemeHelper.getCardBackgroundColor(context),
                                   borderRadius: BorderRadius.circular(16),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: Colors.black.withOpacity(0.05),
+                                      color: ThemeHelper.getShadowColor(context),
                                       blurRadius: 10,
                                       offset: const Offset(0, 4),
                                     ),
@@ -218,20 +228,33 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
                                 ),
                                 child: TextFormField(
                                   controller: _username,
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    color: ThemeHelper.getTextColor(context),
+                                    fontWeight: FontWeight.w500,
+                                  ),
                                   decoration: InputDecoration(
-                                    labelText: "Tên đăng nhập hoặc email",
+                                    labelText: context.tr('username_or_email'),
                                     labelStyle: TextStyle(
-                                      color: Colors.grey[600],
+                                      color: ThemeHelper.getSecondaryTextColor(context),
                                       fontSize: 15,
                                       fontWeight: FontWeight.w500,
                                     ),
-                                    prefixIcon: Icon(
-                                      Icons.person_outline,
-                                      color: primaryBlue,
-                                      size: 22,
+                                    prefixIcon: Container(
+                                      margin: const EdgeInsets.all(12),
+                                      padding: const EdgeInsets.all(8),
+                                      decoration: BoxDecoration(
+                                        color: ThemeHelper.getPrimaryColor(context).withOpacity(0.1),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Icon(
+                                        Icons.person_outline_rounded,
+                                        color: ThemeHelper.getPrimaryColor(context),
+                                        size: 20,
+                                      ),
                                     ),
                                     filled: true,
-                                    fillColor: Colors.white,
+                                    fillColor: ThemeHelper.getInputBackgroundColor(context),
                                     border: OutlineInputBorder(
                                       borderRadius: BorderRadius.circular(16),
                                       borderSide: BorderSide.none,
@@ -239,14 +262,14 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
                                     enabledBorder: OutlineInputBorder(
                                       borderRadius: BorderRadius.circular(16),
                                       borderSide: BorderSide(
-                                        color: Colors.grey[200]!,
+                                        color: ThemeHelper.getBorderColor(context),
                                         width: 1.5,
                                       ),
                                     ),
                                     focusedBorder: OutlineInputBorder(
                                       borderRadius: BorderRadius.circular(16),
                                       borderSide: BorderSide(
-                                        color: primaryBlue,
+                                        color: ThemeHelper.getPrimaryColor(context),
                                         width: 2,
                                       ),
                                     ),
@@ -255,14 +278,9 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
                                       vertical: 18,
                                     ),
                                   ),
-                                  style: const TextStyle(
-                                    fontSize: 16,
-                                    color: Color(0xFF1A1A1A),
-                                    fontWeight: FontWeight.w500,
-                                  ),
                                   validator: (value) {
                                     if (value == null || value.isEmpty) {
-                                      return 'Vui lòng nhập tên đăng nhập';
+                                      return context.tr('field_required');
                                     }
                                     return null;
                                   },
@@ -274,11 +292,11 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
                               // Password Field
                               Container(
                                 decoration: BoxDecoration(
-                                  color: Colors.white,
+                                  color: ThemeHelper.getCardBackgroundColor(context),
                                   borderRadius: BorderRadius.circular(16),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: Colors.black.withOpacity(0.05),
+                                      color: ThemeHelper.getShadowColor(context),
                                       blurRadius: 10,
                                       offset: const Offset(0, 4),
                                     ),
@@ -287,28 +305,41 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
                                 child: TextFormField(
                                   controller: _password,
                                   obscureText: _hide,
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    color: ThemeHelper.getTextColor(context),
+                                    fontWeight: FontWeight.w500,
+                                  ),
                                   decoration: InputDecoration(
-                                    labelText: "Mật khẩu",
+                                    labelText: context.tr('password'),
                                     labelStyle: TextStyle(
-                                      color: Colors.grey[600],
+                                      color: ThemeHelper.getSecondaryTextColor(context),
                                       fontSize: 15,
                                       fontWeight: FontWeight.w500,
                                     ),
-                                    prefixIcon: Icon(
-                                      Icons.lock_outline,
-                                      color: primaryBlue,
-                                      size: 22,
+                                    prefixIcon: Container(
+                                      margin: const EdgeInsets.all(12),
+                                      padding: const EdgeInsets.all(8),
+                                      decoration: BoxDecoration(
+                                        color: ThemeHelper.getPrimaryColor(context).withOpacity(0.1),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Icon(
+                                        Icons.lock_outline_rounded,
+                                        color: ThemeHelper.getPrimaryColor(context),
+                                        size: 20,
+                                      ),
                                     ),
                                     suffixIcon: IconButton(
                                       icon: Icon(
-                                        _hide ? Icons.visibility_off : Icons.visibility,
-                                        color: Colors.grey[600],
+                                        _hide ? Icons.visibility_off_rounded : Icons.visibility_rounded,
+                                        color: ThemeHelper.getSecondaryIconColor(context),
                                         size: 22,
                                       ),
                                       onPressed: () => setState(() => _hide = !_hide),
                                     ),
                                     filled: true,
-                                    fillColor: Colors.white,
+                                    fillColor: ThemeHelper.getInputBackgroundColor(context),
                                     border: OutlineInputBorder(
                                       borderRadius: BorderRadius.circular(16),
                                       borderSide: BorderSide.none,
@@ -316,14 +347,14 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
                                     enabledBorder: OutlineInputBorder(
                                       borderRadius: BorderRadius.circular(16),
                                       borderSide: BorderSide(
-                                        color: Colors.grey[200]!,
+                                        color: ThemeHelper.getBorderColor(context),
                                         width: 1.5,
                                       ),
                                     ),
                                     focusedBorder: OutlineInputBorder(
                                       borderRadius: BorderRadius.circular(16),
                                       borderSide: BorderSide(
-                                        color: primaryBlue,
+                                        color: ThemeHelper.getPrimaryColor(context),
                                         width: 2,
                                       ),
                                     ),
@@ -332,14 +363,9 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
                                       vertical: 18,
                                     ),
                                   ),
-                                  style: const TextStyle(
-                                    fontSize: 16,
-                                    color: Color(0xFF1A1A1A),
-                                    fontWeight: FontWeight.w500,
-                                  ),
                                   validator: (value) {
                                     if (value == null || value.isEmpty) {
-                                      return 'Vui lòng nhập mật khẩu';
+                                      return context.tr('field_required');
                                     }
                                     return null;
                                   },
@@ -357,9 +383,9 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
                                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                   ),
                                   child: Text(
-                                    "Quên mật khẩu?",
+                                    context.tr('forgot_password'),
                                     style: TextStyle(
-                                      color: primaryBlue,
+                                      color: ThemeHelper.getPrimaryColor(context),
                                       fontSize: 14,
                                       fontWeight: FontWeight.w600,
                                     ),
@@ -375,11 +401,13 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
                                       height: 58,
                                       decoration: BoxDecoration(
                                         borderRadius: BorderRadius.circular(16),
-                                        color: primaryBlue.withOpacity(0.3),
+                                        color: ThemeHelper.getPrimaryColor(context).withOpacity(0.3),
                                       ),
-                                      child: const Center(
+                                      child: Center(
                                         child: CircularProgressIndicator(
-                                          valueColor: AlwaysStoppedAnimation<Color>(primaryBlue),
+                                          valueColor: AlwaysStoppedAnimation<Color>(
+                                            ThemeHelper.getPrimaryColor(context),
+                                          ),
                                           strokeWidth: 3,
                                         ),
                                       ),
@@ -389,13 +417,16 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
                                       decoration: BoxDecoration(
                                         borderRadius: BorderRadius.circular(16),
                                         gradient: LinearGradient(
-                                          colors: [primaryBlue, darkBlue],
+                                          colors: [
+                                            ThemeHelper.getPrimaryColor(context),
+                                            ThemeHelper.getPrimaryDarkColor(context),
+                                          ],
                                           begin: Alignment.topLeft,
                                           end: Alignment.bottomRight,
                                         ),
                                         boxShadow: [
                                           BoxShadow(
-                                            color: primaryBlue.withOpacity(0.4),
+                                            color: ThemeHelper.getPrimaryColor(context).withOpacity(0.4),
                                             blurRadius: 20,
                                             offset: const Offset(0, 8),
                                           ),
@@ -417,7 +448,9 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
                                               } catch (e) {
                                                 if (!mounted) return;
                                                 
-                                                String errorMessage = "Đăng nhập thất bại";
+                                                String errorTitle = "Đăng nhập thất bại";
+                                                String errorMessage = "";
+                                                IconData errorIcon = Icons.error_outline_rounded;
                                                 
                                                 if (e is DioException) {
                                                   if (e.response != null) {
@@ -425,51 +458,158 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
                                                     final data = e.response?.data;
                                                     
                                                     if (statusCode == 401) {
-                                                      errorMessage = "Tên đăng nhập hoặc mật khẩu không đúng";
+                                                      errorTitle = "Thông tin đăng nhập không chính xác";
+                                                      errorIcon = Icons.lock_outline_rounded;
+                                                      
+                                                      // Ưu tiên hiển thị message từ server nếu có
+                                                      if (data is Map && (data['message'] != null || data['Message'] != null)) {
+                                                        final serverMessage = (data['message'] ?? data['Message']).toString();
+                                                        errorMessage = serverMessage;
+                                                      } else {
+                                                        // Fallback message nếu server không trả về message cụ thể
+                                                        errorMessage = "• Tên đăng nhập hoặc email không tồn tại\n• Mật khẩu không đúng\n\nVui lòng kiểm tra lại thông tin đăng nhập của bạn.";
+                                                      }
+                                                    } else if (statusCode == 403) {
+                                                      errorTitle = "Tài khoản bị khóa";
+                                                      errorMessage = "Tài khoản của bạn đã bị khóa hoặc vô hiệu hóa. Vui lòng liên hệ quản trị viên để được hỗ trợ.";
+                                                      errorIcon = Icons.block_rounded;
+                                                    } else if (statusCode == 423) {
+                                                      errorTitle = "Tài khoản chưa được kích hoạt";
+                                                      errorMessage = "Vui lòng kiểm tra email để kích hoạt tài khoản trước khi đăng nhập.";
+                                                      errorIcon = Icons.mail_outline_rounded;
+                                                    } else if (statusCode == 400) {
+                                                      errorTitle = "Thông tin không hợp lệ";
+                                                      if (data is Map && (data['message'] != null || data['Message'] != null)) {
+                                                        errorMessage = (data['message'] ?? data['Message']).toString();
+                                                      } else {
+                                                        errorMessage = "Vui lòng kiểm tra lại thông tin đăng nhập.";
+                                                      }
+                                                      errorIcon = Icons.warning_amber_rounded;
+                                                    } else if (statusCode == 500 || statusCode == 502 || statusCode == 503) {
+                                                      errorTitle = "Lỗi máy chủ";
+                                                      errorMessage = "Server đang gặp sự cố. Vui lòng thử lại sau ít phút.";
+                                                      errorIcon = Icons.cloud_off_rounded;
                                                     } else if (data is Map && data['message'] != null) {
                                                       errorMessage = data['message'].toString();
                                                     } else if (data is Map && data['Message'] != null) {
                                                       errorMessage = data['Message'].toString();
                                                     } else {
-                                                      errorMessage = "Lỗi từ server: $statusCode";
+                                                      errorTitle = "Lỗi không xác định";
+                                                      errorMessage = "Mã lỗi: $statusCode\nVui lòng thử lại hoặc liên hệ hỗ trợ.";
                                                     }
                                                   } else if (e.type == DioExceptionType.connectionTimeout ||
                                                              e.type == DioExceptionType.receiveTimeout) {
-                                                    errorMessage = "Kết nối timeout. Vui lòng thử lại.";
+                                                    errorTitle = "Kết nối timeout";
+                                                    errorMessage = "Không thể kết nối đến server trong thời gian cho phép.\n\n• Kiểm tra kết nối mạng\n• Thử lại sau";
+                                                    errorIcon = Icons.timer_off_rounded;
                                                   } else if (e.type == DioExceptionType.connectionError) {
-                                                    errorMessage = "Không thể kết nối đến server. Vui lòng kiểm tra kết nối mạng.";
+                                                    errorTitle = "Lỗi kết nối";
+                                                    errorMessage = "Không thể kết nối đến server.\n\n• Kiểm tra kết nối internet\n• Kiểm tra cài đặt mạng\n• Thử lại sau";
+                                                    errorIcon = Icons.wifi_off_rounded;
                                                   } else {
-                                                    errorMessage = "Lỗi kết nối: ${e.message ?? e.toString()}";
+                                                    errorTitle = "Lỗi kết nối";
+                                                    errorMessage = e.message ?? "Có lỗi xảy ra khi kết nối đến server.";
                                                   }
                                                 } else {
                                                   errorMessage = e.toString();
                                                 }
                                                 
-                                                ScaffoldMessenger.of(context).showSnackBar(
-                                                  SnackBar(
-                                                    content: Text(errorMessage),
-                                                    duration: const Duration(seconds: 3),
-                                                    backgroundColor: Colors.red,
-                                                    behavior: SnackBarBehavior.floating,
+                                                // Hiển thị dialog với thông tin lỗi chi tiết
+                                                showDialog(
+                                                  context: context,
+                                                  builder: (context) => AlertDialog(
+                                                    backgroundColor: ThemeHelper.getDialogBackgroundColor(context),
                                                     shape: RoundedRectangleBorder(
-                                                      borderRadius: BorderRadius.circular(12),
+                                                      borderRadius: BorderRadius.circular(20),
                                                     ),
-                                                    margin: const EdgeInsets.all(16),
+                                                    title: Row(
+                                                      children: [
+                                                        Container(
+                                                          padding: const EdgeInsets.all(10),
+                                                          decoration: BoxDecoration(
+                                                            color: Colors.red.shade50,
+                                                            borderRadius: BorderRadius.circular(12),
+                                                          ),
+                                                          child: Icon(
+                                                            errorIcon,
+                                                            color: Colors.red.shade600,
+                                                            size: 28,
+                                                          ),
+                                                        ),
+                                                        const SizedBox(width: 12),
+                                                        Expanded(
+                                                          child: Text(
+                                                            errorTitle,
+                                                            style: TextStyle(
+                                                              fontSize: 19,
+                                                              fontWeight: FontWeight.bold,
+                                                              color: ThemeHelper.getTextColor(context),
+                                                            ),
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                    content: Column(
+                                                      mainAxisSize: MainAxisSize.min,
+                                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                                      children: [
+                                                        Text(
+                                                          errorMessage.isNotEmpty ? errorMessage : "Vui lòng thử lại.",
+                                                          style: TextStyle(
+                                                            fontSize: 15,
+                                                            height: 1.6,
+                                                            color: ThemeHelper.getSecondaryTextColor(context),
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                    actions: [
+                                                      TextButton(
+                                                        onPressed: () => Navigator.of(context).pop(),
+                                                        style: TextButton.styleFrom(
+                                                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                                                          backgroundColor: ThemeHelper.getPrimaryColor(context),
+                                                          foregroundColor: Colors.white,
+                                                          shape: RoundedRectangleBorder(
+                                                            borderRadius: BorderRadius.circular(12),
+                                                          ),
+                                                        ),
+                                                        child: const Text(
+                                                          "Đã hiểu",
+                                                          style: TextStyle(
+                                                            fontWeight: FontWeight.bold,
+                                                            fontSize: 15,
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    ],
+                                                    actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                                                   ),
                                                 );
                                               }
                                             }
                                           },
                                           borderRadius: BorderRadius.circular(16),
-                                          child: const Center(
-                                            child: Text(
-                                              "Đăng nhập",
-                                              style: TextStyle(
-                                                fontSize: 18,
-                                                fontWeight: FontWeight.bold,
-                                                color: Colors.white,
-                                                letterSpacing: 1,
-                                              ),
+                                          child: Center(
+                                            child: Row(
+                                              mainAxisAlignment: MainAxisAlignment.center,
+                                              children: [
+                                                const Icon(
+                                                  Icons.login_rounded,
+                                                  color: Colors.white,
+                                                  size: 20,
+                                                ),
+                                                const SizedBox(width: 8),
+                                                Text(
+                                                  context.tr('login'),
+                                                  style: TextStyle(
+                                                    fontSize: 18,
+                                                    fontWeight: FontWeight.bold,
+                                                    color: Colors.white,
+                                                    letterSpacing: 1,
+                                                  ),
+                                                ),
+                                              ],
                                             ),
                                           ),
                                         ),
@@ -486,18 +626,18 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
                           child: RichText(
                             text: TextSpan(
                               style: TextStyle(
-                                color: Colors.grey[600],
+                                color: ThemeHelper.getSecondaryTextColor(context),
                                 fontSize: 15,
                               ),
                               children: [
-                                const TextSpan(text: "Chưa có tài khoản? "),
+                                TextSpan(text: "${context.tr('dont_have_account')} "),
                                 WidgetSpan(
                                   child: GestureDetector(
                                     onTap: () => context.push(Routes.register),
                                     child: Text(
-                                      "Đăng ký",
+                                      context.tr('register'),
                                       style: TextStyle(
-                                        color: primaryBlue,
+                                        color: ThemeHelper.getPrimaryColor(context),
                                         fontWeight: FontWeight.bold,
                                         fontSize: 15,
                                       ),
@@ -516,7 +656,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
                           children: [
                             Expanded(
                               child: Divider(
-                                color: Colors.grey[300],
+                                color: ThemeHelper.getDividerColor(context),
                                 thickness: 1,
                                 height: 1,
                               ),
@@ -524,9 +664,9 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
                             Padding(
                               padding: const EdgeInsets.symmetric(horizontal: 16),
                               child: Text(
-                                "HOẶC",
+                                context.tr('or'),
                                 style: TextStyle(
-                                  color: Colors.grey[500],
+                                  color: ThemeHelper.getTertiaryTextColor(context),
                                   fontSize: 13,
                                   fontWeight: FontWeight.w600,
                                   letterSpacing: 1,
@@ -535,7 +675,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
                             ),
                             Expanded(
                               child: Divider(
-                                color: Colors.grey[300],
+                                color: ThemeHelper.getDividerColor(context),
                                 thickness: 1,
                                 height: 1,
                               ),
@@ -549,15 +689,15 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
                         Container(
                           height: 58,
                           decoration: BoxDecoration(
-                            color: Colors.white,
+                            color: ThemeHelper.getCardBackgroundColor(context),
                             borderRadius: BorderRadius.circular(16),
                             border: Border.all(
-                              color: Colors.grey[300]!,
+                              color: ThemeHelper.getBorderColor(context),
                               width: 1.5,
                             ),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withOpacity(0.05),
+                                color: ThemeHelper.getShadowColor(context),
                                 blurRadius: 10,
                                 offset: const Offset(0, 4),
                               ),
@@ -565,7 +705,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
                           ),
                           child: Material(
                             color: Colors.transparent,
-                            child: InkWell(
+                              child: InkWell(
                               onTap: () async {
                                 try {
                                   final helper = GoogleSignInHelperV7();
@@ -640,28 +780,51 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
                                     showDialog(
                                       context: context,
                                       builder: (context) => AlertDialog(
-                                        title: const Row(
+                                        backgroundColor: ThemeHelper.getDialogBackgroundColor(context),
+                                        title: Row(
                                           children: [
-                                            Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 28),
-                                            SizedBox(width: 12),
+                                            Container(
+                                              padding: const EdgeInsets.all(8),
+                                              decoration: BoxDecoration(
+                                                color: Colors.orange.shade50,
+                                                borderRadius: BorderRadius.circular(8),
+                                              ),
+                                              child: Icon(
+                                                Icons.warning_amber_rounded,
+                                                color: Colors.orange.shade600,
+                                                size: 24,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 12),
                                             Expanded(
                                               child: Text(
                                                 "Lỗi đăng nhập Google",
-                                                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                                                style: TextStyle(
+                                                  fontSize: 20,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: ThemeHelper.getTextColor(context),
+                                                ),
                                               ),
                                             ),
                                           ],
                                         ),
                                         content: Text(
                                           errorMessage,
-                                          style: const TextStyle(fontSize: 15, height: 1.5),
+                                          style: TextStyle(
+                                            fontSize: 15,
+                                            height: 1.5,
+                                            color: ThemeHelper.getTextColor(context),
+                                          ),
                                         ),
                                         actions: [
                                           TextButton(
                                             onPressed: () => Navigator.of(context).pop(),
-                                            child: const Text(
+                                            child: Text(
                                               "Đã hiểu",
-                                              style: TextStyle(fontWeight: FontWeight.bold),
+                                              style: TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                                color: ThemeHelper.getPrimaryColor(context),
+                                              ),
                                             ),
                                           ),
                                         ],
@@ -693,25 +856,36 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
                                 child: Row(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    CachedNetworkImage(
-                                      imageUrl:
-                                          "https://developers.google.com/identity/images/g-logo.png",
-                                      width: 24,
-                                      height: 24,
-                                      placeholder: (_, __) => const SizedBox(
-                                        width: 24,
-                                        height: 24,
-                                        child: CircularProgressIndicator(strokeWidth: 2),
+                                    Container(
+                                      padding: const EdgeInsets.all(4),
+                                      decoration: BoxDecoration(
+                                        color: ThemeHelper.getPrimaryColor(context).withOpacity(0.1),
+                                        borderRadius: BorderRadius.circular(6),
                                       ),
-                                      errorWidget: (_, __, ___) => const Icon(Icons.g_mobiledata),
+                                      child: CachedNetworkImage(
+                                        imageUrl:
+                                            "https://developers.google.com/identity/images/g-logo.png",
+                                        width: 20,
+                                        height: 20,
+                                        placeholder: (_, __) => const SizedBox(
+                                          width: 20,
+                                          height: 20,
+                                          child: CircularProgressIndicator(strokeWidth: 2),
+                                        ),
+                                        errorWidget: (_, __, ___) => Icon(
+                                          Icons.g_mobiledata_rounded,
+                                          size: 20,
+                                          color: ThemeHelper.getPrimaryColor(context),
+                                        ),
+                                      ),
                                     ),
                                     const SizedBox(width: 12),
-                                    const Text(
-                                      "Đăng nhập bằng Google",
+                                    Text(
+                                      context.tr('login_with_google'),
                                       style: TextStyle(
                                         fontSize: 16,
                                         fontWeight: FontWeight.w600,
-                                        color: Color(0xFF1A1A1A),
+                                        color: ThemeHelper.getTextColor(context),
                                         letterSpacing: 0.3,
                                       ),
                                     ),
@@ -742,18 +916,25 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Icon(
-                                    Icons.description_outlined,
-                                    size: 16,
-                                    color: primaryBlue,
+                                  Container(
+                                    padding: const EdgeInsets.all(4),
+                                    decoration: BoxDecoration(
+                                      color: ThemeHelper.getPrimaryColor(context).withOpacity(0.1),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: Icon(
+                                      Icons.description_rounded,
+                                      size: 14,
+                                      color: ThemeHelper.getPrimaryColor(context),
+                                    ),
                                   ),
-                                  const SizedBox(width: 4),
+                                  const SizedBox(width: 6),
                                   Text(
-                                    "Điều khoản",
+                                    context.tr('terms_of_service'),
                                     style: TextStyle(
-                                      color: primaryBlue,
+                                      color: ThemeHelper.getPrimaryColor(context),
                                       fontSize: 13,
-                                      fontWeight: FontWeight.w500,
+                                      fontWeight: FontWeight.w600,
                                     ),
                                   ),
                                 ],
@@ -762,7 +943,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
                             Container(
                               width: 1,
                               height: 16,
-                              color: Colors.grey[300],
+                              color: ThemeHelper.getDividerColor(context),
                             ),
                             TextButton(
                               onPressed: () {
@@ -778,18 +959,25 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Icon(
-                                    Icons.lock_outline,
-                                    size: 16,
-                                    color: primaryBlue,
+                                  Container(
+                                    padding: const EdgeInsets.all(4),
+                                    decoration: BoxDecoration(
+                                      color: ThemeHelper.getPrimaryColor(context).withOpacity(0.1),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: Icon(
+                                      Icons.lock_rounded,
+                                      size: 14,
+                                      color: ThemeHelper.getPrimaryColor(context),
+                                    ),
                                   ),
-                                  const SizedBox(width: 4),
+                                  const SizedBox(width: 6),
                                   Text(
-                                    "Bảo mật",
+                                    context.tr('privacy_policy'),
                                     style: TextStyle(
-                                      color: primaryBlue,
+                                      color: ThemeHelper.getPrimaryColor(context),
                                       fontSize: 13,
-                                      fontWeight: FontWeight.w500,
+                                      fontWeight: FontWeight.w600,
                                     ),
                                   ),
                                 ],

@@ -32,27 +32,47 @@ class _TermsAndPolicyScreenState extends State<TermsAndPolicyScreen> with Single
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        shadowColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
+        flexibleSpace: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                primaryBlue,
+                darkBlue,
+              ],
+            ),
+          ),
+        ),
         title: const Text(
           "Điều khoản & Chính sách",
           style: TextStyle(
             fontWeight: FontWeight.bold,
-            fontSize: 18,
+            fontSize: 20,
+            color: Colors.white,
           ),
         ),
-        backgroundColor: Colors.white,
-        elevation: 0,
+        iconTheme: const IconThemeData(color: Colors.white),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Color(0xFF1A1A1A)),
+          icon: const Icon(Icons.arrow_back_rounded),
           onPressed: () => Navigator.of(context).pop(),
         ),
         bottom: TabBar(
           controller: _tabController,
-          labelColor: primaryBlue,
-          unselectedLabelColor: Colors.grey[600],
-          indicatorColor: primaryBlue,
+          labelColor: Colors.white,
+          unselectedLabelColor: Colors.white.withOpacity(0.7),
+          indicatorColor: Colors.white,
           indicatorWeight: 3,
           labelStyle: const TextStyle(
             fontWeight: FontWeight.w600,
+            fontSize: 14,
+          ),
+          unselectedLabelStyle: const TextStyle(
+            fontWeight: FontWeight.w500,
             fontSize: 14,
           ),
           tabs: const [
@@ -325,7 +345,7 @@ class _TermsAndPolicyScreenState extends State<TermsAndPolicyScreen> with Single
           ),
           _buildSubsection(
             "7. Liên hệ",
-            "Nếu bạn có câu hỏi về chính sách bảo mật, vui lòng liên hệ:\nEmail: support@vhs.com\nHotline: 0337 868 575",
+            "Nếu bạn có câu hỏi về chính sách bảo mật, vui lòng liên hệ:\nEmail: vhsplatform700@gmail.com\nHotline: 0337 868 575",
           ),
           const SizedBox(height: 24),
         ],
@@ -338,45 +358,65 @@ class _TermsAndPolicyScreenState extends State<TermsAndPolicyScreen> with Single
     required String title,
     required String subtitle,
   }) {
-    return Row(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: primaryBlue.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Icon(
-            icon,
-            color: primaryBlue,
-            size: 24,
-          ),
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            primaryBlue.withOpacity(0.1),
+            primaryBlue.withOpacity(0.05),
+          ],
         ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: primaryBlue,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                subtitle,
-                style: TextStyle(
-                  fontSize: 13,
-                  color: Colors.grey[600],
-                ),
-              ),
-            ],
-          ),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: primaryBlue.withOpacity(0.3),
+          width: 1,
         ),
-      ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: primaryBlue.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(
+              icon,
+              color: primaryBlue,
+              size: 24,
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: primaryBlue,
+                    letterSpacing: 0.3,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  subtitle,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Colors.grey[700],
+                    height: 1.4,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 

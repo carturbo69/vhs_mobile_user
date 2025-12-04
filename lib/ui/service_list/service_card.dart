@@ -1,7 +1,13 @@
 // lib/ui/service_card.dart
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:vhs_mobile_user/data/models/service/service_model.dart';
+import 'package:vhs_mobile_user/data/models/service/service_localization_extension.dart';
+import 'package:vhs_mobile_user/ui/core/theme_helper.dart';
+import 'package:vhs_mobile_user/l10n/extensions/localization_extension.dart';
+import 'package:vhs_mobile_user/providers/locale_provider.dart';
+import 'package:vhs_mobile_user/services/translation_cache_provider.dart';
 
 // Màu xanh theo web - Sky blue palette
 const Color primaryBlue = Color(0xFF0284C7); // Sky-600
@@ -9,16 +15,21 @@ const Color darkBlue = Color(0xFF0369A1); // Sky-700
 const Color lightBlue = Color(0xFFE0F2FE); // Sky-100
 const Color accentBlue = Color(0xFFBAE6FD); // Sky-200
 
-class ServiceCard extends StatelessWidget {
+class ServiceCard extends ConsumerWidget {
   final ServiceModel service;
   final VoidCallback? onTap;
 
   const ServiceCard({super.key, required this.service, this.onTap});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Watch locale và translation cache để rebuild khi đổi ngôn ngữ hoặc có translation mới
+    ref.watch(localeProvider);
+    ref.watch(translationCacheProvider);
+    
     final images = service.imageList; // CSV → List<String>
     final img = images.isNotEmpty ? images.first : null;
+    final isDark = ThemeHelper.isDarkMode(context);
 
     return GestureDetector(
       onTap: onTap,
@@ -27,7 +38,8 @@ class ServiceCard extends StatelessWidget {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         clipBehavior: Clip.hardEdge,
         elevation: 4,
-        shadowColor: Colors.black.withOpacity(0.1),
+        shadowColor: Colors.black.withOpacity(isDark ? 0.3 : 0.1),
+        color: ThemeHelper.getCardBackgroundColor(context),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -35,7 +47,9 @@ class ServiceCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
-                color: lightBlue,
+                color: isDark
+                    ? Colors.blue.shade900.withOpacity(0.3)
+                    : lightBlue,
                 borderRadius: const BorderRadius.only(
                   topLeft: Radius.circular(16),
                   topRight: Radius.circular(16),
@@ -47,11 +61,11 @@ class ServiceCard extends StatelessWidget {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      service.providerName ?? "Nhà cung cấp",
+                      service.getLocalizedProviderName(ref) ?? context.tr('provider'),
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
-                        color: darkBlue,
+                        color: isDark ? Colors.blue.shade300 : darkBlue,
                       ),
                       maxLines: 2,
                       overflow: TextOverflow.visible,
@@ -64,29 +78,40 @@ class ServiceCard extends StatelessWidget {
             // ================= IMAGE WITH TAG =================
             Stack(
               children: [
-                img != null
-                    ? CachedNetworkImage(
-                        imageUrl: img,
-                        width: double.infinity,
+            img != null
+                ? CachedNetworkImage(
+                    imageUrl: img,
+                    width: double.infinity,
                         height: 180,
-                        fit: BoxFit.cover,
+                    fit: BoxFit.cover,
                         placeholder: (_, __) => Container(
                           height: 180,
-                          color: Colors.grey.shade200,
-                          child: const Center(
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          ),
+                          color: isDark ? Colors.grey.shade800 : Colors.grey.shade200,
+                          child: Center(
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: primaryBlue,
                         ),
+                      ),
+                    ),
                         errorWidget: (_, __, ___) => Container(
                           height: 180,
-                          color: Colors.grey.shade200,
-                          child: const Icon(Icons.broken_image, size: 48),
-                        ),
-                      )
-                    : Container(
+                          color: isDark ? Colors.grey.shade800 : Colors.grey.shade200,
+                          child: Icon(
+                            Icons.broken_image,
+                            size: 48,
+                            color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                          ),
+                    ),
+                  )
+                : Container(
                         height: 180,
-                        color: Colors.grey.shade200,
-                        child: const Icon(Icons.image, size: 48),
+                    color: isDark ? Colors.grey.shade800 : Colors.grey.shade200,
+                    child: Icon(
+                      Icons.image,
+                      size: 48,
+                      color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                    ),
                       ),
                 // Tag category ở góc trên trái
                 Positioned(
@@ -99,7 +124,7 @@ class ServiceCard extends StatelessWidget {
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
-                      service.categoryName.toUpperCase(),
+                      service.getLocalizedCategoryName(ref).toUpperCase(),
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 11,
@@ -112,7 +137,7 @@ class ServiceCard extends StatelessWidget {
                   ),
                 ),
               ],
-            ),
+                  ),
 
             // ================= INFO =================
             Padding(
@@ -122,11 +147,11 @@ class ServiceCard extends StatelessWidget {
                 children: [
                   // Title - lớn, đậm, màu xanh
                   Text(
-                    service.title,
+                    service.getLocalizedTitle(ref),
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 16,
-                      color: darkBlue,
+                      color: isDark ? Colors.blue.shade300 : darkBlue,
                       height: 1.3,
                     ),
                     maxLines: 2,
@@ -136,111 +161,147 @@ class ServiceCard extends StatelessWidget {
 
                   // ================= SERVICES LIST WITH CHECKMARKS =================
                   if (service.serviceOptions.isNotEmpty) ...[
-                    // Container với chiều cao cố định để các card bằng nhau
-                    SizedBox(
-                      height: service.serviceOptions.length > 5 ? 150.0 : (service.serviceOptions.length * 26.0),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          ...service.serviceOptions.take(5).map((opt) => Padding(
-                            padding: const EdgeInsets.only(bottom: 6),
-                            child: Row(
+                    Builder(
+                      builder: (context) {
+                        // Watch translation cache để rebuild khi có translation mới
+                        ref.watch(translationCacheProvider);
+                        
+                        // Tách options thành 2 nhóm: regular và textarea/text (giống Index.cshtml)
+                        final regularOptions = service.serviceOptions
+                            .where((opt) => opt.type.toLowerCase() != 'textarea' && opt.type.toLowerCase() != 'text')
+                            .toList();
+                        final textareaOptions = service.serviceOptions
+                            .where((opt) => opt.type.toLowerCase() == 'textarea' || opt.type.toLowerCase() == 'text')
+                            .toList();
+                        
+                        final totalRegular = regularOptions.length;
+                        
+                        // Tạo list widgets cho regular options
+                        final regularWidgets = regularOptions.take(5).map((opt) => Padding(
+                          padding: const EdgeInsets.only(bottom: 6),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Icon(
+                                Icons.check_circle,
+                                size: 18,
+                                color: Colors.green[600],
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  opt.getLocalizedOptionName(ref),
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: ThemeHelper.getTextColor(context),
+                                    height: 1.3,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        )).toList();
+                        
+                        // Tạo list widgets cho textarea options
+                        final textareaWidgets = textareaOptions.map((opt) {
+                          return Padding(
+                            padding: const EdgeInsets.only(top: 6, bottom: 2),
+                            child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Icon(
-                                  Icons.check_circle,
-                                  size: 18,
-                                  color: Colors.green[600],
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    opt.optionName,
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      color: Colors.grey[800],
-                                      height: 1.3,
+                                Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Icon(
+                                      Icons.check_circle,
+                                      size: 18,
+                                      color: Colors.green[600],
                                     ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            opt.getLocalizedOptionName(ref),
+                                            style: TextStyle(
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.w600,
+                                              color: ThemeHelper.getTextColor(context),
+                                            ),
+                                          ),
+                                          _TextareaValueWidget(option: opt),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ],
                             ),
-                          )),
-                          // Hiển thị indicator nếu còn nhiều hơn 5
-                          if (service.serviceOptions.length > 5)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 2),
-                              child: Row(
-                                children: [
-                                  const SizedBox(width: 26), // Space for icon
-                                  Text(
-                                    "+${service.serviceOptions.length - 5} tùy chọn khác",
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: primaryBlue,
-                                      fontWeight: FontWeight.w600,
-                                      fontStyle: FontStyle.italic,
+                          );
+                        }).toList();
+                        
+                        return Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            // Hiển thị regular options trước
+                            ...regularWidgets,
+                            // Hiển thị indicator nếu còn nhiều hơn 5 regular options
+                            if (totalRegular > 5)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 2),
+                                child: Row(
+                                  children: [
+                                    const SizedBox(width: 26), // Space for icon
+                  Text(
+                                      "+${totalRegular - 5} ${context.tr('more_options')}",
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: primaryBlue,
+                      fontWeight: FontWeight.w600,
+                                        fontStyle: FontStyle.italic,
+                                      ),
                                     ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                        ],
-                      ),
+                                  ],
+                                ),
                     ),
-                    const SizedBox(height: 8),
-                  ],
-
-                  // ================= OTHER WORK =================
-                  if (service.description != null && service.description!.isNotEmpty) ...[
-                    Text(
-                      "Công việc khác:",
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.grey[800],
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      service.description!,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey[700],
-                        height: 1.3,
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 10),
+                            // Hiển thị textarea/text options ở cuối
+                            ...textareaWidgets,
+                          ],
+                        );
+                      },
+                  ),
+                  const SizedBox(height: 6),
                   ],
 
                   // ================= AREA/DURATION ICON =================
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                     decoration: BoxDecoration(
-                      color: lightBlue,
+                      color: isDark
+                          ? Colors.blue.shade900.withOpacity(0.3)
+                          : lightBlue,
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
-                      children: [
+                    children: [
                         Icon(Icons.access_time, size: 16, color: primaryBlue),
-                        const SizedBox(width: 6),
-                        Text(
+                      const SizedBox(width: 6),
+                      Text(
                           service.baseUnit != null 
-                              ? "${service.baseUnit} ${_translateUnitType(service.unitType)}"
-                              : "1 ${_translateUnitType(service.unitType)}",
+                              ? "${service.baseUnit} ${service.getLocalizedUnitType(ref)}"
+                              : "1 ${service.getLocalizedUnitType(ref)}",
                           style: TextStyle(
-                            fontSize: 12,
+                          fontSize: 12,
                             fontWeight: FontWeight.w600,
-                            color: darkBlue,
-                          ),
+                            color: isDark ? Colors.blue.shade300 : darkBlue,
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
+                  ),
                   ),
                   const SizedBox(height: 12),
 
@@ -249,19 +310,19 @@ class ServiceCard extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(vertical: 10),
                     decoration: BoxDecoration(
                       border: Border(
-                        top: BorderSide(color: Colors.grey[200]!, width: 1),
-                        bottom: BorderSide(color: Colors.grey[200]!, width: 1),
+                        top: BorderSide(color: ThemeHelper.getBorderColor(context), width: 1),
+                        bottom: BorderSide(color: ThemeHelper.getBorderColor(context), width: 1),
                       ),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          "GIÁ CHỈ",
+                          context.tr('price_only'),
                           style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.w600,
-                            color: Colors.grey[600],
+                            color: ThemeHelper.getSecondaryTextColor(context),
                             letterSpacing: 0.5,
                           ),
                         ),
@@ -296,7 +357,7 @@ class ServiceCard extends StatelessWidget {
                         "${service.averageRating.toStringAsFixed(1)} (${service.totalReviews})",
                         style: TextStyle(
                           fontSize: 12,
-                          color: Colors.grey[700],
+                          color: ThemeHelper.getSecondaryTextColor(context),
                         ),
                       ),
                     ],
@@ -324,67 +385,41 @@ class ServiceCard extends StatelessWidget {
     
     return buffer.toString();
   }
+}
 
-  String _translateUnitType(String unitType) {
-    final lowerUnitType = unitType.toLowerCase().trim();
+/// Widget riêng để hiển thị textarea value với translation
+class _TextareaValueWidget extends ConsumerWidget {
+  final ServiceOption option;
+  
+  const _TextareaValueWidget({required this.option});
+  
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Watch translation cache để rebuild khi có translation mới
+    ref.watch(translationCacheProvider);
     
-    // Map các unit type từ tiếng Anh sang tiếng Việt (theo Index.cshtml)
-    switch (lowerUnitType) {
-      case 'squaremeter':
-      case 'square meter':
-      case 'm²':
-      case 'm2':
-        return 'Mét vuông';
-      case 'visit':
-      case 'lần':
-        return 'Lần';
-      case 'hour':
-      case 'hours':
-      case 'giờ':
-        return 'Giờ';
-      case 'day':
-      case 'days':
-      case 'ngày':
-        return 'Ngày';
-      case 'apartment':
-      case 'apartments':
-      case 'căn':
-        return 'Căn';
-      case 'room':
-      case 'rooms':
-      case 'phòng':
-        return 'Phòng';
-      case 'person':
-      case 'persons':
-      case 'people':
-      case 'người':
-        return 'Người';
-      case 'package':
-      case 'packages':
-      case 'gói':
-        return 'Gói';
-      case 'event':
-      case 'events':
-      case 'sự kiện':
-        return 'Sự kiện';
-      case 'week':
-      case 'weeks':
-      case 'tuần':
-        return 'Tuần';
-      case 'month':
-      case 'months':
-      case 'tháng':
-        return 'Tháng';
-      case 'session':
-      case 'sessions':
-      case 'buổi':
-        return 'Buổi';
-      default:
-        // Nếu không tìm thấy, trả về nguyên bản hoặc chuyển đổi cơ bản
-        if (unitType.contains('meter') || unitType.contains('m²') || unitType.contains('m2')) {
-          return 'Mét vuông';
-        }
-        return unitType; // Trả về nguyên bản nếu không xác định được
+    if (option.value == null || option.value!.isEmpty) {
+      return const SizedBox.shrink();
     }
+    
+    final localizedValue = option.getLocalizedValue(ref) ?? '';
+    
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 4),
+        Text(
+          localizedValue,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w400,
+            color: ThemeHelper.getSecondaryTextColor(context),
+            height: 1.4,
+          ),
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+        ),
+      ],
+    );
   }
 }
