@@ -134,6 +134,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                 icon: Icons.person_outline,
                 iconColor: Colors.blue,
                 isRequired: true,
+                enabled: false, // Không cho chỉnh sửa
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
                     return context.tr('please_enter_account_name');
@@ -153,6 +154,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                 iconColor: Colors.green,
                 isRequired: true,
                 keyboardType: TextInputType.emailAddress,
+                enabled: false, // Không cho chỉnh sửa
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
                     return context.tr('please_enter_email');
@@ -304,6 +306,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     required IconData icon,
     required Color iconColor,
     bool isRequired = false,
+    bool enabled = true,
     TextInputType? keyboardType,
     int maxLines = 1,
     String? Function(String?)? validator,
@@ -328,6 +331,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
         controller: controller,
         keyboardType: keyboardType,
         maxLines: maxLines,
+        enabled: enabled,
         validator: validator,
         decoration: InputDecoration(
           labelText: isRequired ? '$label *' : label,

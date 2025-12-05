@@ -61,7 +61,9 @@ class _CustomDatePickerState extends ConsumerState<CustomDatePicker> {
   Widget build(BuildContext context) {
     ref.watch(localeProvider); // Rebuild when language changes
     final days = _getDaysInMonth(_currentMonth);
-    final today = DateTime.now();
+    // Lấy thời gian thực mỗi lần build để check chính xác
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day); // Chỉ lấy ngày, bỏ giờ phút
     final lastDate = today.add(const Duration(days: 60));
 
     return Dialog(
@@ -190,14 +192,15 @@ class _CustomDatePickerState extends ConsumerState<CustomDatePicker> {
                     itemBuilder: (context, index) {
                       final date = days[index];
                       final isCurrentMonth = date.month == _currentMonth.month;
-                      final isToday = date.year == today.year &&
-                          date.month == today.month &&
-                          date.day == today.day;
+                      // Chỉ so sánh ngày, không so sánh giờ phút
+                      final dateOnly = DateTime(date.year, date.month, date.day);
+                      final isToday = dateOnly.isAtSameMomentAs(today);
                       final isSelected = date.year == _selectedDate.year &&
                           date.month == _selectedDate.month &&
                           date.day == _selectedDate.day;
-                      final isPast = date.isBefore(today);
-                      final isFuture = date.isAfter(lastDate);
+                      // Ngày quá khứ là ngày trước hôm nay (không bao gồm hôm nay)
+                      final isPast = dateOnly.isBefore(today);
+                      final isFuture = dateOnly.isAfter(lastDate);
 
                       return FutureBuilder<bool>(
                         future: isCurrentMonth && !isPast && !isFuture
@@ -301,7 +304,25 @@ class _CustomDatePickerState extends ConsumerState<CustomDatePicker> {
                       ),
                       const SizedBox(width: 12),
                       ElevatedButton.icon(
-                        onPressed: () => Navigator.pop(context, _selectedDate),
+                        onPressed: () {
+                          // Check xem ngày đã chọn có phải quá khứ không
+                          final now = DateTime.now();
+                          final today = DateTime(now.year, now.month, now.day);
+                          final selectedDateOnly = DateTime(_selectedDate.year, _selectedDate.month, _selectedDate.day);
+                          
+                          if (selectedDateOnly.isBefore(today)) {
+                            // Ngày quá khứ - hiển thị thông báo
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: const Text('Không thể chọn ngày quá khứ'),
+                                backgroundColor: Colors.red.shade400,
+                              ),
+                            );
+                            return;
+                          }
+                          
+                          Navigator.pop(context, _selectedDate);
+                        },
                         icon: const Icon(Icons.check_rounded, size: 18),
                         label: Text(
                           context.tr('select'),
@@ -411,9 +432,36 @@ class _CustomTimePickerState extends ConsumerState<CustomTimePicker> {
     return '${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}';
   }
 
+  // Helper method để check xem giờ có phải quá khứ không
+  // Lấy thời gian thực mỗi lần check
+  bool _isTimeInPast(int hour, int minute) {
+    final now = DateTime.now();
+    final selectedDate = DateTime(widget.date.year, widget.date.month, widget.date.day);
+    final today = DateTime(now.year, now.month, now.day);
+    
+    // Nếu không phải ngày hôm nay, không phải quá khứ
+    if (!selectedDate.isAtSameMomentAs(today)) {
+      return false;
+    }
+    
+    // Nếu là ngày hôm nay, check giờ phút theo thời gian thực
+    final selectedTime = TimeOfDay(hour: hour == 24 ? 0 : hour, minute: minute);
+    final currentTime = TimeOfDay.fromDateTime(now);
+    
+    // So sánh giờ phút (tính bằng phút từ đầu ngày)
+    final selectedMinutes = selectedTime.hour * 60 + selectedTime.minute;
+    final currentMinutes = currentTime.hour * 60 + currentTime.minute;
+    
+    // Quá khứ nếu giờ phút <= giờ phút hiện tại
+    // Ví dụ: hiện tại 16:04 thì 16:04 và trước đó là quá khứ, 16:05 trở đi mới được chọn
+    return selectedMinutes <= currentMinutes;
+  }
+
   @override
   Widget build(BuildContext context) {
     ref.watch(localeProvider); // Rebuild when language changes
+    // Lấy thời gian thực để check
+    final now = DateTime.now();
     final hours = List.generate(24, (index) => index + 1); // 1-24
     final minutes = List.generate(60, (index) => index); // 0-59 phút
 
@@ -590,12 +638,11 @@ class _CustomTimePickerState extends ConsumerState<CustomTimePicker> {
                             itemExtent: 50,
                             physics: const FixedExtentScrollPhysics(),
                             onSelectedItemChanged: (index) {
+                              if (index < 0 || index >= hours.length) return;
+                              final hour = hours[index];
+                              final displayHour = hour == 24 ? 0 : hour;
                               setState(() {
-                                _selectedHour = hours[index];
-                                // Chuyển 24 thành 0 cho TimeOfDay
-                                if (_selectedHour == 24) {
-                                  _selectedHour = 0;
-                                }
+                                _selectedHour = displayHour;
                               });
                             },
                             childDelegate: ListWheelChildBuilderDelegate(
@@ -664,8 +711,10 @@ class _CustomTimePickerState extends ConsumerState<CustomTimePicker> {
                             itemExtent: 50,
                             physics: const FixedExtentScrollPhysics(),
                             onSelectedItemChanged: (index) {
+                              if (index < 0 || index >= minutes.length) return;
+                              final minute = minutes[index];
                               setState(() {
-                                _selectedMinute = minutes[index];
+                                _selectedMinute = minute;
                               });
                             },
                             childDelegate: ListWheelChildBuilderDelegate(
@@ -750,6 +799,18 @@ class _CustomTimePickerState extends ConsumerState<CustomTimePicker> {
                       ElevatedButton.icon(
                         onPressed: () async {
                           final time = TimeOfDay(hour: _selectedHour, minute: _selectedMinute);
+                          // Check xem có phải quá khứ không
+                          if (_isTimeInPast(_selectedHour, _selectedMinute)) {
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: const Text('Không thể chọn giờ quá khứ'),
+                                  backgroundColor: Colors.red.shade400,
+                                ),
+                              );
+                            }
+                            return;
+                          }
                           final available = await _checkAvailability(time);
                           if (available && context.mounted) {
                             Navigator.pop(context, time);

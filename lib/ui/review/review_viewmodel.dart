@@ -43,5 +43,61 @@ class ReviewViewModel extends StateNotifier<AsyncValue<void>> {
       return false;
     }
   }
+
+  Future<bool> updateReview({
+    required String reviewId,
+    required int rating,
+    String? comment,
+    List<String>? newImagePaths,
+    List<String>? removeImageUrls,
+  }) async {
+    state = const AsyncLoading();
+    try {
+      final success = await _repository.updateReview(
+        reviewId: reviewId,
+        rating: rating,
+        comment: comment,
+        newImagePaths: newImagePaths,
+        removeImageUrls: removeImageUrls,
+      );
+      if (success) {
+        state = const AsyncData(null);
+        return true;
+      } else {
+        state = AsyncError(
+          Exception("Không thể cập nhật đánh giá"),
+          StackTrace.current,
+        );
+        return false;
+      }
+    } catch (e, st) {
+      state = AsyncError(e, st);
+      return false;
+    }
+  }
+
+  Future<bool> deleteReview({
+    required String reviewId,
+  }) async {
+    state = const AsyncLoading();
+    try {
+      final success = await _repository.deleteReview(
+        reviewId: reviewId,
+      );
+      if (success) {
+        state = const AsyncData(null);
+        return true;
+      } else {
+        state = AsyncError(
+          Exception("Không thể xóa đánh giá"),
+          StackTrace.current,
+        );
+        return false;
+      }
+    } catch (e, st) {
+      state = AsyncError(e, st);
+      return false;
+    }
+  }
 }
 

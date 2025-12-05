@@ -1030,6 +1030,55 @@ class _DetailContent extends ConsumerWidget {
                     .toList(),
               ),
           ],
+          // Reply from provider
+          if (r.reply != null && r.reply!.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: ThemeHelper.isDarkMode(context)
+                    ? ThemeHelper.getPrimaryColor(context).withOpacity(0.15)
+                    : ThemeHelper.getLightBlueBackgroundColor(context),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: ThemeHelper.getPrimaryColor(context).withOpacity(0.3),
+                  width: 1,
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.store_rounded,
+                        size: 16,
+                        color: ThemeHelper.getPrimaryColor(context),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        context.tr('reply_from_seller'),
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: ThemeHelper.getPrimaryColor(context),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    r.reply!,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: ThemeHelper.getTextColor(context),
+                      height: 1.5,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ],
       ),
     );

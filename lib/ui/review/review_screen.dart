@@ -30,9 +30,13 @@ class ReviewScreen extends ConsumerStatefulWidget {
 class _ReviewScreenState extends ConsumerState<ReviewScreen> {
   int _rating = 0;
   final TextEditingController _commentController = TextEditingController();
-  final List<File> _selectedImages = [];
+  final List<File> _selectedImages = []; // New images to upload
+  final List<String> _existingImageUrls = []; // Existing image URLs from review
+  final List<String> _removedImageUrls = []; // URLs of images to remove
   final ImagePicker _picker = ImagePicker();
   bool _isSubmitting = false;
+  
+  bool get _isEditMode => widget.reviewItem != null;
 
   @override
   void dispose() {
@@ -41,7 +45,8 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
   }
 
   Future<void> _pickImages() async {
-    if (_selectedImages.length >= 5) {
+    final totalImages = _selectedImages.length + _existingImageUrls.length;
+    if (totalImages >= 5) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("${context.tr('max_5')} ${context.tr('attached_images').toLowerCase()}")),
       );
@@ -54,7 +59,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
       );
 
       if (images.isNotEmpty) {
-        final remaining = 5 - _selectedImages.length;
+        final remaining = 5 - totalImages;
         final toAdd = images.take(remaining).map((x) => File(x.path)).toList();
         setState(() {
           _selectedImages.addAll(toAdd);
@@ -70,6 +75,14 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
   void _removeImage(int index) {
     setState(() {
       _selectedImages.removeAt(index);
+    });
+  }
+
+  void _removeExistingImage(int index) {
+    setState(() {
+      final url = _existingImageUrls[index];
+      _existingImageUrls.removeAt(index);
+      _removedImageUrls.add(url);
     });
   }
 
@@ -103,39 +116,54 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
     });
 
     try {
-      if (widget.bookingDetail == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(context.tr('booking_info_not_found')),
-            backgroundColor: Colors.red,
-          ),
-        );
-        return;
-      }
-
-      final imagePaths = _selectedImages.map((f) => f.path).toList();
-      final success = await ref.read(reviewViewModelProvider.notifier).submitReview(
-            bookingId: widget.bookingDetail!.bookingId,
-            serviceId: widget.bookingDetail!.service.serviceId,
-            rating: _rating,
-            comment: comment,
-            imagePaths: imagePaths.isNotEmpty ? imagePaths : null,
+      bool success;
+      
+      if (_isEditMode) {
+        // Edit mode
+        final newImagePaths = _selectedImages.map((f) => f.path).toList();
+        success = await ref.read(reviewViewModelProvider.notifier).updateReview(
+              reviewId: widget.reviewItem!.reviewId,
+              rating: _rating,
+              comment: comment,
+              newImagePaths: newImagePaths.isNotEmpty ? newImagePaths : null,
+              removeImageUrls: _removedImageUrls.isNotEmpty ? _removedImageUrls : null,
+            );
+      } else {
+        // Create mode
+        if (widget.bookingDetail == null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(context.tr('booking_info_not_found')),
+              backgroundColor: Colors.red,
+            ),
           );
+          return;
+        }
+
+        final imagePaths = _selectedImages.map((f) => f.path).toList();
+        success = await ref.read(reviewViewModelProvider.notifier).submitReview(
+              bookingId: widget.bookingDetail!.bookingId,
+              serviceId: widget.bookingDetail!.service.serviceId,
+              rating: _rating,
+              comment: comment,
+              imagePaths: imagePaths.isNotEmpty ? imagePaths : null,
+            );
+      }
 
       if (mounted) {
         if (success) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(context.tr('review_success')),
+              content: Text(_isEditMode ? context.tr('review_updated_success') : context.tr('review_success')),
               backgroundColor: Colors.green,
             ),
           );
-          // Refresh history detail và quay lại
+          // Refresh và quay lại
           context.pop(true); // Return true để indicate success
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(context.tr('review_failed')),
+              content: Text(_isEditMode ? context.tr('review_update_failed') : context.tr('review_failed')),
               backgroundColor: Colors.red,
             ),
           );
@@ -166,7 +194,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
     if (widget.reviewItem != null) {
       _rating = widget.reviewItem!.rating ?? 0;
       _commentController.text = widget.reviewItem!.comment;
-      // TODO: Load existing images
+      _existingImageUrls.addAll(widget.reviewItem!.reviewImageUrls);
     }
   }
 
@@ -176,26 +204,9 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
     ref.watch(localeProvider);
     ref.watch(translationCacheProvider);
     
-    // Nếu là edit mode, hiển thị thông báo tạm thời
-    if (widget.reviewItem != null) {
-      return Scaffold(
-        appBar: AppBar(
-          title: Text(context.tr('edit_review')),
-        ),
-        body: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Text(
-              context.tr('edit_review_under_development'),
-              textAlign: TextAlign.center,
-            ),
-          ),
-        ),
-      );
-    }
-
-    // Create mode - bookingDetail should not be null here
-    final bookingDetail = widget.bookingDetail!;
+    // Get booking detail (for create mode) or service info (for edit mode)
+    final bookingDetail = widget.bookingDetail;
+    final reviewItem = widget.reviewItem;
     final translationService = DataTranslationService(ref);
     
     return Scaffold(
@@ -217,7 +228,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
           ),
         ),
         title: Text(
-          context.tr('review_service'),
+          _isEditMode ? context.tr('edit_review') : context.tr('review_service'),
           style: const TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.bold,
@@ -233,109 +244,125 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Service info card
-            Container(
-              decoration: BoxDecoration(
-                color: ThemeHelper.getCardBackgroundColor(context),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: ThemeHelper.getBorderColor(context),
-                  width: 1,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: ThemeHelper.getShadowColor(context),
-                    blurRadius: 10,
-                    offset: const Offset(0, 2),
+            if (bookingDetail != null || reviewItem != null)
+              Container(
+                decoration: BoxDecoration(
+                  color: ThemeHelper.getCardBackgroundColor(context),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: ThemeHelper.getBorderColor(context),
+                    width: 1,
                   ),
-                ],
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Row(
-                  children: [
-                    Container(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(
-                          color: ThemeHelper.getBorderColor(context),
-                          width: 1,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: ThemeHelper.getShadowColor(context),
-                            blurRadius: 4,
-                            offset: const Offset(0, 2),
+                  boxShadow: [
+                    BoxShadow(
+                      color: ThemeHelper.getShadowColor(context),
+                      blurRadius: 10,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    children: [
+                      Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: ThemeHelper.getBorderColor(context),
+                            width: 1,
                           ),
-                        ],
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(10),
-                        child: Image.network(
-                          bookingDetail.service.image,
-                          width: 80,
-                          height: 80,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) => Container(
+                          boxShadow: [
+                            BoxShadow(
+                              color: ThemeHelper.getShadowColor(context),
+                              blurRadius: 4,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(10),
+                          child: Image.network(
+                            bookingDetail?.service.image ?? reviewItem!.serviceThumbnailUrl,
                             width: 80,
                             height: 80,
-                            color: ThemeHelper.getLightBackgroundColor(context),
-                            child: Icon(
-                              Icons.image_rounded,
-                              size: 40,
-                              color: ThemeHelper.getSecondaryIconColor(context),
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) => Container(
+                              width: 80,
+                              height: 80,
+                              color: ThemeHelper.getLightBackgroundColor(context),
+                              child: Icon(
+                                Icons.image_rounded,
+                                size: 40,
+                                color: ThemeHelper.getSecondaryIconColor(context),
+                              ),
                             ),
                           ),
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Builder(
-                            builder: (context) {
-                              final locale = ref.read(localeProvider);
-                              final isVietnamese = locale.languageCode == 'vi';
-                              final title = isVietnamese 
-                                  ? bookingDetail.service.title 
-                                  : translationService.smartTranslate(bookingDetail.service.title);
-                              return Text(
-                                title,
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
-                                  color: ThemeHelper.getTextColor(context),
-                                ),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                              );
-                            },
-                          ),
-                          const SizedBox(height: 4),
-                          Builder(
-                            builder: (context) {
-                              final locale = ref.read(localeProvider);
-                              final isVietnamese = locale.languageCode == 'vi';
-                              final providerName = isVietnamese 
-                                  ? bookingDetail.provider.providerName 
-                                  : translationService.smartTranslate(bookingDetail.provider.providerName);
-                              return Text(
-                                providerName,
-                                style: TextStyle(
-                                  color: ThemeHelper.getSecondaryTextColor(context),
-                                  fontSize: 14,
-                                ),
-                              );
-                            },
-                          ),
-                        ],
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Builder(
+                              builder: (context) {
+                                if (bookingDetail != null) {
+                                  final locale = ref.read(localeProvider);
+                                  final isVietnamese = locale.languageCode == 'vi';
+                                  final title = isVietnamese 
+                                      ? bookingDetail.service.title 
+                                      : translationService.smartTranslate(bookingDetail.service.title);
+                                  return Text(
+                                    title,
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16,
+                                      color: ThemeHelper.getTextColor(context),
+                                    ),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  );
+                                } else {
+                                  return Text(
+                                    reviewItem!.serviceTitle,
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16,
+                                      color: ThemeHelper.getTextColor(context),
+                                    ),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  );
+                                }
+                              },
+                            ),
+                            if (bookingDetail != null) ...[
+                              const SizedBox(height: 4),
+                              Builder(
+                                builder: (context) {
+                                  final locale = ref.read(localeProvider);
+                                  final isVietnamese = locale.languageCode == 'vi';
+                                  final providerName = isVietnamese 
+                                      ? bookingDetail.provider.providerName 
+                                      : translationService.smartTranslate(bookingDetail.provider.providerName);
+                                  return Text(
+                                    providerName,
+                                    style: TextStyle(
+                                      color: ThemeHelper.getSecondaryTextColor(context),
+                                      fontSize: 14,
+                                    ),
+                                  );
+                                },
+                              ),
+                            ],
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
-            ),
             const SizedBox(height: 24),
 
             // Rating section
@@ -586,7 +613,61 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
               spacing: 8,
               runSpacing: 8,
               children: [
-                // Selected images
+                // Existing images (edit mode only)
+                ..._existingImageUrls.asMap().entries.map((entry) {
+                  final index = entry.key;
+                  final imageUrl = entry.value;
+                  return Stack(
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Image.network(
+                          imageUrl,
+                          width: 80,
+                          height: 80,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) => Container(
+                            width: 80,
+                            height: 80,
+                            color: ThemeHelper.getLightBackgroundColor(context),
+                            child: Icon(
+                              Icons.image_rounded,
+                              size: 40,
+                              color: ThemeHelper.getSecondaryIconColor(context),
+                            ),
+                          ),
+                        ),
+                      ),
+                      Positioned(
+                        top: 4,
+                        right: 4,
+                        child: GestureDetector(
+                          onTap: () => _removeExistingImage(index),
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              color: Colors.red.shade600,
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.red.withOpacity(0.3),
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: const Icon(
+                              Icons.close_rounded,
+                              color: Colors.white,
+                              size: 16,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
+                }),
+                // Selected images (new images to upload)
                 ..._selectedImages.asMap().entries.map((entry) {
                   final index = entry.key;
                   final image = entry.value;
@@ -631,7 +712,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
                   );
                 }),
                 // Add image button
-                if (_selectedImages.length < 5)
+                if ((_selectedImages.length + _existingImageUrls.length) < 5)
                   GestureDetector(
                     onTap: _pickImages,
                     child: Container(
@@ -655,7 +736,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            "${_selectedImages.length}/5",
+                            "${_selectedImages.length + _existingImageUrls.length}/5",
                             style: TextStyle(
                               color: ThemeHelper.getPrimaryColor(context),
                               fontSize: 12,
@@ -686,7 +767,9 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
                       )
                     : const Icon(Icons.send_rounded, size: 20),
                 label: Text(
-                  _isSubmitting ? context.tr('sending_review') : context.tr('submit_review'),
+                  _isSubmitting 
+                      ? (_isEditMode ? context.tr('updating_review') : context.tr('sending_review'))
+                      : (_isEditMode ? context.tr('update_review') : context.tr('submit_review')),
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,

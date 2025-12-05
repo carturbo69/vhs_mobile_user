@@ -27,22 +27,27 @@ class TranslationCacheNotifier extends Notifier<Map<String, String>> {
   }
   
   /// Get translation từ cache hoặc translate mới
-  Future<String> getTranslation(String text) async {
-    // Nếu đang dùng tiếng Việt, không cần translate
+  /// Mặc định: backend trả về tiếng Việt, dịch sang tiếng Anh khi app ở tiếng Anh
+  /// Có thể override bằng cách truyền from/to (ví dụ: unit type từ tiếng Anh sang tiếng Việt)
+  Future<String> getTranslation(String text, {String? from, String? to}) async {
     final locale = ref.read(localeProvider);
-    if (locale.languageCode == 'vi') {
-      return text;
-    }
+    final isVietnamese = locale.languageCode == 'vi';
     
-    // Kiểm tra cache
-    if (state.containsKey(text)) {
-      return state[text]!;
+    // Xác định ngôn ngữ nguồn và đích
+    // Mặc định: backend trả về tiếng Việt, dịch sang tiếng Anh khi app ở tiếng Anh
+    final fromLang = from ?? (isVietnamese ? 'vi' : 'vi');
+    final toLang = to ?? (isVietnamese ? 'vi' : 'en');
+    
+    // Kiểm tra cache với key bao gồm cả ngôn ngữ
+    final cacheKey = '${fromLang}_${toLang}_$text';
+    if (state.containsKey(cacheKey)) {
+      return state[cacheKey]!;
     }
     
     // Translate và cache
     try {
-      print('🔄 Calling Google Translate API for text (length: ${text.length})');
-      final translated = await _translateService.translate(text, from: 'vi', to: 'en');
+      print('🔄 Calling Google Translate API for text (length: ${text.length}) from $fromLang to $toLang');
+      final translated = await _translateService.translate(text, from: fromLang, to: toLang);
       
       // Debug: Kiểm tra xem translation có khác với text gốc không
       if (translated == text) {
@@ -56,7 +61,7 @@ class TranslationCacheNotifier extends Notifier<Map<String, String>> {
       }
       
       // Update state để trigger rebuild
-      state = {...state, text: translated};
+      state = {...state, cacheKey: translated};
       print('✅ Cache updated, state now has ${state.length} entries');
       return translated;
     } catch (e) {
@@ -66,21 +71,29 @@ class TranslationCacheNotifier extends Notifier<Map<String, String>> {
   }
   
   /// Get translation sync (từ cache)
-  String getTranslationSync(String text) {
+  /// Mặc định: backend trả về tiếng Việt, dịch sang tiếng Anh khi app ở tiếng Anh
+  /// Có thể override bằng cách truyền from/to (ví dụ: unit type từ tiếng Anh sang tiếng Việt)
+  String getTranslationSync(String text, {String? from, String? to}) {
     final locale = ref.read(localeProvider);
-    if (locale.languageCode == 'vi') {
-      return text;
-    }
+    final isVietnamese = locale.languageCode == 'vi';
+    
+    // Xác định ngôn ngữ nguồn và đích
+    // Mặc định: backend trả về tiếng Việt, dịch sang tiếng Anh khi app ở tiếng Anh
+    final fromLang = from ?? (isVietnamese ? 'vi' : 'vi');
+    final toLang = to ?? (isVietnamese ? 'vi' : 'en');
+    
+    // Kiểm tra cache với key bao gồm cả ngôn ngữ
+    final cacheKey = '${fromLang}_${toLang}_$text';
     
     // Trigger async translation nếu chưa có trong cache
-    if (!state.containsKey(text)) {
-      getTranslation(text).catchError((e) {
+    if (!state.containsKey(cacheKey)) {
+      getTranslation(text, from: fromLang, to: toLang).catchError((e) {
         print('⚠️ Async translation error: $e');
       });
     }
     
     // Trả về từ cache hoặc text gốc
-    return state[text] ?? text;
+    return state[cacheKey] ?? text;
   }
   
   /// Clear cache

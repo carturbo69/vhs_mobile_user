@@ -277,31 +277,39 @@ class ServiceCard extends ConsumerWidget {
                   ],
 
                   // ================= AREA/DURATION ICON =================
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: isDark
-                          ? Colors.blue.shade900.withOpacity(0.3)
-                          : lightBlue,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                    children: [
-                        Icon(Icons.access_time, size: 16, color: primaryBlue),
-                      const SizedBox(width: 6),
-                      Text(
-                          service.baseUnit != null 
-                              ? "${service.baseUnit} ${service.getLocalizedUnitType(ref)}"
-                              : "1 ${service.getLocalizedUnitType(ref)}",
-                          style: TextStyle(
-                          fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: isDark ? Colors.blue.shade300 : darkBlue,
+                  Builder(
+                    builder: (context) {
+                      // Watch locale và translation cache để rebuild khi đổi ngôn ngữ
+                      ref.watch(localeProvider);
+                      ref.watch(translationCacheProvider);
+                      
+                      return Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: isDark
+                              ? Colors.blue.shade900.withOpacity(0.3)
+                              : lightBlue,
+                          borderRadius: BorderRadius.circular(20),
                         ),
-                      ),
-                    ],
-                  ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.access_time, size: 16, color: primaryBlue),
+                            const SizedBox(width: 6),
+                            Text(
+                              service.baseUnit != null 
+                                  ? "${service.baseUnit} ${service.getLocalizedUnitType(ref)}"
+                                  : "1 ${service.getLocalizedUnitType(ref)}",
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: isDark ? Colors.blue.shade300 : darkBlue,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
                   ),
                   const SizedBox(height: 12),
 

@@ -44,5 +44,39 @@ class ReviewRepository {
 
     return await api.getMyReviews(accountId);
   }
+
+  Future<bool> updateReview({
+    required String reviewId,
+    required int rating,
+    String? comment,
+    List<String>? newImagePaths,
+    List<String>? removeImageUrls,
+  }) async {
+    final saved = await authDao.getSavedAuth();
+    final accountId = saved?['accountId'];
+    if (accountId == null) throw Exception("Missing accountId");
+
+    return await api.updateReview(
+      accountId: accountId,
+      reviewId: reviewId,
+      rating: rating,
+      comment: comment,
+      newImagePaths: newImagePaths,
+      removeImageUrls: removeImageUrls,
+    );
+  }
+
+  Future<bool> deleteReview({
+    required String reviewId,
+  }) async {
+    final saved = await authDao.getSavedAuth();
+    final accountId = saved?['accountId'];
+    if (accountId == null) throw Exception("Missing accountId");
+
+    return await api.deleteReview(
+      accountId: accountId,
+      reviewId: reviewId,
+    );
+  }
 }
 

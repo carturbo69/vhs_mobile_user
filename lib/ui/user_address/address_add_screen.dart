@@ -93,6 +93,84 @@ class _AddAddressPageState extends ConsumerState<AddAddressPage> {
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
+          // Pick location button - Đặt lên đầu
+          Card(
+            elevation: 2,
+            shadowColor: ThemeHelper.getShadowColor(context),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: InkWell(
+              onTap: () async {
+                final result = await context.push(Routes.locationPicker);
+
+                if (result != null) {
+                  final data = result as Map<String, dynamic>;
+                  setState(() {
+                    lat = data["lat"] as double?;
+                    lng = data["lng"] as double?;
+                    // Điền vào tất cả các trường
+                    _province.text = data["provinceName"] as String? ?? "";
+                    _district.text = data["districtName"] as String? ?? "";
+                    _ward.text = data["wardName"] as String? ?? "";
+                    _street.text = data["streetAddress"] as String? ?? "";
+                  });
+                }
+              },
+              borderRadius: BorderRadius.circular(12),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Icon(
+                        Icons.map,
+                        color: Theme.of(context).colorScheme.primary,
+                        size: 24,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            context.tr('select_location_on_map'),
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: ThemeHelper.getTextColor(context),
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            context.tr('select_location_to_auto_fill'),
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: ThemeHelper.getSecondaryTextColor(context),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Icon(
+                      Icons.chevron_right,
+                      color: ThemeHelper.getSecondaryIconColor(context),
+                      size: 24,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          
+          const SizedBox(height: 24),
+          
           // Section: Thông tin địa chỉ
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -194,84 +272,6 @@ class _AddAddressPageState extends ConsumerState<AddAddressPage> {
           const SizedBox(height: 16),
           _field(context.tr('recipient_name'), _recipientName, Icons.person_outline),
           _field(context.tr('recipient_phone'), _recipientPhone, Icons.phone),
-          
-          const SizedBox(height: 24),
-          
-          // Pick location button
-          Card(
-            elevation: 2,
-            shadowColor: ThemeHelper.getShadowColor(context),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: InkWell(
-              onTap: () async {
-                final result = await context.push(Routes.locationPicker);
-
-                if (result != null) {
-                  final data = result as Map<String, dynamic>;
-                  setState(() {
-                    lat = data["lat"] as double?;
-                    lng = data["lng"] as double?;
-                    // Điền vào tất cả các trường
-                    _province.text = data["provinceName"] as String? ?? "";
-                    _district.text = data["districtName"] as String? ?? "";
-                    _ward.text = data["wardName"] as String? ?? "";
-                    _street.text = data["streetAddress"] as String? ?? "";
-                  });
-                }
-              },
-              borderRadius: BorderRadius.circular(12),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Icon(
-                        Icons.map,
-                        color: Theme.of(context).colorScheme.primary,
-                        size: 24,
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            context.tr('select_location_on_map'),
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                              color: ThemeHelper.getTextColor(context),
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            context.tr('select_location_to_auto_fill'),
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: ThemeHelper.getSecondaryTextColor(context),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Icon(
-                      Icons.chevron_right,
-                      color: ThemeHelper.getSecondaryIconColor(context),
-                      size: 24,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
 
           const SizedBox(height: 32),
           ElevatedButton(

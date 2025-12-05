@@ -157,7 +157,7 @@ class _LoginPageState extends ConsumerState<LoginPage> with SingleTickerProvider
                             padding: const EdgeInsets.all(10),
                             child: ClipOval(
                               child: Image.asset(
-                                'assets/images/vhs_logo.png',
+                                'lib/image/vhs_logo.png',
                                 fit: BoxFit.cover,
                                 errorBuilder: (context, error, stackTrace) {
                                   return Container(

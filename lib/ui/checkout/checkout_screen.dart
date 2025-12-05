@@ -1529,14 +1529,48 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                       
                       // Kiểm tra giờ đặt cho từng item
                       final timeErrors = <String, String>{};
+                      final now = DateTime.now();
+                      final today = DateTime(now.year, now.month, now.day);
+                      
                       for (final item in items) {
                         if (selectedTimes[item.cartItemId] == null) {
                           timeErrors[item.cartItemId] = '${context.tr('please_select_time_slot_for')} ${_getLocalizedServiceName(item.serviceName)}';
                           hasError = true;
+                        } else {
+                          // Kiểm tra xem ngày giờ đã chọn có phải quá khứ không
+                          final selectedDate = selectedDates[item.cartItemId];
+                          final selectedTime = selectedTimes[item.cartItemId]!;
+                          
+                          if (selectedDate != null) {
+                            final selectedDateOnly = DateTime(selectedDate.year, selectedDate.month, selectedDate.day);
+                            
+                            // Nếu là ngày hôm nay, check giờ phút
+                            if (selectedDateOnly.isAtSameMomentAs(today)) {
+                              final selectedMinutes = selectedTime.hour * 60 + selectedTime.minute;
+                              final currentMinutes = now.hour * 60 + now.minute;
+                              
+                              // Nếu giờ phút <= giờ phút hiện tại thì là quá khứ
+                              if (selectedMinutes <= currentMinutes) {
+                                // Giờ đã chọn đã trở thành quá khứ - yêu cầu chọn lại
+                                timeErrors[item.cartItemId] = 'Giờ đã chọn đã trôi qua, vui lòng chọn lại giờ';
+                                // Clear giờ đã chọn để người dùng phải chọn lại
+                                selectedTimes[item.cartItemId] = null;
+                          hasError = true;
+                              }
+                            } else if (selectedDateOnly.isBefore(today)) {
+                              // Ngày đã chọn đã trở thành quá khứ - yêu cầu chọn lại
+                              dateErrors[item.cartItemId] = 'Ngày đã chọn đã trôi qua, vui lòng chọn lại ngày';
+                              // Clear ngày và giờ đã chọn để người dùng phải chọn lại
+                              selectedDates[item.cartItemId] = null;
+                              selectedTimes[item.cartItemId] = null;
+                              hasError = true;
+                            }
+                          }
                         }
                       }
                       setState(() {
                         _timeErrors = timeErrors;
+                        _dateErrors = dateErrors; // Update date errors nếu có
                       });
                       
                       // Kiểm tra đã đồng ý điều khoản chưa
