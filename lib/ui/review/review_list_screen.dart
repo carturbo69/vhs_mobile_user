@@ -331,6 +331,16 @@ class _ReviewCard extends ConsumerWidget {
     final isDark = ThemeHelper.isDarkMode(context);
     final translationService = DataTranslationService(ref);
     
+    // Kiểm tra xem đánh giá đã hơn 7 ngày chưa
+    final now = DateTime.now();
+    final createdDate = review.createdAt?.toLocal() ?? now;
+    final daysDifference = now.difference(createdDate).inDays;
+    final isExpired = daysDifference > 7;
+    
+    // Nếu hơn 7 ngày thì không cho phép chỉnh sửa và xóa
+    final canEditReview = review.canEdit && !isExpired;
+    final canDeleteReview = review.canDelete && !isExpired;
+    
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
@@ -680,92 +690,93 @@ class _ReviewCard extends ConsumerWidget {
               color: ThemeHelper.getBorderColor(context),
             ),
             const SizedBox(height: 8),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                Tooltip(
-                  message: review.canEdit 
-                      ? context.tr('edit')
-                      : 'Đã có phản hồi hoặc đã sửa 1 lần',
-                  child: OutlinedButton.icon(
-                    onPressed: review.canEdit ? onEdit : null,
-                    icon: Icon(
-                      Icons.edit_rounded, 
-                      size: 18,
-                      color: review.canEdit 
-                          ? ThemeHelper.getPrimaryColor(context)
-                          : ThemeHelper.getSecondaryIconColor(context),
-                    ),
-                    label: Text(
-                      context.tr('edit'),
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: review.canEdit 
+            if (!isExpired)
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  Tooltip(
+                    message: canEditReview 
+                        ? context.tr('edit')
+                        : 'Đã có phản hồi hoặc đã sửa 1 lần',
+                    child: OutlinedButton.icon(
+                      onPressed: canEditReview ? onEdit : null,
+                      icon: Icon(
+                        Icons.edit_rounded, 
+                        size: 18,
+                        color: canEditReview 
                             ? ThemeHelper.getPrimaryColor(context)
                             : ThemeHelper.getSecondaryIconColor(context),
                       ),
-                    ),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: review.canEdit 
-                          ? ThemeHelper.getPrimaryColor(context)
-                          : ThemeHelper.getSecondaryIconColor(context),
-                      side: BorderSide(
-                        color: review.canEdit 
-                            ? ThemeHelper.getPrimaryColor(context)
-                            : ThemeHelper.getBorderColor(context),
-                        width: 1.5,
+                      label: Text(
+                        context.tr('edit'),
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: canEditReview 
+                              ? ThemeHelper.getPrimaryColor(context)
+                              : ThemeHelper.getSecondaryIconColor(context),
+                        ),
                       ),
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: canEditReview 
+                            ? ThemeHelper.getPrimaryColor(context)
+                            : ThemeHelper.getSecondaryIconColor(context),
+                        side: BorderSide(
+                          color: canEditReview 
+                              ? ThemeHelper.getPrimaryColor(context)
+                              : ThemeHelper.getBorderColor(context),
+                          width: 1.5,
+                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
                       ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 8),
-                Tooltip(
-                  message: review.canDelete 
-                      ? context.tr('delete')
-                      : 'Đánh giá đã có phản hồi, không thể xoá',
-                  child: OutlinedButton.icon(
-                    onPressed: review.canDelete ? onDelete : null,
-                    icon: Icon(
-                      Icons.delete_rounded, 
-                      size: 18,
-                      color: review.canDelete 
-                          ? Colors.red
-                          : ThemeHelper.getSecondaryIconColor(context),
-                    ),
-                    label: Text(
-                      context.tr('delete'),
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: review.canDelete 
+                  const SizedBox(width: 8),
+                  Tooltip(
+                    message: canDeleteReview 
+                        ? context.tr('delete')
+                        : 'Đánh giá đã có phản hồi, không thể xoá',
+                    child: OutlinedButton.icon(
+                      onPressed: canDeleteReview ? onDelete : null,
+                      icon: Icon(
+                        Icons.delete_rounded, 
+                        size: 18,
+                        color: canDeleteReview 
                             ? Colors.red
                             : ThemeHelper.getSecondaryIconColor(context),
                       ),
-                    ),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: review.canDelete 
-                          ? Colors.red
-                          : ThemeHelper.getSecondaryIconColor(context),
-                      side: BorderSide(
-                        color: review.canDelete 
-                            ? Colors.red
-                            : ThemeHelper.getBorderColor(context),
-                        width: 1.5,
+                      label: Text(
+                        context.tr('delete'),
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: canDeleteReview 
+                              ? Colors.red
+                              : ThemeHelper.getSecondaryIconColor(context),
+                        ),
                       ),
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: canDeleteReview 
+                            ? Colors.red
+                            : ThemeHelper.getSecondaryIconColor(context),
+                        side: BorderSide(
+                          color: canDeleteReview 
+                              ? Colors.red
+                              : ThemeHelper.getBorderColor(context),
+                          width: 1.5,
+                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
                       ),
                     ),
                   ),
-                ),
-              ],
-            ),
+                ],
+              ),
           ],
         ),
       ),
