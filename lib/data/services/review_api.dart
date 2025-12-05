@@ -68,5 +68,67 @@ class ReviewApi {
       rethrow;
     }
   }
+
+  // PUT /api/Reviews/{accountId}/edit với multipart/form-data
+  Future<bool> updateReview({
+    required String accountId,
+    required String reviewId,
+    required int rating,
+    String? comment,
+    List<String>? newImagePaths, // Local file paths for new images
+    List<String>? removeImageUrls, // URLs of images to remove
+  }) async {
+    try {
+      final formData = FormData.fromMap({
+        'ReviewId': reviewId,
+        'Rating': rating,
+        if (comment != null && comment.isNotEmpty) 'Comment': comment,
+      });
+
+      // Thêm ảnh mới nếu có
+      if (newImagePaths != null && newImagePaths.isNotEmpty) {
+        for (var path in newImagePaths) {
+          formData.files.add(MapEntry(
+            'NewImages',
+            await MultipartFile.fromFile(path),
+          ));
+        }
+      }
+
+      // Thêm danh sách ảnh cần xóa nếu có
+      if (removeImageUrls != null && removeImageUrls.isNotEmpty) {
+        for (var url in removeImageUrls) {
+          formData.fields.add(MapEntry('RemoveImages', url));
+        }
+      }
+
+      final resp = await _dio.put(
+        '/api/Reviews/$accountId/edit',
+        data: formData,
+        options: Options(
+          contentType: 'multipart/form-data',
+        ),
+      );
+
+      return resp.data['success'] == true || resp.statusCode == 200;
+    } on DioException catch (e) {
+      debugPrint("Error updating review: $e");
+      rethrow;
+    }
+  }
+
+  // DELETE /api/Reviews/{accountId}/{reviewId}
+  Future<bool> deleteReview({
+    required String accountId,
+    required String reviewId,
+  }) async {
+    try {
+      final resp = await _dio.delete('/api/Reviews/$accountId/$reviewId');
+      return resp.data['success'] == true || resp.statusCode == 200;
+    } on DioException catch (e) {
+      debugPrint("Error deleting review: $e");
+      rethrow;
+    }
+  }
 }
 

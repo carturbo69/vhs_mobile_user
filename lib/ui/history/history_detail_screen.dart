@@ -1117,7 +1117,7 @@ print("🔥 TOTAL = ${detail.service.lineTotal - detail.voucherDiscount}");
                   ),
                   const SizedBox(width: 12),
                   Text(
-                    context.tr('refund_notification'),
+                    context.tr('notification'),
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -1192,17 +1192,26 @@ print("🔥 TOTAL = ${detail.service.lineTotal - detail.voucherDiscount}");
     // ========================================
   Widget _actionButtons(BuildContext context, HistoryBookingDetail detail) {
     final statusLower = detail.status.toLowerCase().trim();
-    final isCompleted = statusLower == "completed";
+    
+    // Kiểm tra chặt chẽ từng trạng thái
+    final isConfirmed = statusLower.contains("confirmed") && !statusLower.contains("completed");
     final isServiceCompleted = statusLower == "service completed" || 
-                               statusLower == "servicecompleted";
+                               statusLower == "servicecompleted" ||
+                               (statusLower.contains("service") && statusLower.contains("completed"));
+    // Chỉ "completed" thuần túy (không phải service completed, không phải confirmed)
+    final isCompleted = (statusLower == "completed" || 
+                        (statusLower.contains("completed") && !statusLower.contains("service"))) &&
+                        !isConfirmed;
+    
     final isCompletedOrServiceCompleted = isCompleted || isServiceCompleted;
     
-    // Chỉ đơn Hoàn thành thật sự (không phải ServiceCompleted) mới được phép đánh giá
-    var canReview = isCompleted && !detail.hasReview;
+    // Chỉ cho phép đánh giá khi là "Completed" thuần túy (không phải Service Completed, không phải Confirmed)
+    var canReview = isCompleted && !isConfirmed && !detail.hasReview;
     var canReport = isCompletedOrServiceCompleted;
     
     // Kiểm tra xem đã qua 7 ngày từ khi hoàn thành chưa
-    if (isCompletedOrServiceCompleted) {
+    // Chỉ check 7 ngày cho đánh giá nếu là Completed
+    if (isCompleted && canReview) {
       DateTime? completedDate = detail.completedAt;
       
       // Nếu không có completedAt, thử lấy từ timeline
@@ -1246,12 +1255,57 @@ print("🔥 TOTAL = ${detail.service.lineTotal - detail.voucherDiscount}");
       if (completedDate != null) {
         final now = DateTime.now();
         final daysSinceCompleted = now.difference(completedDate).inDays;
-        // Nếu đã qua 7 ngày (>= 7) thì không cho báo cáo và đánh giá nữa
+        // Nếu đã qua 7 ngày (>= 7) thì không cho đánh giá nữa
         final within7Days = daysSinceCompleted < 7;
-        canReport = within7Days;
         canReview = canReview && within7Days; // Chỉ cho phép đánh giá nếu chưa qua 7 ngày
       }
-      // Nếu không có thông tin về thời gian hoàn thành, vẫn cho phép báo cáo và đánh giá (fallback)
+      // Nếu không có thông tin về thời gian hoàn thành, vẫn cho phép đánh giá (fallback)
+    }
+    
+    // Kiểm tra 7 ngày cho báo cáo (áp dụng cho cả Completed và Service Completed)
+    if (isCompletedOrServiceCompleted) {
+      DateTime? completedDate = detail.completedAt;
+      
+      // Nếu không có completedAt, thử lấy từ timeline
+      if (completedDate == null && detail.timeline.isNotEmpty) {
+        final possibleCodes = ["CHECK OUT", "Check Out", "CHECKOUT", "check out", 
+                              "COMPLETED", "Completed", "completed"];
+        
+        for (var code in possibleCodes) {
+          try {
+            final event = detail.timeline.firstWhere(
+              (e) => e.code.toUpperCase() == code.toUpperCase(),
+            );
+            if (event.time != null) {
+              completedDate = event.time;
+              break;
+            }
+          } catch (e) {
+            continue;
+          }
+        }
+        
+        if (completedDate == null) {
+          try {
+            final completedEvent = detail.timeline.firstWhere(
+              (e) => e.code.toUpperCase().contains("OUT") || 
+                     e.code.toUpperCase().contains("COMPLETE"),
+            );
+            if (completedEvent.time != null) {
+              completedDate = completedEvent.time;
+            }
+          } catch (e) {
+            // Không tìm thấy event
+          }
+        }
+      }
+      
+      if (completedDate != null) {
+        final now = DateTime.now();
+        final daysSinceCompleted = now.difference(completedDate).inDays;
+        final within7Days = daysSinceCompleted < 7;
+        canReport = within7Days;
+      }
     }
     
     return Column(
@@ -1311,7 +1365,7 @@ print("🔥 TOTAL = ${detail.service.lineTotal - detail.voucherDiscount}");
           }),
 
         // ==== ⭐ NÚT ĐÁNH GIÁ ====
-        // Chỉ hiển thị khi Completed (không phải Service Completed), chưa đánh giá và chưa qua 7 ngày
+        // Hiển thị khi Completed (không phải Service Completed), chưa đánh giá và chưa qua 7 ngày
         if (canReview)
           Column(
             children: [

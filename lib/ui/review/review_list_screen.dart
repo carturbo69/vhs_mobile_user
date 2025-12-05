@@ -7,6 +7,7 @@ import 'package:vhs_mobile_user/data/models/review/review_list_item.dart';
 import 'package:vhs_mobile_user/routing/routes.dart';
 import 'package:vhs_mobile_user/ui/review/review_list_viewmodel.dart';
 import 'package:vhs_mobile_user/ui/review/review_screen.dart';
+import 'package:vhs_mobile_user/ui/review/review_viewmodel.dart';
 import 'package:vhs_mobile_user/ui/core/theme_helper.dart';
 import 'package:vhs_mobile_user/l10n/extensions/localization_extension.dart';
 import 'package:vhs_mobile_user/providers/locale_provider.dart';
@@ -247,10 +248,52 @@ class ReviewListScreen extends ConsumerWidget {
                     );
 
                     if (confirm == true && context.mounted) {
-                      // TODO: Implement delete review
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text(context.tr('delete_review_feature_under_development'))),
+                      // Show loading
+                      showDialog(
+                        context: context,
+                        barrierDismissible: false,
+                        builder: (context) => const Center(
+                          child: CircularProgressIndicator(),
+                        ),
                       );
+
+                      try {
+                        final success = await ref.read(reviewViewModelProvider.notifier).deleteReview(
+                              reviewId: reviews[index].reviewId,
+                            );
+
+                        if (context.mounted) {
+                          Navigator.pop(context); // Close loading dialog
+                          
+                          if (success) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(context.tr('review_deleted_success')),
+                                backgroundColor: Colors.green,
+                              ),
+                            );
+                            // Refresh list
+                            ref.invalidate(reviewListProvider);
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(context.tr('review_delete_failed')),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                          }
+                        }
+                      } catch (e) {
+                        if (context.mounted) {
+                          Navigator.pop(context); // Close loading dialog
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text("${context.tr('error')}: ${e.toString()}"),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        }
+                      }
                     }
                   },
                 );
@@ -631,64 +674,98 @@ class _ReviewCard extends ConsumerWidget {
               ),
             ],
 
-            // Actions
-            if (review.canEdit || review.canDelete) ...[
-              const SizedBox(height: 16),
-              Divider(
-                color: ThemeHelper.getBorderColor(context),
-              ),
-              const SizedBox(height: 8),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  if (review.canEdit)
-                    OutlinedButton.icon(
-                      onPressed: onEdit,
-                      icon: const Icon(Icons.edit_rounded, size: 18),
-                      label: Text(
-                        context.tr('edit'),
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: ThemeHelper.getPrimaryColor(context),
-                        side: BorderSide(
-                          color: ThemeHelper.getPrimaryColor(context),
-                          width: 1.5,
-                        ),
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
+            // Actions - Luôn hiển thị cả 2 nút, disable khi không thể sửa/xóa
+            const SizedBox(height: 16),
+            Divider(
+              color: ThemeHelper.getBorderColor(context),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                Tooltip(
+                  message: review.canEdit 
+                      ? context.tr('edit')
+                      : 'Đã có phản hồi hoặc đã sửa 1 lần',
+                  child: OutlinedButton.icon(
+                    onPressed: review.canEdit ? onEdit : null,
+                    icon: Icon(
+                      Icons.edit_rounded, 
+                      size: 18,
+                      color: review.canEdit 
+                          ? ThemeHelper.getPrimaryColor(context)
+                          : ThemeHelper.getSecondaryIconColor(context),
+                    ),
+                    label: Text(
+                      context.tr('edit'),
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: review.canEdit 
+                            ? ThemeHelper.getPrimaryColor(context)
+                            : ThemeHelper.getSecondaryIconColor(context),
                       ),
                     ),
-                  if (review.canDelete) ...[
-                    const SizedBox(width: 8),
-                    OutlinedButton.icon(
-                      onPressed: onDelete,
-                      icon: const Icon(Icons.delete_rounded, size: 18),
-                      label: Text(
-                        context.tr('delete'),
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                        ),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: review.canEdit 
+                          ? ThemeHelper.getPrimaryColor(context)
+                          : ThemeHelper.getSecondaryIconColor(context),
+                      side: BorderSide(
+                        color: review.canEdit 
+                            ? ThemeHelper.getPrimaryColor(context)
+                            : ThemeHelper.getBorderColor(context),
+                        width: 1.5,
                       ),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.red,
-                        side: BorderSide(color: Colors.red, width: 1.5),
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
                       ),
                     ),
-                  ],
-                ],
-              ),
-            ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Tooltip(
+                  message: review.canDelete 
+                      ? context.tr('delete')
+                      : 'Đánh giá đã có phản hồi, không thể xoá',
+                  child: OutlinedButton.icon(
+                    onPressed: review.canDelete ? onDelete : null,
+                    icon: Icon(
+                      Icons.delete_rounded, 
+                      size: 18,
+                      color: review.canDelete 
+                          ? Colors.red
+                          : ThemeHelper.getSecondaryIconColor(context),
+                    ),
+                    label: Text(
+                      context.tr('delete'),
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: review.canDelete 
+                            ? Colors.red
+                            : ThemeHelper.getSecondaryIconColor(context),
+                      ),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: review.canDelete 
+                          ? Colors.red
+                          : ThemeHelper.getSecondaryIconColor(context),
+                      side: BorderSide(
+                        color: review.canDelete 
+                            ? Colors.red
+                            : ThemeHelper.getBorderColor(context),
+                        width: 1.5,
+                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ],
         ),
       ),

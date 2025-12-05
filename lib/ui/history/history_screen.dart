@@ -7,7 +7,6 @@ import 'package:vhs_mobile_user/data/models/booking/booking_history_item.dart';
 import 'package:vhs_mobile_user/data/repositories/booking_repository.dart';
 import 'package:vhs_mobile_user/routing/routes.dart';
 import 'package:vhs_mobile_user/ui/history/history_viewmodel.dart';
-import 'package:vhs_mobile_user/ui/cart/cart_list_viewmodel.dart';
 import 'package:vhs_mobile_user/ui/payment/payment_viewmodel.dart';
 import 'package:vhs_mobile_user/ui/core/theme_helper.dart';
 import 'package:vhs_mobile_user/l10n/extensions/localization_extension.dart';
@@ -1371,56 +1370,12 @@ class _BookingHistoryCard extends ConsumerWidget {
                   children: [
                     Expanded(
                       child: OutlinedButton.icon(
-                        onPressed: () async {
-                          // Thêm service vào cart và navigate đến checkout
-                          try {
-                            // Hiển thị loading
-                            if (context.mounted) {
-                              showDialog(
-                                context: context,
-                                barrierDismissible: false,
-                                builder: (dialogContext) => Center(
-                                  child: CircularProgressIndicator(
-                                    valueColor: AlwaysStoppedAnimation<Color>(
-                                      ThemeHelper.getPrimaryColor(context),
-                                    ),
-                                  ),
-                                ),
+                        onPressed: () {
+                          // Navigate đến checkout với serviceId trực tiếp (không qua cart)
+                          context.push(
+                            Routes.checkout,
+                            extra: {'serviceId': item.serviceId},
                               );
-                            }
-
-                            // Thêm service vào cart
-                            await ref
-                                .read(cartProvider.notifier)
-                                .addToCartFromDetail(serviceId: item.serviceId);
-
-                            // Đóng loading dialog
-                            if (context.mounted) {
-                              if (Navigator.of(context).canPop()) {
-                                Navigator.of(context).pop();
-                              }
-                              // Navigate đến checkout
-                              context.push(Routes.checkout);
-                            }
-                          } catch (e) {
-                            // Đóng loading dialog nếu có lỗi
-                            if (context.mounted) {
-                              if (Navigator.of(context).canPop()) {
-                                Navigator.of(context).pop();
-                              }
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(
-                                    e.toString().contains('đã có trong giỏ hàng')
-                                        ? context.tr('service_already_in_cart_error')
-                                        : context.tr('cannot_reorder_try_again'),
-                                  ),
-                                  backgroundColor: Colors.red,
-                                  duration: const Duration(seconds: 3),
-                                ),
-                              );
-                            }
-                          }
                         },
                         icon: const Icon(Icons.replay_rounded, size: 18),
                         label: Text(
