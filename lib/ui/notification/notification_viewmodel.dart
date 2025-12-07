@@ -4,6 +4,7 @@ import 'package:vhs_mobile_user/data/models/notification/notification_model.dart
 import 'package:vhs_mobile_user/data/repositories/notification_repository.dart';
 import 'package:vhs_mobile_user/data/services/signalr_notification_service.dart';
 import 'package:vhs_mobile_user/helper/jwt_helper.dart';
+import 'package:vhs_mobile_user/services/notification_service.dart';
 
 final notificationListProvider =
     AsyncNotifierProvider<NotificationListNotifier, List<NotificationModel>>(
@@ -62,13 +63,33 @@ class NotificationListNotifier extends AsyncNotifier<List<NotificationModel>> {
 
     final accountId = await _getAccountId();
     if (accountId == null || accountId.isEmpty) {
+      print('⚠️ [NotificationViewModel] No accountId found');
       return [];
     }
 
     _accountId = accountId;
+    print('📋 [NotificationViewModel] Loading notifications for accountId: $accountId');
 
     final response = await _repo.getMyNotifications();
-    return response.data ?? [];
+    final notifications = response.data ?? [];
+    
+    // Log all notification types received
+    final notificationTypes = notifications.map((n) => n.notificationType).toSet();
+    print('📋 [NotificationViewModel] Loaded ${notifications.length} notifications');
+    print('📋 [NotificationViewModel] Notification types: ${notificationTypes.join(", ")}');
+    
+    // Check for system notifications
+    final systemNotifications = notifications.where((n) => 
+      n.notificationType.toLowerCase().contains('system') || 
+      n.notificationType.toLowerCase().contains('hệ thống')
+    ).toList();
+    if (systemNotifications.isNotEmpty) {
+      print('✅ [NotificationViewModel] Found ${systemNotifications.length} system notification(s)');
+    } else {
+      print('⚠️ [NotificationViewModel] No system notifications found');
+    }
+    
+    return notifications;
   }
 
   Future<void> refresh() async {
@@ -94,8 +115,19 @@ class NotificationListNotifier extends AsyncNotifier<List<NotificationModel>> {
         
         if (newNotifications.isNotEmpty) {
           print("📬 Phát hiện ${newNotifications.length} thông báo mới sau refresh");
-          // Notify about new notifications - this will be handled by GlobalNotificationService
-          // if it's watching this provider
+          
+          // Trigger GlobalNotificationService to show local notifications
+          // This ensures system notifications and all other notifications are shown
+          try {
+            final notificationService = ref.read(notificationServiceProvider);
+            // Show notification for each new notification (especially system notifications)
+            for (final notification in newNotifications) {
+              print("🔔 [NotificationViewModel] Triggering local notification for: ${notification.notificationType}");
+              await notificationService.showNotificationForNewItem(notification);
+            }
+          } catch (e) {
+            print("❌ [NotificationViewModel] Error showing notifications: $e");
+          }
         }
       }
       

@@ -616,7 +616,7 @@ const Map<String, String> viTranslations = {
   'confirm_new_password': 'Xác nhận mật khẩu mới',
   'please_enter_current_password': 'Vui lòng nhập mật khẩu hiện tại',
   'please_enter_new_password': 'Vui lòng nhập mật khẩu mới',
-  'password_min_length': 'Mật khẩu phải có ít nhất 8 ký tự',
+  'password_min_length': 'Mật khẩu phải có ít nhất 6 ký tự',
   'password_requirements': 'Mật khẩu phải có chữ hoa, chữ thường và số',
   'please_confirm_password': 'Vui lòng xác nhận mật khẩu',
   'password_mismatch': 'Mật khẩu xác nhận không khớp',

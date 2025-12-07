@@ -335,12 +335,36 @@ class _NotificationItem extends ConsumerWidget {
                     ),
                     if (notification.createdAt != null) ...[
                       const SizedBox(height: 8),
-                      Text(
-                        _formatTime(context, notification.createdAt!),
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: ThemeHelper.getTertiaryTextColor(context),
-                        ),
+                      Row(
+                        children: [
+                          Text(
+                            _formatTime(context, notification.createdAt!),
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: ThemeHelper.getTertiaryTextColor(context),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: ThemeHelper.getPrimaryColor(context).withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: ThemeHelper.getPrimaryColor(context).withOpacity(0.3),
+                                width: 1,
+                              ),
+                            ),
+                            child: Text(
+                              _getNotificationTypeVN(notification.notificationType),
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600,
+                                color: ThemeHelper.getPrimaryColor(context),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ],
@@ -353,18 +377,62 @@ class _NotificationItem extends ConsumerWidget {
     );
   }
 
+  /// Convert notification type to Vietnamese (matching web implementation)
+  String _getNotificationTypeVN(String type) {
+    final t = type.toLowerCase();
+    if (t == 'payment_success' || t.contains('thanh toán thành công')) {
+      return 'Thanh toán thành công';
+    } else if (t == 'new_booking' || t.contains('đơn hàng mới')) {
+      return 'Đơn hàng mới';
+    } else if (t == 'booking_confirmed' || t == 'confirmed' || t.contains('xác nhận đơn hàng') || t.contains('xác nhận')) {
+      return 'Xác nhận đơn hàng';
+    } else if (t == 'booking_cancelled' || t == 'canceled' || t.contains('hủy đơn hàng') || t.contains('bị hủy')) {
+      return 'Hủy đơn hàng';
+    } else if (t == 'booking_completed' || t == 'completed' || t.contains('hoàn thành đơn hàng') || t.contains('hoàn thành')) {
+      return 'Hoàn thành đơn hàng';
+    } else if (t.contains('payment') || t.contains('thanh toán')) {
+      return 'Thanh toán';
+    } else if (t.contains('booking') || t.contains('đặt lịch')) {
+      return 'Đặt lịch';
+    } else if (t == 'system' || t.contains('hệ thống')) {
+      return 'Hệ thống';
+    } else if (t.contains('promotion') || t.contains('khuyến mãi')) {
+      return 'Khuyến mãi';
+    } else if (t == 'servicecompleted' || t.contains('xác nhận hoàn thành')) {
+      return 'Xác nhận hoàn thành';
+    } else if (t.contains('hoàn tiền')) {
+      return 'Hoàn tiền';
+    } else if (t.contains('khiếu nại')) {
+      return 'Khiếu nại';
+    } else if (t.contains('message') || t.contains('chat')) {
+      return 'Tin nhắn';
+    } else if (t.contains('review')) {
+      return 'Đánh giá';
+    } else if (t.contains('report')) {
+      return 'Báo cáo';
+    }
+    return type; // Return original if no match
+  }
+
   IconData _getNotificationIcon(String type) {
     final t = type.toLowerCase();
-    if (t.contains('booking') || t.contains('order')) {
-      return Icons.shopping_bag;
-    } else if (t.contains('payment')) {
+    // Match web implementation icon logic
+    if (t.contains('payment') || t.contains('thanh toán')) {
       return Icons.payment;
+    } else if (t.contains('booking') || t.contains('order') || t.contains('đơn hàng') || t.contains('đặt lịch')) {
+      return Icons.calendar_today;
+    } else if (t == 'system' || t.contains('hệ thống')) {
+      return Icons.settings;
     } else if (t.contains('message') || t.contains('chat')) {
       return Icons.chat;
-    } else if (t.contains('review')) {
+    } else if (t.contains('review') || t.contains('đánh giá')) {
       return Icons.star;
-    } else if (t.contains('report')) {
+    } else if (t.contains('report') || t.contains('khiếu nại')) {
       return Icons.report;
+    } else if (t.contains('promotion') || t.contains('khuyến mãi')) {
+      return Icons.local_offer;
+    } else if (t.contains('hoàn tiền')) {
+      return Icons.account_balance_wallet;
     }
     return Icons.notifications;
   }
