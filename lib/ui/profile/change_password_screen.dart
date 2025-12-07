@@ -165,11 +165,8 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
                   if (value == null || value.isEmpty) {
                     return context.tr('please_enter_new_password');
                   }
-                  if (value.length < 8) {
+                  if (value.length < 6) {
                     return context.tr('password_min_length');
-                  }
-                  if (!RegExp(r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$').hasMatch(value)) {
-                    return context.tr('password_requirements');
                   }
                   return null;
                 },

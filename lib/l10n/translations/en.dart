@@ -616,7 +616,7 @@ const Map<String, String> enTranslations = {
   'confirm_new_password': 'Confirm New Password',
   'please_enter_current_password': 'Please enter current password',
   'please_enter_new_password': 'Please enter new password',
-  'password_min_length': 'Password must be at least 8 characters',
+  'password_min_length': 'Password must be at least 6 characters',
   'password_requirements': 'Password must contain uppercase, lowercase and numbers',
   'please_confirm_password': 'Please confirm password',
   'password_mismatch': 'Confirm password does not match',

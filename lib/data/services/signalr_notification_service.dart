@@ -56,49 +56,129 @@ class SignalRNotificationService {
 
     try {
       await _hubConnection?.start();
-      print("SignalR NotificationHub Connected!");
+      print("✅ SignalR NotificationHub Connected!");
+      print("✅ SignalR: Connection state: ${_hubConnection?.state}");
+      print("✅ SignalR: Connection ID: ${(_hubConnection as dynamic).connectionId}");
 
       _currentAccountId = accountId;
+      print("✅ SignalR: Account ID set: $accountId");
       _registerEvents();
-    } catch (e) {
-      print("SignalR NotificationHub Connection Error: $e");
+      
+      // Test connection by logging all available methods
+      print("🔍 SignalR: Testing connection...");
+    } catch (e, stackTrace) {
+      print("❌ SignalR NotificationHub Connection Error: $e");
+      print("❌ Stack trace: $stackTrace");
     }
   }
 
   void _registerEvents() {
-    if (_hubConnection == null) return;
+    if (_hubConnection == null) {
+      print("⚠️ SignalR: Cannot register events - hubConnection is null");
+      return;
+    }
+
+    print("🔔 SignalR: Registering notification event listeners...");
 
     // Listen for new notifications - backend gửi event "ReceiveNotification"
     _hubConnection!.on("ReceiveNotification", (List<Object?>? args) {
+      print("📬 SignalR: ReceiveNotification event triggered! Args count: ${args?.length ?? 0}");
       if (args != null && args.isNotEmpty) {
         try {
+          print("📬 SignalR: Raw args[0]: ${args[0]}");
           final rawData = args[0] as Map<dynamic, dynamic>;
           final data = rawData.map((key, value) =>
               MapEntry(key.toString(), value));
-          print("📬 SignalR ReceiveNotification: $data");
+          print("📬 SignalR ReceiveNotification parsed data: $data");
+          print("📬 SignalR: NotificationType: ${data['notificationType'] ?? data['NotificationType']}");
+          print("📬 SignalR: Content: ${data['content'] ?? data['Content']}");
+          
           final notification = NotificationModel.fromJson(data);
+          print("✅ SignalR: Successfully parsed notification: ${notification.notificationId}, Type: ${notification.notificationType}");
           _notificationStreamController.add(notification);
-        } catch (e) {
+          print("✅ SignalR: Added notification to stream");
+        } catch (e, stackTrace) {
           print("❌ Error parsing ReceiveNotification - $e");
+          print("❌ Stack trace: $stackTrace");
         }
+      } else {
+        print("⚠️ SignalR: ReceiveNotification event received but args is null or empty");
       }
     });
 
     // Listen for notification:created (backup event name)
     _hubConnection!.on("notification:created", (List<Object?>? args) {
+      print("📬 SignalR: notification:created event triggered! Args count: ${args?.length ?? 0}");
       if (args != null && args.isNotEmpty) {
         try {
+          print("📬 SignalR: Raw args[0]: ${args[0]}");
           final rawData = args[0] as Map<dynamic, dynamic>;
           final data = rawData.map((key, value) =>
               MapEntry(key.toString(), value));
-          print("📬 SignalR notification:created: $data");
+          print("📬 SignalR notification:created parsed data: $data");
+          print("📬 SignalR: NotificationType: ${data['notificationType'] ?? data['NotificationType']}");
+          print("📬 SignalR: Content: ${data['content'] ?? data['Content']}");
+          
           final notification = NotificationModel.fromJson(data);
+          print("✅ SignalR: Successfully parsed notification: ${notification.notificationId}, Type: ${notification.notificationType}");
           _notificationStreamController.add(notification);
-        } catch (e) {
+          print("✅ SignalR: Added notification to stream");
+        } catch (e, stackTrace) {
           print("❌ Error parsing notification:created - $e");
+          print("❌ Stack trace: $stackTrace");
         }
+      } else {
+        print("⚠️ SignalR: notification:created event received but args is null or empty");
       }
     });
+
+    // Listen for all possible event names that backend might send
+    final possibleEventNames = [
+      "ReceiveNotification",
+      "notification:created",
+      "NotificationCreated",
+      "NewNotification",
+      "notification",
+      "Notification",
+    ];
+    
+    for (final eventName in possibleEventNames) {
+      try {
+        _hubConnection!.on(eventName, (List<Object?>? args) {
+          print("📬 SignalR: $eventName event triggered! Args count: ${args?.length ?? 0}");
+          if (args != null && args.isNotEmpty) {
+            try {
+              print("📬 SignalR: Raw args[0]: ${args[0]}");
+              final rawData = args[0] as Map<dynamic, dynamic>;
+              final data = rawData.map((key, value) =>
+                  MapEntry(key.toString(), value));
+              print("📬 SignalR $eventName parsed data: $data");
+              
+              final notification = NotificationModel.fromJson(data);
+              print("✅ SignalR: Successfully parsed notification: ${notification.notificationId}, Type: ${notification.notificationType}");
+              _notificationStreamController.add(notification);
+              print("✅ SignalR: Added notification to stream");
+            } catch (e, stackTrace) {
+              print("❌ Error parsing $eventName - $e");
+              print("❌ Stack trace: $stackTrace");
+            }
+          }
+        });
+        print("✅ SignalR: Registered listener for event: $eventName");
+      } catch (e) {
+        print("⚠️ SignalR: Could not register listener for $eventName: $e");
+      }
+    }
+
+    // Listen for all events to debug (catch-all)
+    try {
+      // Try to listen to all events if the library supports it
+      print("🔍 SignalR: Attempting to register catch-all listener...");
+    } catch (e) {
+      print("⚠️ SignalR: Catch-all listener not supported: $e");
+    }
+
+    print("✅ SignalR: Event listeners registered successfully");
   }
 
   Stream<NotificationModel> listenToNotifications() {
