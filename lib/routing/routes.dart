@@ -22,6 +22,7 @@ abstract final class Routes {
   static const notifications = "/notifications";
   // Cart + Booking
   static const cart = '/cart';
+  static const cartPush = '/cart/view'; // Route riêng để push vào cart từ bên ngoài shell
   static const checkout = '/checkout';
   static const bookingResult = '/booking-result';
 

@@ -128,9 +128,11 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
         ),
         iconTheme: const IconThemeData(color: Colors.white),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Form(
+      body: Container(
+        color: ThemeHelper.getScaffoldBackgroundColor(context),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: Form(
           key: _formKey,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -233,6 +235,7 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
             ],
           ),
         ),
+        ),
       ),
     );
   }
@@ -246,17 +249,18 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
     required VoidCallback onToggleVisibility,
     String? Function(String?)? validator,
   }) {
+    final isDark = ThemeHelper.isDarkMode(context);
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: ThemeHelper.getCardBackgroundColor(context),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: Colors.grey.shade200,
+          color: ThemeHelper.getBorderColor(context),
           width: 1,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: ThemeHelper.getShadowColor(context),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -266,13 +270,19 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
         controller: controller,
         obscureText: obscureText,
         validator: validator,
+        style: TextStyle(
+          color: ThemeHelper.getTextColor(context),
+        ),
         decoration: InputDecoration(
           labelText: '$label *',
+          labelStyle: TextStyle(
+            color: ThemeHelper.getSecondaryTextColor(context),
+          ),
           prefixIcon: Container(
             margin: const EdgeInsets.all(12),
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: iconColor.withOpacity(0.1),
+              color: iconColor.withOpacity(isDark ? 0.2 : 0.1),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(
@@ -284,7 +294,7 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
           suffixIcon: IconButton(
             icon: Icon(
               obscureText ? Icons.visibility_outlined : Icons.visibility_off_outlined,
-              color: Colors.grey.shade600,
+              color: ThemeHelper.getSecondaryIconColor(context),
             ),
             onPressed: onToggleVisibility,
           ),
@@ -318,7 +328,7 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
             ),
           ),
           filled: true,
-          fillColor: Colors.grey.shade50,
+          fillColor: ThemeHelper.getInputBackgroundColor(context),
           contentPadding: const EdgeInsets.symmetric(
             horizontal: 16,
             vertical: 16,
@@ -379,10 +389,10 @@ class _VerifyOTPForPasswordChangeState extends ConsumerState<VerifyOTPForPasswor
         Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: Colors.blue.shade50,
+            color: ThemeHelper.getLightBlueBackgroundColor(context),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: Colors.blue.shade200,
+              color: ThemeHelper.getPrimaryColor(context).withOpacity(0.3),
               width: 1,
             ),
           ),
@@ -391,14 +401,15 @@ class _VerifyOTPForPasswordChangeState extends ConsumerState<VerifyOTPForPasswor
               Icon(
                 Icons.verified_user_outlined,
                 size: 48,
-                color: Colors.blue.shade600,
+                color: ThemeHelper.getPrimaryColor(context),
               ),
               const SizedBox(height: 12),
               Text(
                 context.tr('enter_otp'),
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
+                  color: ThemeHelper.getTextColor(context),
                 ),
               ),
               const SizedBox(height: 4),
@@ -406,7 +417,7 @@ class _VerifyOTPForPasswordChangeState extends ConsumerState<VerifyOTPForPasswor
                 context.tr('otp_sent_to_email'),
                 style: TextStyle(
                   fontSize: 14,
-                  color: Colors.grey.shade600,
+                  color: ThemeHelper.getSecondaryTextColor(context),
                 ),
                 textAlign: TextAlign.center,
               ),
@@ -416,15 +427,15 @@ class _VerifyOTPForPasswordChangeState extends ConsumerState<VerifyOTPForPasswor
         const SizedBox(height: 24),
         Container(
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: ThemeHelper.getCardBackgroundColor(context),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: Colors.grey.shade200,
+              color: ThemeHelper.getBorderColor(context),
               width: 1,
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.05),
+                color: ThemeHelper.getShadowColor(context),
                 blurRadius: 10,
                 offset: const Offset(0, 2),
               ),
@@ -432,19 +443,31 @@ class _VerifyOTPForPasswordChangeState extends ConsumerState<VerifyOTPForPasswor
           ),
           child: TextFormField(
             controller: _otpController,
+            style: TextStyle(
+              fontSize: 24,
+              letterSpacing: 8,
+              fontWeight: FontWeight.bold,
+              color: ThemeHelper.getTextColor(context),
+            ),
             decoration: InputDecoration(
               labelText: context.tr('otp_code'),
+              labelStyle: TextStyle(
+                color: ThemeHelper.getSecondaryTextColor(context),
+              ),
               hintText: context.tr('enter_6_digits'),
+              hintStyle: TextStyle(
+                color: ThemeHelper.getTertiaryTextColor(context),
+              ),
               prefixIcon: Container(
                 margin: const EdgeInsets.all(12),
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: Colors.blue.withOpacity(0.1),
+                  color: ThemeHelper.getPrimaryColor(context).withOpacity(0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Icon(
                   Icons.lock_outline,
-                  color: Colors.blue.shade600,
+                  color: ThemeHelper.getPrimaryColor(context),
                   size: 20,
                 ),
               ),
@@ -459,12 +482,12 @@ class _VerifyOTPForPasswordChangeState extends ConsumerState<VerifyOTPForPasswor
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide: BorderSide(
-                  color: Colors.blue.shade600,
+                  color: ThemeHelper.getPrimaryColor(context),
                   width: 2,
                 ),
               ),
               filled: true,
-              fillColor: Colors.grey.shade50,
+              fillColor: ThemeHelper.getInputBackgroundColor(context),
               contentPadding: const EdgeInsets.symmetric(
                 horizontal: 16,
                 vertical: 16,
@@ -473,11 +496,6 @@ class _VerifyOTPForPasswordChangeState extends ConsumerState<VerifyOTPForPasswor
             keyboardType: TextInputType.number,
             maxLength: 6,
             textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontSize: 24,
-              letterSpacing: 8,
-              fontWeight: FontWeight.bold,
-            ),
           ),
         ),
         const SizedBox(height: 24),

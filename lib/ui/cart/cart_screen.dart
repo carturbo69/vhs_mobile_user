@@ -118,19 +118,19 @@ class _CartScreenState extends ConsumerState<CartScreen> {
         elevation: 0,
         shadowColor: Colors.transparent,
         surfaceTintColor: Colors.transparent,
-        automaticallyImplyLeading: false,
-        leading: (_previousRoute != null || Navigator.canPop(context))
-            ? IconButton(
-                icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
-                onPressed: () {
-                  if (_previousRoute != null) {
-                    context.go(_previousRoute!);
-                  } else if (Navigator.canPop(context)) {
-                    Navigator.of(context).pop();
-                  }
-                },
-              )
-            : null,
+        // automaticallyImplyLeading: true,
+        // leading: (_previousRoute != null || Navigator.canPop(context))
+        //     ? IconButton(
+        //         icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+        //         onPressed: () {
+        //           if (_previousRoute != null) {
+        //             context.go(_previousRoute!);
+        //           } else if (Navigator.canPop(context)) {
+        //             Navigator.of(context).pop();
+        //           }
+        //         },
+        //       )
+        //     : null,
         flexibleSpace: Container(
           decoration: BoxDecoration(
             gradient: LinearGradient(

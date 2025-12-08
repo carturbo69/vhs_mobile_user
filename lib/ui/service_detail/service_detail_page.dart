@@ -86,12 +86,10 @@ class ServiceDetailPage extends ConsumerWidget {
                     child: IconButton(
                       icon: const Icon(Icons.shopping_cart_outlined, color: Colors.white),
                       onPressed: () {
-                        // Luôn dùng go để tránh duplicate keys với StatefulShellRoute
-                        // Lưu route hiện tại để có thể quay lại
+                        // Push vào route riêng để tránh duplicate key với shell routes
                         final currentLocation = GoRouterState.of(context).matchedLocation;
-                        if (currentLocation != Routes.cart) {
-                          // Lưu route hiện tại vào extra để có thể quay lại
-                          context.go(Routes.cart, extra: {'previousRoute': currentLocation});
+                        if (currentLocation != Routes.cart && currentLocation != Routes.cartPush) {
+                          context.push(Routes.cartPush);
                         }
                       },
                       tooltip: context.tr('cart_tooltip'),
