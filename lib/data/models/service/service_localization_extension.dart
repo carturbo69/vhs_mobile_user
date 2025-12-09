@@ -155,35 +155,44 @@ extension ServiceOptionLocalizationExtension on ServiceOption {
     final locale = ref.read(localeProvider);
     final isVietnamese = locale.languageCode == 'vi';
     
+    String result;
     if (isVietnamese) {
-      return optionName;
+      result = optionName;
+    } else {
+      // Watch translation cache
+      ref.watch(translationCacheProvider);
+      
+      final translationService = DataTranslationService(ref);
+      result = translationService.translateOptionName(optionName);
     }
     
-    // Watch translation cache
-    ref.watch(translationCacheProvider);
-    
-    final translationService = DataTranslationService(ref);
-    return translationService.translateOptionName(optionName);
+    // Bỏ ngoặc tròn trong optionName (backend có thể trả về ngoặc tròn)
+    return result.replaceAll('(', '').replaceAll(')', '').trim();
   }
   
   /// Lấy value theo locale hiện tại (cho textarea/text options)
   String? getLocalizedValue(WidgetRef ref) {
-    if (value == null || value!.isEmpty) {
-      return value;
+    // Xử lý trường hợp value là string "null"
+    if (value == null || value!.isEmpty || value!.toLowerCase() == 'null') {
+      return null;
     }
     
     final locale = ref.read(localeProvider);
     final isVietnamese = locale.languageCode == 'vi';
     
+    String? result;
     if (isVietnamese) {
-      return value;
+      result = value;
+    } else {
+      // Watch translation cache
+      ref.watch(translationCacheProvider);
+      
+      final translationService = DataTranslationService(ref);
+      result = translationService.smartTranslate(value!);
     }
     
-    // Watch translation cache
-    ref.watch(translationCacheProvider);
-    
-    final translationService = DataTranslationService(ref);
-    return translationService.smartTranslate(value!);
+    // Bỏ ngoặc tròn trong value (backend có thể trả về ngoặc tròn)
+    return result?.replaceAll('(', '').replaceAll(')', '').trim();
   }
 }
 
@@ -194,35 +203,44 @@ extension ServiceOptionDetailLocalizationExtension on ServiceOptionDetail {
     final locale = ref.read(localeProvider);
     final isVietnamese = locale.languageCode == 'vi';
     
+    String result;
     if (isVietnamese) {
-      return optionName;
+      result = optionName;
+    } else {
+      // Watch translation cache
+      ref.watch(translationCacheProvider);
+      
+      final translationService = DataTranslationService(ref);
+      result = translationService.translateOptionName(optionName);
     }
     
-    // Watch translation cache
-    ref.watch(translationCacheProvider);
-    
-    final translationService = DataTranslationService(ref);
-    return translationService.translateOptionName(optionName);
+    // Bỏ ngoặc tròn trong optionName (backend có thể trả về ngoặc tròn)
+    return result.replaceAll('(', '').replaceAll(')', '').trim();
   }
   
   /// Lấy value theo locale hiện tại (cho textarea/text options)
   String? getLocalizedValue(WidgetRef ref) {
-    if (value == null || value!.isEmpty) {
-      return value;
+    // Xử lý trường hợp value là string "null"
+    if (value == null || value!.isEmpty || value!.toLowerCase() == 'null') {
+      return null;
     }
     
     final locale = ref.read(localeProvider);
     final isVietnamese = locale.languageCode == 'vi';
     
+    String? result;
     if (isVietnamese) {
-      return value;
+      result = value;
+    } else {
+      // Watch translation cache
+      ref.watch(translationCacheProvider);
+      
+      final translationService = DataTranslationService(ref);
+      result = translationService.smartTranslate(value!);
     }
     
-    // Watch translation cache
-    ref.watch(translationCacheProvider);
-    
-    final translationService = DataTranslationService(ref);
-    return translationService.smartTranslate(value!);
+    // Bỏ ngoặc tròn trong value (backend có thể trả về ngoặc tròn)
+    return result?.replaceAll('(', '').replaceAll(')', '').trim();
   }
 }
 

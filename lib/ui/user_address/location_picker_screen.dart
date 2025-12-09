@@ -178,17 +178,41 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
                   onPressed: picked == null
                       ? null
                       : () async {
-                          final addressData = await _reverseGeocode(picked!);
+                          if (!mounted) return;
+                          
+                          try {
+                            final addressData = await _reverseGeocode(picked!);
 
-                          Navigator.pop(context, {
-                            "lat": picked!.latitude,
-                            "lng": picked!.longitude,
-                            "provinceName": addressData["provinceName"] ?? "",
-                            "districtName": addressData["districtName"] ?? "",
-                            "wardName": addressData["wardName"] ?? "",
-                            "streetAddress": addressData["streetAddress"] ?? "",
-                            "address": addressData["fullAddress"] ?? "",
-                          });
+                            // Trả về dữ liệu
+                            if (mounted) {
+                              final resultData = {
+                                "lat": picked!.latitude,
+                                "lng": picked!.longitude,
+                                "provinceName": addressData["provinceName"] ?? "",
+                                "districtName": addressData["districtName"] ?? "",
+                                "wardName": addressData["wardName"] ?? "",
+                                "streetAddress": addressData["streetAddress"] ?? "",
+                                "address": addressData["fullAddress"] ?? "",
+                              };
+                              
+                              print('🔍 [LocationPicker] Returning data: $resultData');
+                              Navigator.pop(context, resultData);
+                            }
+                          } catch (e) {
+                            print('❌ [LocationPicker] Error in reverse geocoding: $e');
+                            
+                            // Hiển thị lỗi
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    context.tr('error_getting_address') ?? 'Không thể lấy địa chỉ. Vui lòng thử lại.',
+                                  ),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                            }
+                          }
                         },
                   icon: const Icon(Icons.check_circle_rounded, size: 24),
                   label: Text(
@@ -221,29 +245,94 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
 
   Future<Map<String, String>> _reverseGeocode(LatLng pos) async {
     try {
+      print('🔍 [LocationPicker] Reverse geocoding for: ${pos.latitude}, ${pos.longitude}');
+      
+      // Gọi placemarkFromCoordinates (không có localeIdentifier vì có thể không hỗ trợ)
       final placemarks = await placemarkFromCoordinates(
         pos.latitude,
         pos.longitude,
       );
 
+      print('🔍 [LocationPicker] Placemarks count: ${placemarks.length}');
+
+      if (placemarks.isEmpty) {
+        print('⚠️ [LocationPicker] No placemarks found');
+        return {
+          "provinceName": "",
+          "districtName": "",
+          "wardName": "",
+          "streetAddress": "",
+          "fullAddress": "${pos.latitude}, ${pos.longitude}",
+        };
+      }
+
       final p = placemarks.first;
+      
+      print('🔍 [LocationPicker] Placemark data:');
+      print('  - name: ${p.name}');
+      print('  - street: ${p.street}');
+      print('  - thoroughfare: ${p.thoroughfare}');
+      print('  - subThoroughfare: ${p.subThoroughfare}');
+      print('  - locality: ${p.locality}');
+      print('  - subLocality: ${p.subLocality}');
+      print('  - administrativeArea: ${p.administrativeArea}');
+      print('  - subAdministrativeArea: ${p.subAdministrativeArea}');
+      print('  - country: ${p.country}');
+      print('  - postalCode: ${p.postalCode}');
+      print('  - isoCountryCode: ${p.isoCountryCode}');
 
       // Parse địa chỉ thành các thành phần
-      // Với địa chỉ Việt Nam:
-      // - administrativeArea: Tỉnh/Thành phố
-      // - subAdministrativeArea hoặc locality: Quận/Huyện
-      // - subLocality: Phường/Xã
-      // - street: Đường/Số nhà
+      // Với địa chỉ Việt Nam, cấu trúc có thể khác nhau tùy vào nguồn dữ liệu
+      // Thử nhiều cách để lấy đúng thông tin
       
-      String provinceName = p.administrativeArea ?? "";
-      String districtName = p.subAdministrativeArea ?? p.locality ?? "";
-      String wardName = p.subLocality ?? "";
-      String streetAddress = p.street ?? "";
+      String provinceName = "";
+      String districtName = "";
+      String wardName = "";
+      String streetAddress = "";
       
-      // Nếu không có street, thử dùng name hoặc thoroughfare
-      if (streetAddress.isEmpty) {
-        streetAddress = p.name ?? p.thoroughfare ?? "";
+      // Lấy Tỉnh/Thành phố
+      provinceName = p.administrativeArea ?? "";
+      if (provinceName.isEmpty && p.subAdministrativeArea != null) {
+        // Đôi khi subAdministrativeArea chứa tên tỉnh
+        final subAdmin = p.subAdministrativeArea!;
+        if (subAdmin.contains("Province") || subAdmin.contains("City") || 
+            subAdmin.contains("Tỉnh") || subAdmin.contains("Thành phố")) {
+          provinceName = subAdmin;
+        }
       }
+      
+      // Lấy Quận/Huyện
+      districtName = p.subAdministrativeArea ?? p.locality ?? "";
+      // Nếu đã dùng subAdministrativeArea cho province, thì dùng locality
+      if (provinceName == p.subAdministrativeArea) {
+        districtName = p.locality ?? "";
+      }
+      
+      // Lấy Phường/Xã
+      wardName = p.subLocality ?? "";
+      
+      // Lấy Đường/Số nhà - thử nhiều nguồn
+      streetAddress = p.street ?? "";
+      if (streetAddress.isEmpty) {
+        streetAddress = p.thoroughfare ?? "";
+      }
+      if (streetAddress.isEmpty) {
+        streetAddress = p.name ?? "";
+      }
+      // Kết hợp subThoroughfare và thoroughfare nếu có
+      if (streetAddress.isEmpty) {
+        final parts = [
+          p.subThoroughfare,
+          p.thoroughfare,
+        ].where((e) => e != null && e.isNotEmpty).toList();
+        streetAddress = parts.join(" ");
+      }
+
+      print('🔍 [LocationPicker] Parsed address:');
+      print('  - provinceName: $provinceName');
+      print('  - districtName: $districtName');
+      print('  - wardName: $wardName');
+      print('  - streetAddress: $streetAddress');
 
       // Tạo full address để hiển thị
       final fullAddressParts = [
@@ -254,7 +343,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
       ].where((e) => e.isNotEmpty);
       final fullAddress = fullAddressParts.join(", ");
 
-      return {
+      final result = {
         "provinceName": provinceName,
         "districtName": districtName,
         "wardName": wardName,
@@ -263,7 +352,13 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
             ? fullAddress 
             : "${pos.latitude}, ${pos.longitude}",
       };
-    } catch (e) {
+      
+      print('🔍 [LocationPicker] Final result: $result');
+      
+      return result;
+    } catch (e, stackTrace) {
+      print('❌ [LocationPicker] Reverse geocoding error: $e');
+      print('❌ [LocationPicker] Stack trace: $stackTrace');
       return {
         "provinceName": "",
         "districtName": "",

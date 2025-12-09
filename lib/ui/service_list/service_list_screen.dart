@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
@@ -31,6 +32,8 @@ class _ServiceListScreenState extends ConsumerState<ServiceListScreen> {
 
   String? _category;
   bool _showAll = false; // Track xem đã mở rộng để xem tất cả chưa
+  List? _cachedShuffledList; // Cache shuffled list để tránh shuffle lại mỗi lần rebuild
+  int? _lastListLength; // Track length để biết khi nào cần shuffle lại
 
   @override
   void dispose() {
@@ -42,6 +45,8 @@ class _ServiceListScreenState extends ConsumerState<ServiceListScreen> {
   void _onSearchChanged() {
     setState(() {
       _showAll = false; // Reset khi search thay đổi
+      _cachedShuffledList = null; // Reset cache để shuffle lại
+      _lastListLength = null;
     });
     _debounce?.cancel();
     _debounce = Timer(const Duration(milliseconds: 350), () {
@@ -52,11 +57,23 @@ class _ServiceListScreenState extends ConsumerState<ServiceListScreen> {
   }
 
   List<Widget> _buildServiceListSlivers(List list) {
+    // Shuffle danh sách để random vị trí hiển thị
+    // Chỉ shuffle lại nếu list thay đổi (length khác hoặc list khác)
+    if (_cachedShuffledList == null || 
+        _lastListLength != list.length ||
+        !_listsEqual(_cachedShuffledList!, list)) {
+      _cachedShuffledList = List.from(list);
+      _cachedShuffledList!.shuffle(Random());
+      _lastListLength = list.length;
+    }
+    
+    final shuffledList = _cachedShuffledList!;
+    
     // Giới hạn hiển thị 20 items nếu chưa mở rộng
-    final displayCount = _showAll || list.length <= 20 
-        ? list.length 
+    final displayCount = _showAll || shuffledList.length <= 20 
+        ? shuffledList.length 
         : 20;
-    final hasMore = list.length > 20 && !_showAll;
+    final hasMore = shuffledList.length > 20 && !_showAll;
 
     final slivers = <Widget>[
       SliverPadding(
@@ -66,7 +83,7 @@ class _ServiceListScreenState extends ConsumerState<ServiceListScreen> {
           mainAxisSpacing: 12,
           crossAxisSpacing: 12,
           itemBuilder: (context, index) {
-            final item = list[index];
+            final item = shuffledList[index];
             return ServiceCard(
               service: item,
               onTap: () =>
@@ -128,6 +145,15 @@ class _ServiceListScreenState extends ConsumerState<ServiceListScreen> {
     }
 
     return slivers;
+  }
+
+  // Helper method để so sánh 2 list có bằng nhau không (chỉ so sánh serviceId)
+  bool _listsEqual(List list1, List list2) {
+    if (list1.length != list2.length) return false;
+    for (int i = 0; i < list1.length; i++) {
+      if (list1[i].serviceId != list2[i].serviceId) return false;
+    }
+    return true;
   }
 
   @override
@@ -405,6 +431,8 @@ class _ServiceListScreenState extends ConsumerState<ServiceListScreen> {
                               setState(() {
                                 _category = value == "all" ? null : value;
                                 _showAll = false; // Reset khi filter thay đổi
+                                _cachedShuffledList = null; // Reset cache để shuffle lại
+                                _lastListLength = null;
                               });
 
                               ref
