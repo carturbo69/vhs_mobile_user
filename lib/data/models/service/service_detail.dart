@@ -62,14 +62,26 @@ class ServiceOptionDetail {
   });
 
   factory ServiceOptionDetail.fromJson(Map<String, dynamic> j) {
+    // Bỏ ngoặc tròn ngay khi parse từ JSON
+    final rawOptionName = (j['optionName'] ?? '').toString();
+    var rawValue = j['value']?.toString();
+    
+    // Xử lý trường hợp value là string "null" hoặc rỗng
+    if (rawValue == null || rawValue.isEmpty || rawValue.toLowerCase() == 'null') {
+      rawValue = null;
+    }
+    
+    final cleanOptionName = rawOptionName.replaceAll('(', '').replaceAll(')', '').trim();
+    final cleanValue = rawValue?.replaceAll('(', '').replaceAll(')', '').trim();
+    
     return ServiceOptionDetail(
       serviceOptionId: j['serviceOptionId'].toString(),
       optionId: j['optionId'].toString(),
-      optionName: j['optionName'],
+      optionName: cleanOptionName,
       tagId: j['tagId']?.toString(),
       type: j['type'],
       family: j['family']?.toString(),
-      value: j['value']?.toString(),
+      value: cleanValue,
     );
   }
 }

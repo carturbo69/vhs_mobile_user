@@ -16,14 +16,9 @@ class NotificationScreen extends ConsumerStatefulWidget {
 }
 
 class _NotificationScreenState extends ConsumerState<NotificationScreen> {
-  @override
-  void initState() {
-    super.initState();
-    // Refresh notifications when screen is opened
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(notificationListProvider.notifier).refresh();
-    });
-  }
+  // Không refresh tự động trong initState
+  // Provider sẽ tự động load khi được watch lần đầu
+  // Chỉ refresh khi người dùng pull to refresh hoặc thực hiện action cụ thể
 
   @override
   Widget build(BuildContext context) {
@@ -34,6 +29,7 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
     final notifier = ref.read(notificationListProvider.notifier);
 
     return Scaffold(
+      backgroundColor: ThemeHelper.getScaffoldBackgroundColor(context),
       appBar: AppBar(
         elevation: 0,
         flexibleSpace: Container(
@@ -61,7 +57,7 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
         actions: [
           PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert),
-            color: Colors.white,
+            color: ThemeHelper.getCardBackgroundColor(context),
             onSelected: (value) async {
               if (value == 'mark_all_read') {
                 await notifier.markAllAsRead();
@@ -77,12 +73,28 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
                 final confirm = await showDialog<bool>(
                   context: context,
                   builder: (context) => AlertDialog(
-                    title: Text(context.tr('clear_all_notifications')),
-                    content: Text(context.tr('confirm_clear_all_notifications')),
+                    backgroundColor: ThemeHelper.getCardBackgroundColor(context),
+                    title: Text(
+                      context.tr('clear_all_notifications'),
+                      style: TextStyle(
+                        color: ThemeHelper.getTextColor(context),
+                      ),
+                    ),
+                    content: Text(
+                      context.tr('confirm_clear_all_notifications'),
+                      style: TextStyle(
+                        color: ThemeHelper.getSecondaryTextColor(context),
+                      ),
+                    ),
                     actions: [
                       TextButton(
                         onPressed: () => Navigator.pop(context, false),
-                        child: Text(context.tr('cancel')),
+                        child: Text(
+                          context.tr('cancel'),
+                          style: TextStyle(
+                            color: ThemeHelper.getSecondaryTextColor(context),
+                          ),
+                        ),
                       ),
                       TextButton(
                         onPressed: () => Navigator.pop(context, true),
@@ -112,9 +124,17 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
                 value: 'mark_all_read',
                 child: Row(
                   children: [
-                    const Icon(Icons.done_all, color: Colors.blue),
+                    Icon(
+                      Icons.done_all,
+                      color: ThemeHelper.getPrimaryColor(context),
+                    ),
                     const SizedBox(width: 8),
-                    Text(context.tr('mark_all_read')),
+                    Text(
+                      context.tr('mark_all_read'),
+                      style: TextStyle(
+                        color: ThemeHelper.getTextColor(context),
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -124,7 +144,12 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
                   children: [
                     const Icon(Icons.delete_sweep, color: Colors.red),
                     const SizedBox(width: 8),
-                    Text(context.tr('clear_all')),
+                    Text(
+                      context.tr('clear_all'),
+                      style: TextStyle(
+                        color: ThemeHelper.getTextColor(context),
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -272,9 +297,7 @@ class _NotificationItem extends ConsumerWidget {
           decoration: BoxDecoration(
             color: isRead
                 ? ThemeHelper.getCardBackgroundColor(context)
-                : (isDark
-                    ? Colors.blue.shade900.withOpacity(0.2)
-                    : Colors.blue.shade50),
+                : ThemeHelper.getLightBlueBackgroundColor(context),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color: ThemeHelper.getBorderColor(context),
@@ -282,7 +305,7 @@ class _NotificationItem extends ConsumerWidget {
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(isDark ? 0.3 : 0.05),
+                color: ThemeHelper.getShadowColor(context),
                 blurRadius: 10,
                 offset: const Offset(0, 2),
               ),
@@ -327,7 +350,7 @@ class _NotificationItem extends ConsumerWidget {
                             width: 8,
                             height: 8,
                             decoration: BoxDecoration(
-                              color: Colors.blue.shade600,
+                              color: ThemeHelper.getPrimaryColor(context),
                               shape: BoxShape.circle,
                             ),
                           ),

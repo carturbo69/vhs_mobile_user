@@ -29,6 +29,9 @@ class _AddAddressPageState extends ConsumerState<AddAddressPage> {
   double? lng;
   UserAddressModel? _editingAddress;
   bool _isInitialized = false;
+  
+  // Static variable để lưu dữ liệu tạm thời - không bị mất khi widget recreate
+  static Map<String, dynamic>? _staticPendingLocationData;
 
   @override
   void didChangeDependencies() {
@@ -42,6 +45,42 @@ class _AddAddressPageState extends ConsumerState<AddAddressPage> {
       }
       _isInitialized = true;
     }
+    
+    // Luôn kiểm tra và load lại dữ liệu location từ static variable nếu có
+    // Điều này đảm bảo dữ liệu được load khi widget được recreate sau khi quay lại từ location picker
+    if (_staticPendingLocationData != null && mounted) {
+      // Đợi một frame để đảm bảo widget đã được rebuild hoàn toàn
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _staticPendingLocationData != null) {
+          print('🔄 [AddAddress] Applying static pending location data in didChangeDependencies');
+          _applyLocationData(_staticPendingLocationData!);
+          _staticPendingLocationData = null; // Clear sau khi apply
+        }
+      });
+    }
+  }
+  
+  void _applyLocationData(Map<String, dynamic> data) {
+    final latValue = data["lat"];
+    final lngValue = data["lng"];
+    
+    setState(() {
+      lat = latValue is double ? latValue : (latValue is num ? latValue.toDouble() : null);
+      lng = lngValue is double ? lngValue : (lngValue is num ? lngValue.toDouble() : null);
+      
+      // Cập nhật vào TextEditingController
+      _province.text = (data["provinceName"]?.toString() ?? "").trim();
+      _district.text = (data["districtName"]?.toString() ?? "").trim();
+      _ward.text = (data["wardName"]?.toString() ?? "").trim();
+      _street.text = (data["streetAddress"]?.toString() ?? "").trim();
+    });
+    
+    print('✅ [AddAddress] Applied location data:');
+    print('  - lat: $lat, lng: $lng');
+    print('  - province: ${_province.text}');
+    print('  - district: ${_district.text}');
+    print('  - ward: ${_ward.text}');
+    print('  - street: ${_street.text}');
   }
 
   void _loadAddressData(UserAddressModel address) {
@@ -59,6 +98,17 @@ class _AddAddressPageState extends ConsumerState<AddAddressPage> {
   Widget build(BuildContext context) {
     // Watch locale để rebuild khi đổi ngôn ngữ
     ref.watch(localeProvider);
+    
+    // Check và apply pending location data từ static variable nếu có (sau khi widget được rebuild)
+    if (_staticPendingLocationData != null && mounted) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _staticPendingLocationData != null) {
+          print('🔄 [AddAddress] Applying static pending location data in build method');
+          _applyLocationData(_staticPendingLocationData!);
+          _staticPendingLocationData = null; // Clear sau khi apply
+        }
+      });
+    }
     
     final isEditMode = _editingAddress != null;
     return Scaffold(
@@ -102,19 +152,43 @@ class _AddAddressPageState extends ConsumerState<AddAddressPage> {
             ),
             child: InkWell(
               onTap: () async {
+                print('🔍 [AddAddress] Opening location picker...');
+                
                 final result = await context.push(Routes.locationPicker);
+                
+                print('🔍 [AddAddress] Location picker returned: $result');
+                print('🔍 [AddAddress] Result type: ${result.runtimeType}');
 
-                if (result != null) {
-                  final data = result as Map<String, dynamic>;
-                  setState(() {
-                    lat = data["lat"] as double?;
-                    lng = data["lng"] as double?;
-                    // Điền vào tất cả các trường
-                    _province.text = data["provinceName"] as String? ?? "";
-                    _district.text = data["districtName"] as String? ?? "";
-                    _ward.text = data["wardName"] as String? ?? "";
-                    _street.text = data["streetAddress"] as String? ?? "";
+                // Xử lý dữ liệu
+                if (result != null && result is Map) {
+                  final data = Map<String, dynamic>.from(result);
+                  print('🔍 [AddAddress] Received location data: $data');
+                  
+                  // Lưu dữ liệu vào static variable để không bị mất khi widget recreate
+                  _staticPendingLocationData = data;
+                  print('💾 [AddAddress] Saved location data to static variable');
+                  
+                  // Sử dụng addPostFrameCallback để apply dữ liệu sau khi widget được rebuild
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (mounted && _staticPendingLocationData != null) {
+                      print('🔄 [AddAddress] Applying location data via postFrameCallback');
+                      _applyLocationData(_staticPendingLocationData!);
+                      _staticPendingLocationData = null; // Clear sau khi apply
+                    } else {
+                      print('⚠️ [AddAddress] Widget not mounted in postFrameCallback, will retry in build/didChangeDependencies');
+                    }
                   });
+                  
+                  // Trigger rebuild để đảm bảo build method được gọi và postFrameCallback được thực thi
+                  if (mounted) {
+                    setState(() {
+                      // Empty setState để trigger rebuild
+                    });
+                  } else {
+                    print('⚠️ [AddAddress] Widget not mounted, data saved to static variable - will be applied when widget rebuilds');
+                  }
+                } else {
+                  print('⚠️ [AddAddress] No location data received (result is null or not a Map)');
                 }
               },
               borderRadius: BorderRadius.circular(12),

@@ -11,7 +11,7 @@ class DioClient {
   DioClient(this._ref)
     : _dio = Dio(
         BaseOptions(
-          baseUrl: "http://apivhs.cuahangkinhdoanh.com",
+          baseUrl: "https://apivhs.cuahangkinhdoanh.com",
           connectTimeout: const Duration(seconds: 20),
           receiveTimeout: const Duration(seconds: 20),
         ),

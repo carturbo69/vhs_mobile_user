@@ -105,58 +105,104 @@ final routerProvider = Provider<GoRouter>((ref) {
       // -------------------------
       // AUTH ROUTES (ngoài shell)
       // -------------------------
-      GoRoute(path: Routes.login, builder: (_, __) => const LoginPage()),
+      GoRoute(
+        path: Routes.login,
+        name: 'login',
+        pageBuilder: (_, __) => MaterialPage(
+          key: const ValueKey('login'),
+          child: const LoginPage(),
+        ),
+      ),
 
-      GoRoute(path: Routes.register, builder: (_, __) => const RegisterPage()),
+      GoRoute(
+        path: Routes.register,
+        name: 'register',
+        pageBuilder: (_, __) => MaterialPage(
+          key: const ValueKey('register'),
+          child: const RegisterPage(),
+        ),
+      ),
 
       GoRoute(
         path: Routes.forgotPassword,
-        builder: (_, __) => const ForgotPasswordPage(),
+        name: 'forgotPassword',
+        pageBuilder: (_, __) => MaterialPage(
+          key: const ValueKey('forgotPassword'),
+          child: const ForgotPasswordPage(),
+        ),
       ),
 
       GoRoute(
         path: Routes.verifyOtp,
-        builder: (context, state) {
+        name: 'verifyOtp',
+        pageBuilder: (context, state) {
           final data = state.extra as Map<String, dynamic>;
-          return VerifyOtpPage(email: data['email'], mode: data['mode']);
+          final email = data['email'] ?? '';
+          final mode = data['mode'] ?? '';
+          return MaterialPage(
+            key: ValueKey('verifyOtp_${email}_$mode'),
+            child: VerifyOtpPage(email: email, mode: mode),
+          );
         },
       ),
 
       GoRoute(
         path: Routes.resetPassword,
-        builder: (context, state) {
+        name: 'resetPassword',
+        pageBuilder: (context, state) {
           final data = state.extra as Map<String, dynamic>;
-          return ResetPasswordPage(email: data['email'], token: data['token']);
+          final email = data['email'] ?? '';
+          final token = data['token'] ?? '';
+          return MaterialPage(
+            key: ValueKey('resetPassword_${email}_$token'),
+            child: ResetPasswordPage(email: email, token: token),
+          );
         },
       ),
 
       GoRoute(
         path: Routes.detailService,
-        builder: (context, state) {
+        name: 'detailService',
+        pageBuilder: (context, state) {
           final id = state.pathParameters['id']!;
-          return ServiceDetailPage(serviceId: id);
+          return MaterialPage(
+            key: ValueKey('detailService_$id'),
+            child: ServiceDetailPage(serviceId: id),
+          );
         },
       ),
       GoRoute(
         path: Routes.serviceShop,
-        builder: (context, state) {
+        name: 'serviceShop',
+        pageBuilder: (context, state) {
           final providerId = state.pathParameters['providerId']!;
-          return ServiceShopScreen(providerId: providerId);
+          return MaterialPage(
+            key: ValueKey('serviceShop_$providerId'),
+            child: ServiceShopScreen(providerId: providerId),
+          );
         },
       ),
       GoRoute(
         path: Routes.bookingDetail,
-        builder: (context, state) {
+        name: 'bookingDetail',
+        pageBuilder: (context, state) {
           final booking = state.extra as BookingHistoryItem;
-          return HistoryDetailScreen(bookingId: booking.bookingId);
+          return MaterialPage(
+            key: ValueKey('bookingDetail_${booking.bookingId}'),
+            child: HistoryDetailScreen(bookingId: booking.bookingId),
+          );
         },
       ),
 
       GoRoute(
         path: Routes.chatDetail,
-        builder: (context, state) {
+        name: 'chatDetail',
+        pageBuilder: (context, state) {
           final conversationId = state.pathParameters['conversationId']!;
-          return ChatDetailScreen(conversationId: conversationId);
+          return MaterialPage(
+            key: ValueKey('chatDetail_$conversationId'),
+            child: ChatDetailScreen(conversationId: conversationId),
+          );
         },
       ),
 
@@ -165,111 +211,203 @@ final routerProvider = Provider<GoRouter>((ref) {
       // -------------------------
       GoRoute(
         path: Routes.profileDetail,
-        builder: (_, __) => const ProfileDetailScreen(),
+        name: 'profileDetail',
+        pageBuilder: (_, __) => MaterialPage(
+          key: const ValueKey('profileDetail'),
+          child: const ProfileDetailScreen(),
+        ),
       ),
       GoRoute(
         path: Routes.editProfile,
-        builder: (context, state) {
+        name: 'editProfile',
+        pageBuilder: (context, state) {
           // Lấy profile từ extra (được truyền từ profile screen)
           final profile = state.extra as ProfileModel;
-          return EditProfileScreen(profile: profile);
+          return MaterialPage(
+            key: ValueKey('editProfile_${profile.accountId ?? DateTime.now().millisecondsSinceEpoch}'),
+            child: EditProfileScreen(profile: profile),
+          );
         },
       ),
       GoRoute(
         path: Routes.changePassword,
-        builder: (_, __) => const ChangePasswordScreen(),
+        name: 'changePassword',
+        pageBuilder: (_, __) => MaterialPage(
+          key: const ValueKey('changePassword'),
+          child: const ChangePasswordScreen(),
+        ),
       ),
       GoRoute(
         path: Routes.changeEmail,
-        builder: (context, state) {
+        name: 'changeEmail',
+        pageBuilder: (context, state) {
           // Lấy profile từ extra (được truyền từ profile screen)
           final profile = state.extra as ProfileModel;
-          return ChangeEmailScreen(profile: profile);
+          return MaterialPage(
+            key: ValueKey('changeEmail_${profile.accountId ?? DateTime.now().millisecondsSinceEpoch}'),
+            child: ChangeEmailScreen(profile: profile),
+          );
         },
       ),
       GoRoute(
         path: Routes.providerRegistrationGuide,
-        builder: (context, state) => const ProviderRegistrationGuideScreen(),
+        name: 'providerRegistrationGuide',
+        pageBuilder: (context, state) => MaterialPage(
+          key: const ValueKey('providerRegistrationGuide'),
+          child: const ProviderRegistrationGuideScreen(),
+        ),
       ),
       // -------------------------
       // ADDRESS ROUTES
       // -------------------------
       GoRoute(
         path: Routes.addressList,
-        builder: (context, state) => const AddressListPage(),
+        name: 'addressList',
+        pageBuilder: (context, state) => MaterialPage(
+          key: const ValueKey('addressList'),
+          child: const AddressListPage(),
+        ),
       ),
       GoRoute(
         path: Routes.addAddress,
-        builder: (_, __) => const AddAddressPage(),
+        name: 'addAddress',
+        pageBuilder: (_, __) => MaterialPage(
+          key: ValueKey('addAddress_${DateTime.now().millisecondsSinceEpoch}'),
+          child: const AddAddressPage(),
+        ),
       ),
       GoRoute(
         path: Routes.locationPicker,
-        builder: (_, __) => const LocationPickerScreen(),
+        name: 'locationPicker',
+        pageBuilder: (_, __) => MaterialPage(
+          key: ValueKey('locationPicker_${DateTime.now().millisecondsSinceEpoch}'),
+          child: const LocationPickerScreen(),
+        ),
       ),
 
+      // Route riêng cho cart khi push từ bên ngoài shell
+      GoRoute(
+        path: Routes.cartPush,
+        name: 'cartPush',
+        pageBuilder: (context, state) {
+          // Sử dụng fullPath và extra để tạo key unique
+          // Nếu có extra, sử dụng hash của nó, nếu không thì dùng fullPath
+          final extra = state.extra;
+          final keySuffix = extra != null 
+              ? '_${extra.hashCode}' 
+              : '_${state.uri.toString()}';
+          return MaterialPage(
+            key: ValueKey('cartPush$keySuffix'),
+            child: const CartScreen(),
+          );
+        },
+      ),
       GoRoute(
         path: Routes.checkout,
-        builder: (context, state) {
+        name: 'checkout',
+        pageBuilder: (context, state) {
           final extra = state.extra;
           final selectedItemIds = extra is List<String> ? extra : null;
-          return CheckoutScreen(selectedItemIds: selectedItemIds);
+          final keyValue = selectedItemIds?.join(',') ?? 'checkout';
+          return MaterialPage(
+            key: ValueKey('checkout_$keyValue'),
+            child: CheckoutScreen(selectedItemIds: selectedItemIds),
+          );
         },
       ),
       GoRoute(
         path: Routes.bookingResult,
-        builder: (context, state) {
+        name: 'bookingResult',
+        pageBuilder: (context, state) {
           final result = state.extra as BookingResultModel;
-          return BookingResultScreen(result: result);
+          final keyValue = result.bookingIds.isNotEmpty 
+              ? result.bookingIds.join(',') 
+              : DateTime.now().millisecondsSinceEpoch.toString();
+          return MaterialPage(
+            key: ValueKey('bookingResult_$keyValue'),
+            child: BookingResultScreen(result: result),
+          );
         },
       ),
       GoRoute(
         path: Routes.paymentWebView,
-        builder: (context, state) {
+        name: 'paymentWebView',
+        pageBuilder: (context, state) {
           final paymentUrl = state.extra as String? ?? '';
-          return PaymentWebViewScreen(paymentUrl: paymentUrl);
+          return MaterialPage(
+            key: ValueKey('paymentWebView_${paymentUrl.hashCode}'),
+            child: PaymentWebViewScreen(paymentUrl: paymentUrl),
+          );
         },
       ),
       GoRoute(
         path: Routes.paymentSuccess,
-        builder: (context, state) {
+        name: 'paymentSuccess',
+        pageBuilder: (context, state) {
           final data = state.extra as PaymentSuccessData;
-          return PaymentSuccessScreen(data: data);
+          final keyValue = data.transactionId.isNotEmpty 
+              ? data.transactionId 
+              : DateTime.now().millisecondsSinceEpoch.toString();
+          return MaterialPage(
+            key: ValueKey('paymentSuccess_$keyValue'),
+            child: PaymentSuccessScreen(data: data),
+          );
         },
       ),
       // Review routes - reviewList phải đứng trước review để tránh conflict
       GoRoute(
         path: Routes.reviewList,
-        builder: (context, state) {
-          return const ReviewListScreen();
-        },
-      ),
-      GoRoute(
-        path: Routes.review,
-        builder: (context, state) {
-          final extra = state.extra;
-          if (extra is HistoryBookingDetail) {
-            return ReviewScreen(bookingDetail: extra);
-          } else if (extra is ReviewListItem) {
-            // Edit mode
-            return ReviewScreen(reviewItem: extra);
-          }
-          return const Scaffold(
-            body: Center(child: Text('Invalid review data')),
+        name: 'reviewList',
+        pageBuilder: (context, state) {
+          return MaterialPage(
+            key: const ValueKey('reviewList'),
+            child: const ReviewListScreen(),
           );
         },
       ),
       GoRoute(
+        path: Routes.review,
+        name: 'review',
+        pageBuilder: (context, state) {
+          final extra = state.extra;
+          Widget child;
+          ValueKey key;
+          if (extra is HistoryBookingDetail) {
+            key = ValueKey('review_${extra.bookingId}');
+            child = ReviewScreen(bookingDetail: extra);
+          } else if (extra is ReviewListItem) {
+            // Edit mode
+            key = ValueKey('review_edit_${extra.reviewId}');
+            child = ReviewScreen(reviewItem: extra);
+          } else {
+            key = const ValueKey('review_invalid');
+            child = const Scaffold(
+              body: Center(child: Text('Invalid review data')),
+            );
+          }
+          return MaterialPage(key: key, child: child);
+        },
+      ),
+      GoRoute(
         path: Routes.report,
-        builder: (context, state) {
+        name: 'report',
+        pageBuilder: (context, state) {
           final detail = state.extra as HistoryBookingDetail;
-          return ReportScreen(bookingDetail: detail);
+          return MaterialPage(
+            key: ValueKey('report_${detail.bookingId}'),
+            child: ReportScreen(bookingDetail: detail),
+          );
         },
       ),
       GoRoute(
         path: Routes.reportDetail,
-        builder: (context, state) {
+        name: 'reportDetail',
+        pageBuilder: (context, state) {
           final reportId = state.pathParameters['id']!;
-          return ReportDetailScreen(reportId: reportId);
+          return MaterialPage(
+            key: ValueKey('reportDetail_$reportId'),
+            child: ReportDetailScreen(reportId: reportId),
+          );
         },
       ),
 
@@ -287,6 +425,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             routes: [
               GoRoute(
                 path: Routes.listService,
+                name: 'listService',
                 builder: (_, __) => const ServiceListScreen(),
               ),
             ],
@@ -297,6 +436,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             routes: [
               GoRoute(
                 path: Routes.notifications,
+                name: 'notifications',
                 builder: (_, __) => const NotificationScreen(),
               ),
             ],
@@ -307,6 +447,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             routes: [
               GoRoute(
                 path: Routes.chatList,
+                name: 'chatList',
                 builder: (_, __) => const ChatListScreen(),
               ),
             ],
@@ -317,6 +458,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             routes: [
               GoRoute(
                 path: Routes.history,
+                name: 'history',
                 builder: (_, __) => const HistoryScreen(),
               ),
             ],
@@ -327,16 +469,18 @@ final routerProvider = Provider<GoRouter>((ref) {
             routes: [
               GoRoute(
                 path: Routes.profile,
+                name: 'profile',
                 builder: (_, __) => const ProfileSummaryScreen(),
               ),
             ],
           ),
 
-          // ---------- TAB 4: CART ----------
+          // ---------- TAB 6: CART ----------
           StatefulShellBranch(
             routes: [
               GoRoute(
                 path: Routes.cart,
+                name: 'cart',
                 builder: (_, __) => const CartScreen(),
               ),
             ],

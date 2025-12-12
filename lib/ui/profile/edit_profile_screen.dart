@@ -118,9 +118,11 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
         ),
         iconTheme: const IconThemeData(color: Colors.white),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Form(
+      body: Container(
+        color: ThemeHelper.getScaffoldBackgroundColor(context),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: Form(
           key: _formKey,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -253,25 +255,34 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
             ],
           ),
         ),
+        ),
       ),
     );
   }
 
   Widget _buildSectionTitle(String title, BuildContext context) {
+    final isDark = ThemeHelper.isDarkMode(context);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.centerLeft,
           end: Alignment.centerRight,
-          colors: [
-            Colors.blue.shade50,
-            Colors.blue.shade100.withOpacity(0.5),
-          ],
+          colors: isDark
+              ? [
+                  Colors.blue.shade900.withOpacity(0.3),
+                  Colors.blue.shade800.withOpacity(0.2),
+                ]
+              : [
+                  Colors.blue.shade50,
+                  Colors.blue.shade100.withOpacity(0.5),
+                ],
         ),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: Colors.blue.shade200.withOpacity(0.5),
+          color: isDark
+              ? Colors.blue.shade700.withOpacity(0.5)
+              : Colors.blue.shade200.withOpacity(0.5),
           width: 1,
         ),
       ),
@@ -281,7 +292,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
             width: 4,
             height: 20,
             decoration: BoxDecoration(
-              color: Colors.blue.shade600,
+              color: ThemeHelper.getPrimaryColor(context),
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -291,7 +302,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: Colors.blue.shade900,
+              color: isDark ? Colors.blue.shade300 : Colors.blue.shade900,
             ),
           ),
         ],
@@ -311,17 +322,18 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     int maxLines = 1,
     String? Function(String?)? validator,
   }) {
+    final isDark = ThemeHelper.isDarkMode(context);
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: ThemeHelper.getCardBackgroundColor(context),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: Colors.grey.shade200,
+          color: ThemeHelper.getBorderColor(context),
           width: 1,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: ThemeHelper.getShadowColor(context),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -333,13 +345,19 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
         maxLines: maxLines,
         enabled: enabled,
         validator: validator,
+        style: TextStyle(
+          color: ThemeHelper.getTextColor(context),
+        ),
         decoration: InputDecoration(
           labelText: isRequired ? '$label *' : label,
+          labelStyle: TextStyle(
+            color: ThemeHelper.getSecondaryTextColor(context),
+          ),
           prefixIcon: Container(
             margin: const EdgeInsets.all(12),
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: iconColor.withOpacity(0.1),
+              color: iconColor.withOpacity(isDark ? 0.2 : 0.1),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(
@@ -378,7 +396,9 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
             ),
           ),
           filled: true,
-          fillColor: Colors.grey.shade50,
+          fillColor: enabled
+              ? ThemeHelper.getInputBackgroundColor(context)
+              : ThemeHelper.getLightBackgroundColor(context),
           contentPadding: const EdgeInsets.symmetric(
             horizontal: 16,
             vertical: 16,

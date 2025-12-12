@@ -1010,9 +1010,6 @@ class _BookingHistoryCard extends ConsumerWidget {
                 const SizedBox(height: 8),
               if (validOptions.isNotEmpty) ...[
                 ...validOptions.map((option) {
-                  final isTextarea =
-                      option.type.toLowerCase() == "textarea" ||
-                      option.type.toLowerCase() == "text";
                   final isDark = ThemeHelper.isDarkMode(context);
                   
                   // Dịch option name và value
@@ -1033,63 +1030,42 @@ class _BookingHistoryCard extends ConsumerWidget {
                     }
                   }
                   
+                  // Format: optionName (value) nếu có value, hiển thị trên cùng một dòng
+                  final displayText = (optionValue != null && optionValue.isNotEmpty 
+                      ? '$optionName ($optionValue)'
+                      : optionName).replaceAll(RegExp(r'\s+'), ' ').trim();
+                  
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 8),
-                    child: Column(
+                    child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.all(4),
-                                  decoration: BoxDecoration(
-                                    color: isDark 
-                                        ? Colors.green.shade900.withOpacity(0.3)
-                                        : Colors.green.shade50,
-                                    borderRadius: BorderRadius.circular(4),
-                                  ),
-                                  child: Icon(
-                                    Icons.check_circle_rounded,
-                                    size: 16,
-                                    color: Colors.green.shade400,
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                optionName,
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w500,
-                                  color: ThemeHelper.getTextColor(context),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        if (optionValue != null &&
-                            optionValue.isNotEmpty) ...[
-                          const SizedBox(height: 4),
-                          Padding(
-                            padding: const EdgeInsets.only(left: 22),
-                            child: isTextarea
-                                ? Text(
-                                    optionValue,
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: ThemeHelper.getSecondaryTextColor(context),
-                                      height: 1.4,
-                                    ),
-                                  )
-                                : Text(
-                                    optionValue,
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: ThemeHelper.getTertiaryTextColor(context),
-                                    ),
-                                  ),
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            color: isDark 
+                                ? Colors.green.shade900.withOpacity(0.3)
+                                : Colors.green.shade50,
+                            borderRadius: BorderRadius.circular(4),
                           ),
-                        ],
+                          child: Icon(
+                            Icons.check_circle_rounded,
+                            size: 16,
+                            color: Colors.green.shade400,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            displayText,
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                              color: ThemeHelper.getTextColor(context),
+                              height: 1.3,
+                            ),
+                          ),
+                        ),
                       ],
                     ),
                   );

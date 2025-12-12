@@ -177,66 +177,73 @@ class ServiceCard extends ConsumerWidget {
                         final totalRegular = regularOptions.length;
                         
                         // Tạo list widgets cho regular options
-                        final regularWidgets = regularOptions.take(5).map((opt) => Padding(
-                          padding: const EdgeInsets.only(bottom: 6),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Icon(
-                                Icons.check_circle,
-                                size: 18,
-                                color: Colors.green[600],
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  opt.getLocalizedOptionName(ref),
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    color: ThemeHelper.getTextColor(context),
-                                    height: 1.3,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
+                        final regularWidgets = regularOptions.take(5).map((opt) {
+                          final optionName = opt.getLocalizedOptionName(ref); // Đã bỏ ngoặc tròn trong extension
+                          final optionValue = opt.getLocalizedValue(ref); // Đã bỏ ngoặc tròn trong extension
+                          
+                          // Ghép chuỗi: optionName (value) nếu có value
+                          // Backend trả về 2 trường riêng, format với ngoặc tròn cho value
+                          final displayText = (optionValue != null && optionValue.isNotEmpty 
+                              ? '$optionName ($optionValue)'
+                              : optionName).replaceAll(RegExp(r'\s+'), ' ').trim();
+                          
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 6),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Icon(
+                                  Icons.check_circle,
+                                  size: 18,
+                                  color: Colors.green[600],
                                 ),
-                              ),
-                            ],
-                          ),
-                        )).toList();
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    displayText,
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      color: ThemeHelper.getTextColor(context),
+                                      height: 1.3,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        }).toList();
                         
                         // Tạo list widgets cho textarea options
                         final textareaWidgets = textareaOptions.map((opt) {
+                          final optionName = opt.getLocalizedOptionName(ref); // Đã bỏ ngoặc tròn trong extension
+                          final optionValue = opt.getLocalizedValue(ref); // Đã bỏ ngoặc tròn trong extension
+                          
+                          // Ghép chuỗi: optionName (value) nếu có value
+                          // Backend trả về 2 trường riêng, format với ngoặc tròn cho value
+                          final displayText = (optionValue != null && optionValue.isNotEmpty 
+                              ? '$optionName ($optionValue)'
+                              : optionName).replaceAll(RegExp(r'\s+'), ' ').trim();
+                          
                           return Padding(
                             padding: const EdgeInsets.only(top: 6, bottom: 2),
-                            child: Column(
+                            child: Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Row(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Icon(
-                                      Icons.check_circle,
-                                      size: 18,
-                                      color: Colors.green[600],
+                                Icon(
+                                  Icons.check_circle,
+                                  size: 18,
+                                  color: Colors.green[600],
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    displayText,
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      color: ThemeHelper.getTextColor(context),
+                                      height: 1.3,
                                     ),
-                                    const SizedBox(width: 8),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            opt.getLocalizedOptionName(ref),
-                                            style: TextStyle(
-                                              fontSize: 13,
-                                              fontWeight: FontWeight.w600,
-                                              color: ThemeHelper.getTextColor(context),
-                                            ),
-                                          ),
-                                          _TextareaValueWidget(option: opt),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
+                                  ),
                                 ),
                               ],
                             ),
@@ -392,42 +399,5 @@ class ServiceCard extends ConsumerWidget {
     }
     
     return buffer.toString();
-  }
-}
-
-/// Widget riêng để hiển thị textarea value với translation
-class _TextareaValueWidget extends ConsumerWidget {
-  final ServiceOption option;
-  
-  const _TextareaValueWidget({required this.option});
-  
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    // Watch translation cache để rebuild khi có translation mới
-    ref.watch(translationCacheProvider);
-    
-    if (option.value == null || option.value!.isEmpty) {
-      return const SizedBox.shrink();
-    }
-    
-    final localizedValue = option.getLocalizedValue(ref) ?? '';
-    
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const SizedBox(height: 4),
-        Text(
-          localizedValue,
-          style: TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w400,
-            color: ThemeHelper.getSecondaryTextColor(context),
-            height: 1.4,
-          ),
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-        ),
-      ],
-    );
   }
 }

@@ -86,12 +86,10 @@ class ServiceDetailPage extends ConsumerWidget {
                     child: IconButton(
                       icon: const Icon(Icons.shopping_cart_outlined, color: Colors.white),
                       onPressed: () {
-                        // Luôn dùng go để tránh duplicate keys với StatefulShellRoute
-                        // Lưu route hiện tại để có thể quay lại
+                        // Push vào route riêng để tránh duplicate key với shell routes
                         final currentLocation = GoRouterState.of(context).matchedLocation;
-                        if (currentLocation != Routes.cart) {
-                          // Lưu route hiện tại vào extra để có thể quay lại
-                          context.go(Routes.cart, extra: {'previousRoute': currentLocation});
+                        if (currentLocation != Routes.cart && currentLocation != Routes.cartPush) {
+                          context.push(Routes.cartPush);
                         }
                       },
                       tooltip: context.tr('cart_tooltip'),
@@ -655,7 +653,16 @@ class _DetailContent extends ConsumerWidget {
           const SizedBox(height: 16),
           // Hiển thị regular options trước
           ...regularOptions.map(
-                  (o) => Container(
+                  (o) {
+                    final optionName = o.getLocalizedOptionName(ref);
+                    final optionValue = o.getLocalizedValue(ref);
+                    
+                    // Format: optionName (value) nếu có value
+                    final displayText = (optionValue != null && optionValue.isNotEmpty 
+                        ? '$optionName ($optionValue)'
+                        : optionName).replaceAll(RegExp(r'\s+'), ' ').trim();
+                    
+                    return Container(
               margin: const EdgeInsets.only(bottom: 10),
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                     decoration: BoxDecoration(
@@ -676,7 +683,7 @@ class _DetailContent extends ConsumerWidget {
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      o.getLocalizedOptionName(ref),
+                      displayText,
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
@@ -686,10 +693,19 @@ class _DetailContent extends ConsumerWidget {
                   ),
                 ],
               ),
-            ),
+            );
+                  },
           ),
           // Hiển thị textarea options ở cuối cùng
           ...textareaOptions.map((opt) {
+            final optionName = opt.getLocalizedOptionName(ref);
+            final optionValue = opt.getLocalizedValue(ref);
+            
+            // Format: optionName (value) nếu có value, hiển thị trên cùng một dòng
+            final displayText = (optionValue != null && optionValue.isNotEmpty 
+                ? '$optionName ($optionValue)'
+                : optionName).replaceAll(RegExp(r'\s+'), ' ').trim();
+            
             return Container(
               margin: const EdgeInsets.only(bottom: 10),
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -701,44 +717,26 @@ class _DetailContent extends ConsumerWidget {
                   width: 1,
                 ),
               ),
-              child: Column(
+              child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.check_circle,
-                        color: ThemeHelper.getPrimaryColor(context),
-                        size: 20,
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          opt.getLocalizedOptionName(ref),
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: ThemeHelper.getTextColor(context),
-                          ),
-                        ),
-                      ),
-                    ],
+                  Icon(
+                    Icons.check_circle,
+                    color: ThemeHelper.getPrimaryColor(context),
+                    size: 20,
                   ),
-                  if (opt.value != null && opt.value!.isNotEmpty) ...[
-                    const SizedBox(height: 8),
-                    Padding(
-                      padding: const EdgeInsets.only(left: 30),
-                      child: Text(
-                        opt.getLocalizedValue(ref) ?? '',
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w400,
-                          color: ThemeHelper.getSecondaryTextColor(context),
-                          height: 1.4,
-                        ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      displayText,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: ThemeHelper.getTextColor(context),
+                        height: 1.3,
                       ),
                     ),
-                  ],
+                  ),
                 ],
               ),
             );

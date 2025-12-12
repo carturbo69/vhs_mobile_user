@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:signalr_netcore/hub_connection.dart';
 import 'package:signalr_netcore/hub_connection_builder.dart';
+import 'package:signalr_netcore/signalr_client.dart';
 import 'package:vhs_mobile_user/data/dao/auth_dao.dart';
 import 'package:vhs_mobile_user/data/models/notification/notification_model.dart';
 
@@ -12,7 +13,8 @@ final signalRNotificationServiceProvider = Provider<SignalRNotificationService>(
 class SignalRNotificationService {
   final Ref _ref;
   HubConnection? _hubConnection;
-  final String _serverUrl = "http://apivhs.cuahangkinhdoanh.com/hubs/notification";
+  // Use HTTPS to match backend and avoid mixed-content / blocked connections
+  final String _serverUrl = "https://apivhs.cuahangkinhdoanh.com/hubs/notification";
 
   final _notificationStreamController = StreamController<NotificationModel>.broadcast();
   final _unreadCountStreamController = StreamController<int>.broadcast();
@@ -31,13 +33,19 @@ class SignalRNotificationService {
     final authDao = _ref.read(authDaoProvider);
     final token = await authDao.getToken();
 
-    // Add token to URL as query parameter for authentication
-    final urlWithToken = token != null && token.isNotEmpty
-        ? '$_serverUrl?access_token=$token'
-        : _serverUrl;
-
+    // Use accessTokenFactory so token is attached as Authorization header.
+    // This matches the working staff/mobile client and avoids server-side
+    // HubException “Method does not exist” that happens when we try to call
+    // the old Register method.
     _hubConnection = HubConnectionBuilder()
-        .withUrl(urlWithToken)
+        .withUrl(
+          _serverUrl,
+          options: HttpConnectionOptions(
+            accessTokenFactory: token != null && token.isNotEmpty
+                ? () async => token
+                : null,
+          ),
+        )
         .withAutomaticReconnect()
         .build();
 
@@ -47,7 +55,7 @@ class SignalRNotificationService {
 
     (_hubConnection as dynamic).onreconnected(({connectionId}) {
       print("SignalR NotificationHub Reconnected. ID: $connectionId");
-      // NotificationHub automatically adds user to group based on JWT token
+      // No explicit register needed; authentication via token keeps user context.
     });
 
     (_hubConnection as dynamic).onreconnecting(({error}) {

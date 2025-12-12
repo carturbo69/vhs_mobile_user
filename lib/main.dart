@@ -82,11 +82,11 @@ class _MyAppState extends ConsumerState<MyApp> {
     // Wait a bit to ensure ref is ready
     await Future.delayed(const Duration(milliseconds: 500));
     
-    try {
-      // Initialize and connect notification SignalR
+      try {
+        // Initialize and connect notification SignalR
       print('🚀 [Main] Initializing notification service...');
-      final notificationService = ref.read(notificationServiceProvider);
-      await notificationService.initialize();
+        final notificationService = ref.read(notificationServiceProvider);
+        await notificationService.initialize();
       print('✅ [Main] Notification service initialized');
       
       // Load notification list first to ensure it's ready
@@ -94,53 +94,53 @@ class _MyAppState extends ConsumerState<MyApp> {
       await notificationNotifier.refresh();
       print('✅ [Main] Notification list loaded');
       
-      await notificationService.connectSignalR();
+        await notificationService.connectSignalR();
       print('✅ [Main] Notification SignalR connected');
       
-      // Setup auto-refresh notification list every 30 seconds (backup if SignalR fails)
-      // Note: SignalR should handle real-time updates, this is just a backup
-      _setupAutoRefreshNotifications();
-      
-      // Auto-connect chat SignalR with retry
-      print('🚀 [Main] Auto-connecting chat SignalR...');
-      final chatSignalRService = ref.read(signalRChatServiceProvider);
-      
-      // Retry up to 3 times with delay
-      int retries = 0;
-      const maxRetries = 3;
-      while (retries < maxRetries && !chatSignalRService.isConnected) {
-        await chatSignalRService.autoConnect();
-        if (chatSignalRService.isConnected) {
-          print('✅ [Main] Chat SignalR auto-connect successful on attempt ${retries + 1}');
-          break;
-        }
-        retries++;
-        if (retries < maxRetries) {
-          print('⚠️ [Main] Chat SignalR auto-connect failed, retrying in 2 seconds... (attempt $retries/$maxRetries)');
-          await Future.delayed(const Duration(seconds: 2));
-        }
-      }
-      
-      if (!chatSignalRService.isConnected) {
-        print('⚠️ [Main] Chat SignalR auto-connect failed after $maxRetries attempts');
-      } else {
-        print('✅ [Main] Chat SignalR auto-connect completed');
+      // Không cần auto-refresh timer vì đã có SignalR xử lý real-time
+      // Người dùng có thể pull-to-refresh nếu cần
+      // _setupAutoRefreshNotifications(); // Đã tắt
         
-        // Setup global chat listeners to receive messages even when not on chat screen
-        final globalChatService = ref.read(globalChatServiceProvider);
-        await globalChatService.setupListeners();
+        // Auto-connect chat SignalR with retry
+      print('🚀 [Main] Auto-connecting chat SignalR...');
+        final chatSignalRService = ref.read(signalRChatServiceProvider);
+        
+        // Retry up to 3 times with delay
+        int retries = 0;
+        const maxRetries = 3;
+        while (retries < maxRetries && !chatSignalRService.isConnected) {
+          await chatSignalRService.autoConnect();
+          if (chatSignalRService.isConnected) {
+          print('✅ [Main] Chat SignalR auto-connect successful on attempt ${retries + 1}');
+            break;
+          }
+          retries++;
+          if (retries < maxRetries) {
+          print('⚠️ [Main] Chat SignalR auto-connect failed, retrying in 2 seconds... (attempt $retries/$maxRetries)');
+            await Future.delayed(const Duration(seconds: 2));
+          }
+        }
+        
+        if (!chatSignalRService.isConnected) {
+        print('⚠️ [Main] Chat SignalR auto-connect failed after $maxRetries attempts');
+        } else {
+        print('✅ [Main] Chat SignalR auto-connect completed');
+          
+          // Setup global chat listeners to receive messages even when not on chat screen
+          final globalChatService = ref.read(globalChatServiceProvider);
+          await globalChatService.setupListeners();
         print('✅ [Main] Global chat listeners setup completed');
-      }
-    } catch (e, stackTrace) {
+        }
+      } catch (e, stackTrace) {
       print('❌ [Main] Error initializing SignalR services: $e');
-      print('Stack trace: $stackTrace');
+        print('Stack trace: $stackTrace');
       // Retry after 3 seconds
       Future.delayed(const Duration(seconds: 3), () {
         if (mounted) {
           _signalRInitialized = false;
           _initializeSignalR();
-        }
-      });
+      }
+    });
     }
   }
 
@@ -148,16 +148,17 @@ class _MyAppState extends ConsumerState<MyApp> {
     // Cancel existing timer if any
     _notificationRefreshTimer?.cancel();
     
-    // Refresh notification list every 5 seconds as backup (SignalR should handle real-time)
+    // Refresh notification list every 30 seconds as backup (SignalR should handle real-time)
     // This ensures we get notifications even if SignalR doesn't receive events
-    _notificationRefreshTimer = Timer.periodic(const Duration(seconds: 5), (timer) {
+    // Tăng lên 30 giây để giảm tải server và tránh reload quá thường xuyên
+    _notificationRefreshTimer = Timer.periodic(const Duration(seconds: 30), (timer) {
       if (!mounted) {
         timer.cancel();
         return;
       }
       
       try {
-        print('🔄 [Main] Auto-refreshing notification list (backup polling)...');
+        print('🔄 [Main] Auto-refreshing notification list (backup polling every 30s)...');
         final notificationNotifier = ref.read(notificationListProvider.notifier);
         notificationNotifier.refresh();
       } catch (e) {
@@ -165,7 +166,7 @@ class _MyAppState extends ConsumerState<MyApp> {
       }
     });
     
-    print('✅ [Main] Auto-refresh notification timer started (every 5 seconds as backup)');
+    print('✅ [Main] Auto-refresh notification timer started (every 30 seconds as backup)');
   }
 
   @override
