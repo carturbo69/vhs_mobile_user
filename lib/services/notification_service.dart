@@ -23,6 +23,9 @@ class GlobalNotificationService {
   final FlutterLocalNotificationsPlugin _localNotifications = FlutterLocalNotificationsPlugin();
   bool _isInitialized = false;
   Set<String> _knownNotificationIds = <String>{};
+  bool _isConnectingSignalR = false;
+  int _signalRRetryCount = 0;
+  Timer? _signalRRetryTimer;
 
   GlobalNotificationService(this._ref);
 
@@ -83,6 +86,12 @@ class GlobalNotificationService {
   }
 
   Future<void> connectSignalR() async {
+    if (_isConnectingSignalR) {
+      print('⚠️ SignalR connect already in progress, skipping duplicate call');
+      return;
+    }
+
+    _isConnectingSignalR = true;
     try {
       final authDao = _ref.read(authDaoProvider);
       final auth = await authDao.getSavedAuth();
@@ -95,83 +104,107 @@ class GlobalNotificationService {
         }
       }
 
-      if (accountId != null && accountId.isNotEmpty) {
-        final signalRService = _ref.read(signalRNotificationServiceProvider);
-        await signalRService.connect(accountId);
+      if (accountId == null || accountId.isEmpty) {
+        print('⚠️ Không tìm thấy accountId để kết nối SignalR, sẽ thử lại...');
+        _scheduleSignalRRetry();
+        return;
+      }
 
-        // Listen to new notifications from SignalR
-        _notificationSubscription?.cancel();
-        print("🔔 GlobalNotificationService: Setting up SignalR listener...");
-        _notificationSubscription = signalRService.listenToNotifications().listen((notification) {
-          print("🔔 ========== Global nhận thông báo mới từ SignalR ==========");
-          print("🔔 Notification ID: ${notification.notificationId}");
-          print("🔔 Notification Type: ${notification.notificationType}");
-          print("🔔 Content: ${notification.content}");
-          print("🔔 Is Read: ${notification.isRead}");
-          print("🔔 Receiver Role: ${notification.receiverRole}");
-          print("🔔 ==========================================================");
-          
-          // Update UI state immediately - REAL-TIME UPDATE
-          print("🔄 [GlobalNotificationService] Updating notification list in real-time...");
-          final notifier = _ref.read(notificationListProvider.notifier);
-          final currentList = notifier.state.value;
-          
-          List<NotificationModel> newList;
-          if (currentList != null) {
-            // Remove duplicate if exists
-            final otherItems = currentList.where(
-              (item) => item.notificationId != notification.notificationId
-            ).toList();
-            // Add new notification at the top (ensure isRead is false for new notifications)
-            final newNotification = NotificationModel(
-              notificationId: notification.notificationId,
-              accountReceivedId: notification.accountReceivedId,
-              receiverRole: notification.receiverRole,
-              notificationType: notification.notificationType,
-              content: notification.content,
-              isRead: false, // New notifications are always unread
-              createdAt: notification.createdAt ?? DateTime.now(),
-              receiverName: notification.receiverName,
-              receiverEmail: notification.receiverEmail,
-            );
-            newList = [newNotification, ...otherItems];
-            
-            // Update state immediately - this will trigger UI update
-            notifier.state = AsyncValue.data(newList);
-            
-            // Calculate unread count immediately
-            final unreadCount = newList.where((n) => n.isRead != true).length;
-            print("✅ [GlobalNotificationService] Đã cập nhật danh sách thông báo REAL-TIME, tổng: ${newList.length}, chưa đọc: $unreadCount");
-          } else {
-            // If state is null, refresh to get full list
-            print("⚠️ [GlobalNotificationService] State is null, refreshing notification list...");
-            notifier.refresh();
-            newList = [];
-          }
-          
-          // Invalidate unread count provider to force immediate recalculation
-          // This ensures the badge updates immediately
-          _ref.invalidate(notificationUnreadCountProvider);
-          print("🔄 [GlobalNotificationService] Đã invalidate notificationUnreadCountProvider để cập nhật badge");
-          
-          // Show local notification (non-blocking)
-          _showLocalNotification(notification).catchError((error) {
-            print("❌ Error in _showLocalNotification: $error");
-          });
-        }, onError: (error) {
-          print("❌ Error listening to SignalR notifications: $error");
-        });
+      final signalRService = _ref.read(signalRNotificationServiceProvider);
+      await signalRService.connect(accountId);
+      _signalRRetryCount = 0;
 
-        // Initialize known notification IDs from current state
-        final currentList = _ref.read(notificationListProvider).value;
+      // Listen to new notifications from SignalR
+      _notificationSubscription?.cancel();
+      print("🔔 GlobalNotificationService: Setting up SignalR listener...");
+      _notificationSubscription = signalRService.listenToNotifications().listen((notification) {
+        print("🔔 ========== Global nhận thông báo mới từ SignalR ==========");
+        print("🔔 Notification ID: ${notification.notificationId}");
+        print("🔔 Notification Type: ${notification.notificationType}");
+        print("🔔 Content: ${notification.content}");
+        print("🔔 Is Read: ${notification.isRead}");
+        print("🔔 Receiver Role: ${notification.receiverRole}");
+        print("🔔 ==========================================================");
+        
+        // Update UI state immediately - REAL-TIME UPDATE
+        print("🔄 [GlobalNotificationService] Updating notification list in real-time...");
+        final notifier = _ref.read(notificationListProvider.notifier);
+        final currentList = notifier.state.value;
+        
+        List<NotificationModel> newList;
         if (currentList != null) {
-          _knownNotificationIds = currentList.map((n) => n.notificationId).toSet();
-          print("📋 Đã khởi tạo ${_knownNotificationIds.length} notification IDs đã biết");
+          // Remove duplicate if exists
+          final otherItems = currentList.where(
+            (item) => item.notificationId != notification.notificationId
+          ).toList();
+          // Add new notification at the top (ensure isRead is false for new notifications)
+          final newNotification = NotificationModel(
+            notificationId: notification.notificationId,
+            accountReceivedId: notification.accountReceivedId,
+            receiverRole: notification.receiverRole,
+            notificationType: notification.notificationType,
+            content: notification.content,
+            isRead: false, // New notifications are always unread
+            createdAt: notification.createdAt ?? DateTime.now(),
+            receiverName: notification.receiverName,
+            receiverEmail: notification.receiverEmail,
+          );
+          newList = [newNotification, ...otherItems];
+          
+          // Update state immediately - this will trigger UI update
+          notifier.state = AsyncValue.data(newList);
+          
+          // Calculate unread count immediately
+          final unreadCount = newList.where((n) => n.isRead != true).length;
+          print("✅ [GlobalNotificationService] Đã cập nhật danh sách thông báo REAL-TIME, tổng: ${newList.length}, chưa đọc: $unreadCount");
+        } else {
+          // If state is null, refresh to get full list
+          print("⚠️ [GlobalNotificationService] State is null, refreshing notification list...");
+          notifier.refresh();
+          newList = [];
         }
+        
+        // Invalidate unread count provider to force immediate recalculation
+        // This ensures the badge updates immediately
+        _ref.invalidate(notificationUnreadCountProvider);
+        print("🔄 [GlobalNotificationService] Đã invalidate notificationUnreadCountProvider để cập nhật badge");
+        
+        // Show local notification (non-blocking)
+        _showLocalNotification(notification).catchError((error) {
+          print("❌ Error in _showLocalNotification: $error");
+        });
+      }, onError: (error) {
+        print("❌ Error listening to SignalR notifications: $error");
+      });
+
+      // Initialize known notification IDs from current state
+      final currentList = _ref.read(notificationListProvider).value;
+      if (currentList != null) {
+        _knownNotificationIds = currentList.map((n) => n.notificationId).toSet();
+        print("📋 Đã khởi tạo ${_knownNotificationIds.length} notification IDs đã biết");
       }
     } catch (e) {
       print('❌ Error connecting SignalR NotificationHub: $e');
+      _scheduleSignalRRetry();
+    } finally {
+      _isConnectingSignalR = false;
     }
+  }
+
+  void _scheduleSignalRRetry() {
+    const maxRetries = 5;
+    if (_signalRRetryCount >= maxRetries) {
+      print('⚠️ Dừng retry SignalR sau $maxRetries lần');
+      return;
+    }
+    if (_signalRRetryTimer?.isActive == true) return;
+
+    _signalRRetryCount += 1;
+    final delay = Duration(seconds: 2 * _signalRRetryCount);
+    print('⏳ Sẽ thử kết nối SignalR lần ${_signalRRetryCount} sau ${delay.inSeconds}s...');
+    _signalRRetryTimer = Timer(delay, () {
+      connectSignalR();
+    });
   }
 
   Future<void> _showLocalNotification(NotificationModel notification) async {

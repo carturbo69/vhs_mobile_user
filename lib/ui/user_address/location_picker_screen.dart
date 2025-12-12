@@ -49,7 +49,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
         children: [
           GoogleMap(
             initialCameraPosition: const CameraPosition(
-              target: LatLng(10.776889, 106.700806), // SG default
+              target: LatLng(9.9909, 105.8053), // SG default
               zoom: 14,
             ),
             onMapCreated: (c) => controller = c,
